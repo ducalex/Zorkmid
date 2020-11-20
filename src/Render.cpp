@@ -11,6 +11,14 @@ int GAMESCREEN_X = 0;
 int GAMESCREEN_Y = 68;
 int GAMESCREEN_FLAT_X = 0;
 
+static float mgamma = 1.0;
+
+static uint32_t time = 0;
+static int32_t frames = 0;
+static int32_t fps = 1;
+
+#define SFTYPE SDL_SWSURFACE // SDL_HWSURFACE
+
 static uint8_t Renderer = RENDER_FLAT;
 
 static MList *sublist = NULL;
@@ -22,8 +30,6 @@ static SDL_Surface *tempbuf;    // This surface used for effects(region action) 
 static SDL_Surface *viewportbuf;//This surface used for rendered viewport image with renderer processing.
 
 static int32_t RenderDelay = 0;
-
-static struct_effect Effects[EFFECTS_MAX_CNT];
 
 static struct {
     int32_t x;
@@ -38,6 +44,11 @@ static int32_t pana_PanaWidth = 1800;
 static bool pana_ReversePana = false;
 static float pana_angle = 60.0, pana_linscale = 1.00;
 static int32_t pana_Zero = 0;
+
+
+const int FiveBitToEightBitLookupTable[32] = {
+        0, 8, 16, 24, 32, 41, 49, 57, 65, 74, 82, 90, 98, 106, 115, 123,
+        131, 139, 148, 156, 164, 172, 180, 189, 197, 205, 213, 222, 230, 238, 246, 255};
 
 static const float sin_tab[] = {
     0.000000, 0.012272, 0.024541, 0.036807,
@@ -77,7 +88,6 @@ static const float sin_tab[] = {
 
 static inline float fastSin(float x)
 {
-
     int idx = 0;
     if (x < 0)
         idx = x * (-81.487332253);
@@ -112,6 +122,64 @@ static inline float fastSqrt(float x)
     u.i = (1 << 29) + (u.i >> 1) - (1 << 22);
     return u.x;
 }
+
+#define EFFECT_WAVE 1
+#define EFFECT_LIGH 2
+#define EFFECT_9 4
+
+struct effect0 //water
+{
+    int32_t frame;
+    int32_t frame_cnt;
+    int8_t **ampls;
+    SDL_Surface *surface;
+};
+
+struct effect1 //lightning
+{
+    int8_t *map; // 0 - no; !0 - draw
+    int8_t sign;
+    int32_t stp;
+    int32_t maxstp;
+    SDL_Surface *surface;
+};
+
+struct effect9
+{
+    int8_t *cloud_mod;
+    SDL_Surface *cloud;
+    SDL_Surface *mask;
+    SDL_Surface *mapping;
+};
+
+typedef struct
+{
+    int32_t type;
+    int32_t delay;
+    int32_t time;
+    int32_t w;
+    int32_t h;
+    int32_t x;
+    int32_t y;
+    union effect
+    {
+        effect0 ef0;
+        effect1 ef1;
+        effect9 ef9;
+    } effect;
+} struct_effect_t;
+
+#define EFFECTS_MAX_CNT 32
+
+static struct_effect_t Effects[EFFECTS_MAX_CNT];
+
+static void Effects_Delete(uint32_t index);
+static struct_effect_t *Effects_GetEf(uint32_t index);
+static int32_t Effects_AddEffect(int32_t type);
+static int32_t Effects_GetColor(uint32_t x, uint32_t y);
+static void Rend_EF_9_Draw(struct_effect_t *ef);
+static void Rend_EF_Wave_Draw(struct_effect_t *ef);
+static void Rend_EF_Light_Draw(struct_effect_t *ef);
 
 void Rend_pana_SetAngle(float angle)
 {
@@ -204,7 +272,7 @@ void Rend_pana_SetTable()
     Rend_indexer();
 }
 
-void Rend_InitGraphics(bool fullscreen, char *fontsdir)
+void Rend_InitGraphics(bool fullscreen)
 {
     // To do : Use a nice struct instead
     if (CUR_GAME == GAME_ZGI)
@@ -237,7 +305,20 @@ void Rend_InitGraphics(bool fullscreen, char *fontsdir)
         GAMESCREEN_FLAT_X = 0;
     }
 
-    screen = InitGraphicAndSound(GAME_W, GAME_H, GAME_BPP, fullscreen, fontsdir);
+    if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
+    {
+        printf("Unable to init SDL: %s\n", SDL_GetError());
+        exit(1);
+    }
+
+    if (fullscreen)
+        screen = SDL_SetVideoMode(GAME_W, GAME_H, GAME_BPP, SFTYPE | SDL_FULLSCREEN);
+    else
+        screen = SDL_SetVideoMode(GAME_W, GAME_H, GAME_BPP, SFTYPE);
+
+    char buffer[128];
+    sprintf(buffer, "Zorkmid: %s [build: " __DATE__ " " __TIME__ "]", GetGameTitle());
+    SDL_WM_SetCaption(buffer, NULL);
 
     sublist = CreateMList();
     subid = 0;
@@ -245,18 +326,26 @@ void Rend_InitGraphics(bool fullscreen, char *fontsdir)
     tempbuf = CreateSurface(GAMESCREEN_W, GAMESCREEN_H);
     viewportbuf = CreateSurface(GAMESCREEN_W, GAMESCREEN_H);
 
+    txt_LoadFonts();
+
     Mouse_LoadCursors();
 
     SDL_ShowCursor(SDL_DISABLE);
 
-    view_X = getdirectvar(SLOT_VIEW_POS);
+    view_X = GetDirectgVarInt(SLOT_VIEW_POS);
 
     memset(Effects, 0, sizeof(Effects));
 }
 
 void Rend_SwitchFullscreen()
 {
-    screen = SwitchFullscreen();
+    int32_t flags = screen->flags;
+
+    screen = SDL_SetVideoMode(0, 0, 0, flags ^ SDL_FULLSCREEN);
+    if (screen == NULL)
+        screen = SDL_SetVideoMode(0, 0, 0, flags);
+    else
+        flags ^= SDL_FULLSCREEN;
 }
 
 void Rend_DrawImageToGamescr(SDL_Surface *scr, int x, int y)
@@ -632,7 +721,14 @@ void Rend_RenderFunc()
     Ctrl_DrawControls();
 
     //effect-processor
-    Effects_Process();
+    for (int32_t i = 0; i < EFFECTS_MAX_CNT; i++) {
+        if (Effects[i].type == EFFECT_WAVE)
+            Rend_EF_Wave_Draw(&Effects[i]);
+        else if (Effects[i].type == EFFECT_LIGH)
+            Rend_EF_Light_Draw(&Effects[i]);
+        else if (Effects[i].type == EFFECT_9)
+            Rend_EF_9_Draw(&Effects[i]);
+    }
 
     //Apply renderer distortion
     if (Renderer == RENDER_FLAT)
@@ -678,19 +774,6 @@ void Rend_DeleteSubRect(struct_SubRect *erect)
     erect->todelete = true;
 }
 
-void Rend_ClearSubs()
-{
-    StartMList(sublist);
-    while (!eofMList(sublist))
-    {
-        struct_SubRect *subrec = (struct_SubRect *)DataMList(sublist);
-        SDL_FreeSurface(subrec->img);
-        free(subrec);
-        NextMList(sublist);
-    }
-    FlushMList(sublist);
-}
-
 void Rend_ProcessSubs()
 {
     StartMList(sublist);
@@ -724,23 +807,6 @@ void Rend_DelaySubDelete(struct_SubRect *sub, int32_t time)
         sub->timer = time;
 }
 
-struct_SubRect *Rend_GetSubById(int id)
-{
-    StartMList(sublist);
-    while (!eofMList(sublist))
-    {
-        struct_SubRect *subrec = (struct_SubRect *)DataMList(sublist);
-        if (subrec->id == id)
-        {
-            return subrec;
-            break;
-        }
-        NextMList(sublist);
-    }
-
-    return NULL;
-}
-
 SDL_Surface *Rend_GetGameScreen()
 {
     return tempbuf;
@@ -749,11 +815,6 @@ SDL_Surface *Rend_GetGameScreen()
 SDL_Surface *Rend_GetLocationScreenImage()
 {
     return scrbuf;
-}
-
-SDL_Surface *Rend_GetWindowSurface()
-{
-    return screen;
 }
 
 uint32_t Rend_MapScreenRGB(int r, int g, int b)
@@ -884,44 +945,6 @@ void Rend_DrawTilt()
     }
     SDL_UnlockSurface(tempbuf);
     SDL_UnlockSurface(viewportbuf);
-    //    //float hhx = (float)(rand()%5+1)/10.0;
-    //    SDL_LockSurface(tempbuf);
-    //    SDL_LockSurface(scrbuf);
-    //    if (GAME_BPP == 32)
-    //    {
-    //        int32_t maxIndx = scrbuf->w*scrbuf->h;
-    //    int *nww = ((int *)tempbuf->pixels);
-    //    int *old = (int *)scrbuf->pixels;    // only for 32 bit color
-    //    for(int y = 0; y < GAMESCREEN_H; y++)
-    //    {
-    //         // only for 32 bit color
-    //
-    //        for(int x = 0; x < GAMESCREEN_W; x++)
-    //        {
-    //            // int *nww = (int *)screen->pixels;
-    //
-    //            int newy = render_table[x][y].y  /* *hhx */  + *view_X;
-    //
-    //            if (newy < 0)
-    //                newy += scrbuf->h;
-    //            else if (newy > scrbuf->h)
-    //                newy -= scrbuf->h;
-    //
-    //            int32_t index = render_table[x][y].x + newy * scrbuf->w;
-    //            if (index > maxIndx)
-    //                index %= maxIndx;
-    //            *nww = old[index];
-    //            nww++; //more faster than mul %)
-    //        }
-    //    }
-    //    }
-    //    else
-    //    {
-    //        printf("Write tilt code for %d bpp\n",GAME_BPP);
-    //        exit(0);
-    //    }
-    //    SDL_UnlockSurface(tempbuf);
-    //    SDL_UnlockSurface(scrbuf);
 }
 
 void Rend_tilt_MouseInteract()
@@ -1008,7 +1031,7 @@ void Rend_SetRendererTable()
 struct_action_res *Rend_CreateDistortNode()
 {
     struct_action_res *act = ScrSys_CreateActRes(NODE_TYPE_DISTORT);
-    act->nodes.distort = NEW(struct_distort);
+    act->nodes.distort = NEW(distort_t);
     act->nodes.distort->cur_frame = 0;
     act->nodes.distort->increase = true;
     act->nodes.distort->frames = 0;
@@ -1034,7 +1057,7 @@ int32_t Rend_ProcessDistortNode(struct_action_res *nod)
     if (Rend_GetRenderer() != RENDER_PANA && Rend_GetRenderer() != RENDER_TILT)
         return NODE_RET_OK;
 
-    struct_distort *dist = nod->nodes.distort;
+    distort_t *dist = nod->nodes.distort;
 
     if (dist->increase)
         dist->cur_frame += rand() % dist->frames;
@@ -1087,7 +1110,95 @@ void Rend_DrawScalerToGamescr(scaler *scl, int16_t x, int16_t y)
         DrawScaler(scl, x, y, scrbuf);
 }
 
-int32_t Effects_GetColor(uint32_t x, uint32_t y)
+int Rend_deleteRegion(struct_action_res *nod)
+{
+    if (nod->node_type != NODE_TYPE_REGION)
+        return NODE_RET_NO;
+
+    if (nod->nodes.node_region != -1)
+        Effects_Delete(nod->nodes.node_region);
+
+    if (nod->slot > 0)
+    {
+        SetgVarInt(nod->slot, 2);
+        setGNode(nod->slot, NULL);
+    }
+
+    free(nod);
+
+    return NODE_RET_DELETE;
+}
+
+//Function used to get region for apply post-process effects
+
+int8_t Rend_GetScreenPart(int32_t *x, int32_t *y, int32_t w, int32_t h, SDL_Surface *dst)
+{
+    if (dst != NULL)
+    {
+        SDL_Rect rct;
+        rct.x = *x;
+        rct.y = *y;
+        rct.w = w;
+        rct.h = h;
+
+        SDL_BlitSurface(scrbuf, &rct, dst, NULL);
+    }
+
+    if (Renderer == RENDER_FLAT)
+    {
+        if ((*x + w) < 0 ||
+            (*x) >= scrbuf->w ||
+            (*y + h) < 0 ||
+            (*y) >= scrbuf->h)
+            return 0;
+        else
+            return 1;
+    }
+    else if (Renderer == RENDER_PANA)
+    {
+        if ((*y + h) < 0 ||
+            (*y) >= scrbuf->h)
+            return 0;
+        else
+        {
+            int32_t xx = *x % pana_PanaWidth;
+
+            if (xx < 0)
+                xx = *x + pana_PanaWidth;
+
+            if (xx + w > (*view_X - GAMESCREEN_W_2) && xx < (*view_X + GAMESCREEN_W_2))
+            {
+                *x -= *view_X - GAMESCREEN_W_2;
+                return 1;
+            }
+
+            if (*view_X > (pana_PanaWidth - GAMESCREEN_W_2))
+            {
+                if (*x < (GAMESCREEN_W_2 - (pana_PanaWidth - *view_X)))
+                {
+                    *x += GAMESCREEN_W_2 + (pana_PanaWidth - *view_X);
+                    return 1;
+                }
+            }
+            else if (*view_X < GAMESCREEN_W_2)
+            {
+                if (*x + w > pana_PanaWidth - (GAMESCREEN_W_2 - *view_X))
+                {
+                    *x -= pana_PanaWidth - (GAMESCREEN_W_2 - *view_X);
+                    return 1;
+                }
+            }
+        }
+    }
+    else if (Renderer == RENDER_TILT)
+    {
+        printf("I HATE this shit! Write your code for tilt render in %s at %d line.\n", __FILE__, __LINE__);
+    }
+
+    return 0;
+}
+
+static int32_t Effects_GetColor(uint32_t x, uint32_t y)
 {
     int32_t color = 0;
 
@@ -1124,7 +1235,7 @@ int32_t Effects_GetColor(uint32_t x, uint32_t y)
     return color;
 }
 
-int8_t *Effects_Map_Useart(int32_t color, int32_t color_dlta, int32_t x, int32_t y, int32_t w, int32_t h)
+static int8_t *Effects_Map_Useart(int32_t color, int32_t color_dlta, int32_t x, int32_t y, int32_t w, int32_t h)
 {
     int8_t *tmp = (int8_t *)malloc(w * h);
     memset(tmp, 0, w * h);
@@ -1169,7 +1280,7 @@ int32_t Rend_EF_Light_Setup(char *string, int32_t x, int32_t y, int32_t w, int32
     if (eftmp == -1)
         return -1;
 
-    struct_effect *ef = Effects_GetEf(eftmp);
+    struct_effect_t *ef = Effects_GetEf(eftmp);
 
     if (ef == NULL)
     {
@@ -1186,7 +1297,7 @@ int32_t Rend_EF_Light_Setup(char *string, int32_t x, int32_t y, int32_t w, int32
 
         if (GAME_BPP == 32)
         {
-            dlt = FiveBitToEightBitLookupTable_SDL[(dlt & 0x1F)];
+            dlt = (dlt & 0x1F) * 8;
             dlt = SDL_MapRGB(scrbuf->format, dlt, dlt, dlt);
         }
         else if (GAME_BPP == 16)
@@ -1218,7 +1329,7 @@ int32_t Rend_EF_Light_Setup(char *string, int32_t x, int32_t y, int32_t w, int32
     return eftmp;
 }
 
-void Rend_EF_Light_Draw(struct_effect *ef)
+static void Rend_EF_Light_Draw(struct_effect_t *ef)
 {
     if (!ef->effect.ef1.surface)
         return;
@@ -1309,15 +1420,12 @@ void Rend_EF_Light_Draw(struct_effect *ef)
 
 int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s_y, float apml, float waveln, float spd)
 {
-
-    //    Effects |= REG_EF_WAVE;
-
     int32_t eftmp = Effects_AddEffect(EFFECT_WAVE);
 
     if (eftmp == -1)
         return -1;
 
-    struct_effect *ef = Effects_GetEf(eftmp);
+    struct_effect_t *ef = Effects_GetEf(eftmp);
 
     if (ef == NULL)
     {
@@ -1369,7 +1477,7 @@ int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s
     return eftmp;
 }
 
-void Rend_EF_Wave_Draw(struct_effect *ef)
+static void Rend_EF_Wave_Draw(struct_effect_t *ef)
 {
     if (!ef->effect.ef0.surface)
         return;
@@ -1461,90 +1569,9 @@ void Rend_EF_Wave_Draw(struct_effect *ef)
     DrawImageToSurf(ef->effect.ef0.surface, 0, 0, tempbuf);
 }
 
-//Function used to get region for apply post-process effects
-
-int8_t Rend_GetScreenPart(int32_t *x, int32_t *y, int32_t w, int32_t h, SDL_Surface *dst)
+static int32_t Effects_AddEffect(int32_t type)
 {
-    if (dst != NULL)
-    {
-        SDL_Rect rct;
-        rct.x = *x;
-        rct.y = *y;
-        rct.w = w;
-        rct.h = h;
-
-        SDL_BlitSurface(scrbuf, &rct, dst, NULL);
-    }
-
-    if (Renderer == RENDER_FLAT)
-    {
-        if ((*x + w) < 0 ||
-            (*x) >= scrbuf->w ||
-            (*y + h) < 0 ||
-            (*y) >= scrbuf->h)
-            return 0;
-        else
-            return 1;
-    }
-    else if (Renderer == RENDER_PANA)
-    {
-        if ((*y + h) < 0 ||
-            (*y) >= scrbuf->h)
-            return 0;
-        else
-        {
-            int32_t xx = *x % pana_PanaWidth;
-
-            if (xx < 0)
-                xx = *x + pana_PanaWidth;
-
-            if (xx + w > (*view_X - GAMESCREEN_W_2) && xx < (*view_X + GAMESCREEN_W_2))
-            {
-                *x -= *view_X - GAMESCREEN_W_2;
-                return 1;
-            }
-
-            if (*view_X > (pana_PanaWidth - GAMESCREEN_W_2))
-            {
-                if (*x < (GAMESCREEN_W_2 - (pana_PanaWidth - *view_X)))
-                {
-                    *x += GAMESCREEN_W_2 + (pana_PanaWidth - *view_X);
-                    return 1;
-                }
-            }
-            else if (*view_X < GAMESCREEN_W_2)
-            {
-                if (*x + w > pana_PanaWidth - (GAMESCREEN_W_2 - *view_X))
-                {
-                    *x -= pana_PanaWidth - (GAMESCREEN_W_2 - *view_X);
-                    return 1;
-                }
-            }
-        }
-    }
-    else if (Renderer == RENDER_TILT)
-    {
-        printf("I HATE this shit! Write your code for tilt render in %s at %d line.\n", __FILE__, __LINE__);
-    }
-
-    return 0;
-}
-
-void Effects_Process()
-{
-    for (int32_t i = 0; i < EFFECTS_MAX_CNT; i++) {
-        if (Effects[i].type == EFFECT_WAVE)
-            Rend_EF_Wave_Draw(&Effects[i]);
-        else if (Effects[i].type == EFFECT_LIGH)
-            Rend_EF_Light_Draw(&Effects[i]);
-        else if (Effects[i].type == EFFECT_9)
-            Rend_EF_9_Draw(&Effects[i]);
-    }
-}
-
-int32_t Effects_AddEffect(int32_t type)
-{
-    struct_effect *effect = NULL;
+    struct_effect_t *effect = NULL;
     int s = 0;
 
     for (; s < EFFECTS_MAX_CNT; s++) {
@@ -1590,11 +1617,11 @@ int32_t Effects_AddEffect(int32_t type)
     return s;
 }
 
-void Effects_Delete(uint32_t index)
+static void Effects_Delete(uint32_t index)
 {
     if (index < EFFECTS_MAX_CNT) {
 
-        struct_effect *effect = &Effects[index];
+        struct_effect_t *effect = &Effects[index];
 
         switch (effect->type)
         {
@@ -1626,35 +1653,16 @@ void Effects_Delete(uint32_t index)
                 free(effect->effect.ef9.cloud_mod);
             break;
         }
-        memset(effect, 0, sizeof(struct_effect));
+        memset(effect, 0, sizeof(struct_effect_t));
     }
 }
 
-struct_effect *Effects_GetEf(uint32_t index)
+static struct_effect_t *Effects_GetEf(uint32_t index)
 {
     if (index < EFFECTS_MAX_CNT)
         return &Effects[index];
     else
         return NULL;
-}
-
-int Rend_deleteRegion(struct_action_res *nod)
-{
-    if (nod->node_type != NODE_TYPE_REGION)
-        return NODE_RET_NO;
-
-    if (nod->nodes.node_region != -1)
-        Effects_Delete(nod->nodes.node_region);
-
-    if (nod->slot > 0)
-    {
-        SetgVarInt(nod->slot, 2);
-        setGNode(nod->slot, NULL);
-    }
-
-    free(nod);
-
-    return NODE_RET_DELETE;
 }
 
 int32_t Rend_EF_9_Setup(char *mask, char *clouds, int32_t delay, int32_t x, int32_t y, int32_t w, int32_t h)
@@ -1665,7 +1673,7 @@ int32_t Rend_EF_9_Setup(char *mask, char *clouds, int32_t delay, int32_t x, int3
     if (eftmp == -1)
         return -1;
 
-    struct_effect *ef = Effects_GetEf(eftmp);
+    struct_effect_t *ef = Effects_GetEf(eftmp);
 
     if (ef == NULL)
     {
@@ -1694,7 +1702,7 @@ int32_t Rend_EF_9_Setup(char *mask, char *clouds, int32_t delay, int32_t x, int3
     return eftmp;
 }
 
-void Rend_EF_9_Draw(struct_effect *ef)
+static void Rend_EF_9_Draw(struct_effect_t *ef)
 {
     if (!ef->effect.ef9.mapping)
         return;
@@ -1853,4 +1861,378 @@ void Rend_EF_9_Draw(struct_effect *ef)
 
         DrawImageToSurf(srf, x, y, tempbuf);
     }
+}
+
+
+
+
+
+void setGamma(float val)
+{
+    if (val > 0.4 && val < 2.1)
+    {
+        mgamma = val;
+        SDL_SetGamma(mgamma, mgamma, mgamma);
+    }
+}
+
+float getGamma()
+{
+    return mgamma;
+}
+
+void ConvertImage(SDL_Surface **tmp)
+{
+    SDL_Surface *tmp2 = SDL_ConvertSurface(*tmp, screen->format, SFTYPE);
+    SDL_FreeSurface(*tmp);
+    *tmp = tmp2;
+}
+
+SDL_Surface *CreateSurface(uint16_t w, uint16_t h)
+{
+    return SDL_CreateRGBSurface(SFTYPE, w, h, GAME_BPP, 0, 0, 0, 0);
+}
+
+anim_surf *LoadAnimImage(const char *file, int32_t mask)
+{
+#ifdef LOADTRACE
+    printf("fallback-mechanism\n");
+#endif
+    char buf[64];
+    const char *bufp;
+    strcpy(buf, file);
+    int len = strlen(buf);
+
+    bufp = GetFilePath(buf);
+    if (bufp == NULL)
+        return NULL;
+
+    SDL_Surface *tmp = IMG_Load(bufp);
+    //ConvertImage(&tmp);
+
+    buf[len - 1] = 'm';
+    buf[len - 2] = 'n';
+    buf[len - 3] = 'a';
+
+    bufp = GetExactFilePath(buf);
+    if (bufp == NULL)
+        return NULL;
+
+    anim_surf *atmp = NEW(anim_surf);
+
+    FILE *ff = fopen(bufp, "rb");
+    fread(&atmp->info, 1, sizeof(atmp->info), ff);
+    fclose(ff);
+
+    //atmp->info.time&=0x7f;
+
+    typedef SDL_Surface *PSDL_Surface;
+
+    atmp->info.time /= 10;
+    atmp->img = NEW_ARRAY(PSDL_Surface, atmp->info.frames); //frames * sizeof(SDL_Surface *));
+
+    for (uint8_t i = 0; i < atmp->info.frames; i++)
+    {
+        atmp->img[i] = CreateSurface(atmp->info.w, atmp->info.h);
+        if (mask != 0 && mask != -1)
+            SDL_SetColorKey(atmp->img[i], SDL_SRCCOLORKEY, mask);
+        SDL_Rect rtmp;
+        rtmp.x = 0;
+        rtmp.y = i * atmp->info.h;
+        rtmp.w = atmp->info.w;
+        rtmp.h = atmp->info.h;
+        SDL_BlitSurface(tmp, &rtmp, atmp->img[i], 0);
+    }
+
+    SDL_FreeSurface(tmp);
+
+    return atmp;
+}
+
+void DrawAnimImageToSurf(anim_surf *anim, int x, int y, int frame, SDL_Surface *surf)
+{
+    if (!anim || !surf)
+        return;
+
+    if (frame >= anim->info.frames)
+        return;
+
+    DrawImageToSurf(anim->img[frame], x, y, surf);
+}
+
+void FreeAnimImage(anim_surf *anim)
+{
+    if (!anim)
+        return;
+
+    if (anim)
+    {
+        int32_t frames = anim->info.frames;
+        for (int i = 0; i < frames; i++)
+            if (anim->img[i])
+                SDL_FreeSurface(anim->img[i]);
+
+        free(anim->img);
+        free(anim);
+    }
+}
+
+void DrawImage(SDL_Surface *surf, int16_t x, int16_t y)
+{
+    if (!surf)
+        return;
+
+    SDL_Rect tmp;
+    tmp.x = x; //ceil(x*sc_fac);
+    tmp.y = y; //ceil(y*sc_fac);
+    tmp.w = 0;
+    tmp.h = 0;
+    SDL_BlitSurface(surf, 0, screen, &tmp);
+}
+
+void DrawImageToSurf(SDL_Surface *surf, int16_t x, int16_t y, SDL_Surface *dest)
+{
+    if (!surf || !dest)
+        return;
+
+    SDL_Rect tmp;
+    tmp.x = x; //ceil(x*sc_fac);
+    tmp.y = y; //ceil(y*sc_fac);
+    tmp.w = 0;
+    tmp.h = 0;
+    //SDL_StretchSurfaceBlit(surf,0,dest,0);
+    SDL_BlitSurface(surf, 0, dest, &tmp);
+}
+
+void SetColorKey(SDL_Surface *surf, int8_t r, int8_t g, int8_t b)
+{
+    SDL_SetColorKey(surf, SDL_SRCCOLORKEY, Rend_MapScreenRGB(r, g, b));
+}
+
+scaler *CreateScaler(SDL_Surface *src, uint16_t w, uint16_t h)
+{
+    scaler *tmp = NEW(scaler);
+    tmp->surf = src;
+
+    tmp->w = w;
+    tmp->h = h;
+    tmp->offsets = NULL;
+
+    if (w == src->w && h == src->h)
+        return tmp;
+
+    tmp->offsets = (int32_t *)malloc(tmp->w * tmp->h * sizeof(int32_t));
+
+    float xfac = tmp->surf->w / (float)tmp->w;
+    float yfac = tmp->surf->h / (float)tmp->h;
+
+    int32_t pos = 0;
+
+    int32_t *tmpofs = tmp->offsets;
+
+    for (int16_t yy = 0; yy < tmp->h; yy++)
+        for (int16_t xx = 0; xx < tmp->w; xx++)
+        {
+            int32_t newx = xx * xfac;
+            int32_t newy = yy * yfac;
+            int32_t posofs = newx + newy * tmp->surf->w;
+
+            *tmpofs = posofs - pos;
+
+            tmpofs++;
+
+            pos = posofs;
+        }
+
+    return tmp;
+}
+
+void DeleteScaler(scaler *scal)
+{
+    if (scal->offsets != NULL)
+        free(scal->offsets);
+
+    free(scal);
+}
+
+void DrawScaler(scaler *scal, int16_t x, int16_t y, SDL_Surface *dst)
+{
+    if (!scal)
+        return;
+    if ((scal->surf->format->BytesPerPixel != dst->format->BytesPerPixel) ||
+        x >= dst->w || y >= dst->h || x <= -scal->w || y <= -scal->h)
+        return;
+
+    if (scal->offsets == NULL)
+        DrawImageToSurf(scal->surf, x, y, dst);
+    else
+    {
+        if (x >= 0 && y >= 0 &&
+            x + scal->w <= dst->w &&
+            y + scal->h <= dst->h)
+        {
+            int32_t oneline = dst->w - scal->w;
+
+            SDL_LockSurface(scal->surf);
+            SDL_LockSurface(dst);
+
+            if (GAME_BPP == 32)
+            {
+                int32_t *ofs = (int32_t *)dst->pixels;
+
+                ofs += y * dst->w + x;
+
+                int32_t *ifs = (int32_t *)scal->surf->pixels;
+                int32_t *dlt = scal->offsets;
+
+                for (int16_t yy = 0; yy < scal->h; yy++)
+                {
+                    for (int16_t xx = 0; xx < scal->w; xx++)
+                    {
+                        ifs += *dlt;
+                        *ofs = *ifs;
+                        ofs++;
+                        dlt++;
+                    }
+
+                    ofs += oneline;
+                }
+            }
+            else if (GAME_BPP == 16)
+            {
+                int16_t *ofs = (int16_t *)dst->pixels;
+
+                ofs += y * dst->w + x;
+
+                int16_t *ifs = (int16_t *)scal->surf->pixels;
+                int32_t *dlt = scal->offsets;
+
+                for (int16_t yy = 0; yy < scal->h; yy++)
+                {
+                    for (int16_t xx = 0; xx < scal->w; xx++)
+                    {
+                        ifs += *dlt;
+                        *ofs = *ifs;
+                        ofs++;
+                        dlt++;
+                    }
+
+                    ofs += oneline;
+                }
+            }
+            else
+            {
+                printf("Produce your scaler code there \"%s\":%d\n", __FILE__, __LINE__);
+            }
+            SDL_UnlockSurface(scal->surf);
+            SDL_UnlockSurface(dst);
+        }
+        else
+        {
+            int32_t oneline = dst->w - scal->w;
+
+            SDL_LockSurface(scal->surf);
+            SDL_LockSurface(dst);
+
+            if (GAME_BPP == 32)
+            {
+                int32_t *ofs = (int32_t *)dst->pixels;
+                int32_t *maxofs = ofs, *minofs = ofs;
+
+                maxofs += dst->w * dst->h;
+
+                ofs += y * dst->w + x;
+
+                int16_t lx = 0, rx = scal->w;
+
+                if (x < 0)
+                    lx = -x;
+
+                if (x + scal->w >= dst->w)
+                    rx = dst->w - x;
+
+                int32_t *ifs = (int32_t *)scal->surf->pixels;
+                int32_t *dlt = scal->offsets;
+
+                for (int16_t yy = 0; yy < scal->h; yy++)
+                {
+                    for (int16_t xx = 0; xx < scal->w; xx++)
+                    {
+                        ifs += *dlt;
+                        if (ofs >= minofs && ofs < maxofs &&
+                            xx >= lx && xx < rx)
+                            *ofs = *ifs;
+                        ofs++;
+                        dlt++;
+                    }
+
+                    ofs += oneline;
+                }
+            }
+            else if (GAME_BPP == 16)
+            {
+                int16_t *ofs = (int16_t *)dst->pixels;
+                int16_t *maxofs = ofs, *minofs = ofs;
+
+                maxofs += dst->w * dst->h;
+
+                ofs += y * dst->w + x;
+
+                int16_t lx = 0, rx = scal->w;
+
+                if (x < 0)
+                    lx = -x;
+
+                if (x + scal->w >= dst->w)
+                    rx = dst->w - x;
+
+                int16_t *ifs = (int16_t *)scal->surf->pixels;
+                int32_t *dlt = scal->offsets;
+
+                for (int16_t yy = 0; yy < scal->h; yy++)
+                {
+                    for (int16_t xx = 0; xx < scal->w; xx++)
+                    {
+                        ifs += *dlt;
+                        if (ofs >= minofs && ofs < maxofs &&
+                            xx >= lx && xx < rx)
+                            *ofs = *ifs;
+                        ofs++;
+                        dlt++;
+                    }
+
+                    ofs += oneline;
+                }
+            }
+            else
+            {
+                printf("Produce your scaler code there \"%s\":%d\n", __FILE__, __LINE__);
+            }
+            SDL_UnlockSurface(scal->surf);
+            SDL_UnlockSurface(dst);
+        }
+    }
+}
+
+void DrawScalerToScreen(scaler *scal, int16_t x, int16_t y)
+{
+    DrawScaler(scal, x, y, screen);
+}
+
+int32_t GetFps()
+{
+    return fps;
+}
+
+void FpsCounter()
+{
+    if (millisec() > time)
+    {
+        fps = frames;
+        if (fps == 0)
+            fps = 1;
+        frames = 0;
+        time = millisec() + 1000;
+    }
+    frames++;
 }

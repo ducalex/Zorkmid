@@ -3,6 +3,12 @@
 
 #include "Subtitles.h"
 
+#ifdef SMPEG_SUPPORT
+#include <smpeg/smpeg.h>
+#endif
+
+#include "avi_duck/simple_avi.h"
+
 extern int GAME_W;
 extern int GAME_H;
 extern int GAME_BPP;
@@ -52,7 +58,7 @@ struct struct_SubRect
     bool todelete;
 };
 
-struct struct_distort
+typedef struct
 {
     int32_t speed;
     float st_angl;
@@ -67,6 +73,46 @@ struct struct_distort
     int32_t cur_frame;
     bool increase;
     float param1;
+} distort_t;
+
+struct anim_surf
+{
+    SDL_Surface **img;
+    struct info {
+        uint32_t w;
+        uint32_t h;
+        uint32_t time;
+        uint32_t frames;
+    } info;
+};
+
+#ifdef SMPEG_SUPPORT
+struct anim_mpg
+{
+    SDL_Surface *img;
+    SMPEG *mpg;
+    SMPEG_Info inf;
+    bool pld;
+    bool loop;
+    int32_t lastfrm;
+};
+#endif
+
+struct anim_avi
+{
+    SDL_Surface *img;
+    avi_file *av;
+    bool pld;
+    bool loop;
+    int32_t lastfrm;
+};
+
+struct scaler
+{
+    int32_t *offsets;
+    uint16_t w;
+    uint16_t h;
+    SDL_Surface *surf;
 };
 
 void Rend_DrawImageToScr(SDL_Surface *scr, int x, int y);
@@ -103,18 +149,16 @@ void Rend_PanaMouseInteract();
 void Rend_MouseInteractOfRender();
 void Rend_tilt_MouseInteract();
 void Rend_RenderFunc();
-void Rend_InitGraphics(bool fullscreen, char *fontpath);
+void Rend_InitGraphics(bool fullscreen);
 void Rend_SwitchFullscreen();
 void Rend_SetDelay(int32_t delay);
+TTF_Font *txt_get_font_by_name(char *name, int size);
 SDL_Surface *Rend_GetLocationScreenImage();
 struct_SubRect *Rend_CreateSubRect(int x, int y, int w, int h);
 void Rend_DeleteSubRect(struct_SubRect *erect);
-void Rend_ClearSubs();
 void Rend_ProcessSubs();
-struct_SubRect *Rend_GetSubById(int id);
 void Rend_DelaySubDelete(struct_SubRect *sub, int32_t time);
 SDL_Surface *Rend_GetGameScreen();
-SDL_Surface *Rend_GetWindowSurface();
 uint32_t Rend_MapScreenRGB(int r, int g, int b);
 void Rend_ScreenFlip();
 struct_action_res *Rend_CreateDistortNode();
@@ -123,67 +167,26 @@ int32_t Rend_DeleteDistortNode(struct_action_res *nod);
 int Rend_deleteRegion(struct_action_res *nod);
 int8_t Rend_GetScreenPart(int32_t *x, int32_t *y, int32_t w, int32_t h, SDL_Surface *dst);
 
-/***************Effects section******************/
-
-#define EFFECTS_MAX_CNT 32
-
-#define EFFECT_WAVE 1
-#define EFFECT_LIGH 2
-#define EFFECT_9 4
-
-void Effects_Process();
-void Effects_Delete(uint32_t index);
-struct_effect *Effects_GetEf(uint32_t index);
-int32_t Effects_AddEffect(int32_t type);
-int32_t Effects_GetColor(uint32_t x, uint32_t y);
-
 int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s_y, float apml, float waveln, float spd);
 int32_t Rend_EF_Light_Setup(char *string, int32_t x, int32_t y, int32_t w, int32_t h, int32_t delay, int32_t steps);
 int32_t Rend_EF_9_Setup(char *mask, char *clouds, int32_t delay, int32_t x, int32_t y, int32_t w, int32_t h);
-void Rend_EF_9_Draw(struct_effect *ef);
 
-void Rend_Effect(SDL_Surface *srf); //test-wave effect
 
-struct effect0 //water
-{
-    int32_t frame;
-    int32_t frame_cnt;
-    int8_t **ampls;
-    SDL_Surface *surface;
-};
-
-struct effect1 //lightning
-{
-    int8_t *map; // 0 - no; !0 - draw
-    int8_t sign;
-    int32_t stp;
-    int32_t maxstp;
-    SDL_Surface *surface;
-};
-
-struct effect9
-{
-    int8_t *cloud_mod;
-    SDL_Surface *cloud;
-    SDL_Surface *mask;
-    SDL_Surface *mapping;
-};
-
-struct struct_effect
-{
-    int32_t type;
-    int32_t delay;
-    int32_t time;
-    int32_t w;
-    int32_t h;
-    int32_t x;
-    int32_t y;
-    union effect
-    {
-        effect0 ef0;
-        effect1 ef1;
-        effect9 ef9;
-    } effect;
-};
+SDL_Surface *CreateSurface(uint16_t w, uint16_t h);
+void ConvertImage(SDL_Surface **tmp);
+void DrawImage(SDL_Surface *surf, int16_t x, int16_t y);
+void DrawImageToSurf(SDL_Surface *surf, int16_t x, int16_t y, SDL_Surface *dest);
+void SetColorKey(SDL_Surface *surf, int8_t r, int8_t g, int8_t b);
+anim_surf *LoadAnimImage(const char *file, int32_t mask);
+void DrawAnimImageToSurf(anim_surf *anim, int x, int y, int frame, SDL_Surface *surf);
+void FreeAnimImage(anim_surf *anim);
+scaler *CreateScaler(SDL_Surface *src, uint16_t w, uint16_t h);
+void DeleteScaler(scaler *scal);
+void DrawScaler(scaler *scal, int16_t x, int16_t y, SDL_Surface *dst);
+void DrawScalerToScreen(scaler *scal, int16_t x, int16_t y);
+int32_t GetFps();
+void FpsCounter();
+void setGamma(float val);
+float getGamma();
 
 #endif // RENDER_H_INCLUDED

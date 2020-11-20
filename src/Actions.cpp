@@ -1,7 +1,7 @@
 #include "Actions.h"
 
-#define TRACE_ACTION()  printf("      > %s(%s)\n", __func__, params);
-// #define TRACE_ACTION {}
+// #define TRACE_ACTION()  printf("      > %s(%s)\n", __func__, params);
+#define TRACE_ACTION() {}
 
 int action_set_screen(char *params, int aSlot, pzllst *owner)
 {
@@ -37,13 +37,13 @@ int action_set_partial_screen(char *params, int aSlot, pzllst *owner)
     if (tmp2 > 0)
     {
         int r, g, b;
-        b = FiveBitToEightBitLookupTable_SDL[((tmp2 >> 10) & 0x1F)];
-        g = FiveBitToEightBitLookupTable_SDL[((tmp2 >> 5) & 0x1F)];
-        r = FiveBitToEightBitLookupTable_SDL[(tmp2 & 0x1F)];
+        b = ((tmp2 >> 10) & 0x1F) * 8;
+        g = ((tmp2 >> 5) & 0x1F) * 8;
+        r = (tmp2 & 0x1F) * 8;
 #ifdef TRACE
         printf("        action:set_partial_screen Color Key (%x %x %x)\n", r, g, b);
 #endif
-        tmp = loader_LoadFile(file, Rend_GetRenderer() == RENDER_PANA, Rend_MapScreenRGB(r, g, b));
+        tmp = loader_LoadFile_key(file, Rend_GetRenderer() == RENDER_PANA, Rend_MapScreenRGB(r, g, b));
     }
     else
         tmp = loader_LoadFile(file, Rend_GetRenderer() == RENDER_PANA);
@@ -215,7 +215,6 @@ int action_streamvideo(char *params, int aSlot, pzllst *owner)
 #ifdef SMPEG_SUPPORT
     if (strCMP((file + tmp - 3), "mpg") == 0)
     {
-
         anim_mpg *anm = NEW(anim_mpg);
         Mix_Chunk *aud = NULL;
 
@@ -268,7 +267,7 @@ int action_streamvideo(char *params, int aSlot, pzllst *owner)
 
         while (SMPEG_status(anm->mpg) != SMPEG_STOPPED)
         {
-            UpdateGameSystem();
+            GameUpdate();
 
             if (KeyHit(SDLK_SPACE))
                 SMPEG_stop(anm->mpg);
@@ -348,7 +347,7 @@ int action_streamvideo(char *params, int aSlot, pzllst *owner)
 
         while (anm->av->status == AVI_PLAY)
         {
-            UpdateGameSystem();
+            GameUpdate();
 
             if (KeyHit(SDLK_SPACE))
                 avi_stop(anm->av);
@@ -450,9 +449,9 @@ int action_animplay(char *params, int aSlot, pzllst *owner)
 
     if (mask2 != -1 && mask2 != 0)
     {
-        b = FiveBitToEightBitLookupTable_SDL[((mask2 >> 10) & 0x1F)];
-        g = FiveBitToEightBitLookupTable_SDL[((mask2 >> 5) & 0x1F)];
-        r = FiveBitToEightBitLookupTable_SDL[(mask2 & 0x1F)];
+        b = ((mask2 >> 10) & 0x1F) * 8;
+        g = ((mask2 >> 5) & 0x1F) * 8;
+        r = (mask2 & 0x1F) * 8;
         mask2 = r | g << 8 | b << 16;
     }
 
@@ -828,7 +827,7 @@ int action_ttytext(char *params, int aSlot, pzllst *owner)
     nod->slot = aSlot;
     nod->owner = owner;
 
-    mfile *fl = mfopen(fil);
+    mfile_t *fl = mfopen(fil);
     m_wide_to_utf8(fl);
 
     int32_t flsize = fl->size;
@@ -852,9 +851,8 @@ int action_ttytext(char *params, int aSlot, pzllst *owner)
     nod->nodes.tty_text->txtsize = j;
     free(tmp);
 
-    txt_readfontstyle(&nod->nodes.tty_text->style, nod->nodes.tty_text->txtbuf);
-    nod->nodes.tty_text->fnt = GetFontByName(nod->nodes.tty_text->style.fontname, nod->nodes.tty_text->style.size);
-
+    txt_get_font_style(&nod->nodes.tty_text->style, nod->nodes.tty_text->txtbuf);
+    nod->nodes.tty_text->fnt = txt_get_font_by_name(nod->nodes.tty_text->style.fontname, nod->nodes.tty_text->style.size);
     nod->nodes.tty_text->w = w;
     nod->nodes.tty_text->h = h;
     nod->nodes.tty_text->x = x;
@@ -1145,10 +1143,7 @@ int action_menu_bar_enable(char *params, int aSlot, pzllst *owner)
 {
     TRACE_ACTION();
 
-    uint16_t val;
-    val = GetIntVal(params);
-
-    menu_SetMenuBarVal(val);
+    menu_SetMenuBarVal(GetIntVal(params));
 
     return ACTION_NORMAL;
 }
@@ -1157,10 +1152,7 @@ int action_delay_render(char *params, int aSlot, pzllst *owner)
 {
     TRACE_ACTION();
 
-    uint16_t val;
-    val = GetIntVal(params);
-
-    Rend_SetDelay(val);
+    Rend_SetDelay(GetIntVal(params));
 
     return ACTION_NORMAL;
 }
@@ -1299,7 +1291,7 @@ int action_quit(char *params, int aSlot, pzllst *owner)
     TRACE_ACTION();
 
     if (atoi(params) == 1)
-        END();
+        GameQuit();
     else
         ifquit();
 

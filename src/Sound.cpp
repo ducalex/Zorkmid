@@ -29,8 +29,14 @@ int GetLogVol(uint8_t linear)
         return 0;
 }
 
-void InitMusic()
+void InitSound()
 {
+    if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+    {
+        printf("Unable to init SDL: %s\n", SDL_GetError());
+        exit(1);
+    }
+
     Mix_OpenAudio(audio_rate, audio_format, audio_channels, audio_buffers);
     memset(ChanStatus, 0, sizeof(ChanStatus));
     CHANNELS = Mix_AllocateChannels(TRY_CHANNELS);
@@ -132,7 +138,7 @@ int snd_ProcessWav(struct_action_res *nod)
     if (nod->node_type != NODE_TYPE_MUSIC)
         return NODE_RET_OK;
 
-    musicnode *mnod = nod->nodes.node_music;
+    musicnode_t *mnod = nod->nodes.node_music;
 
     if (!Mix_Playing(mnod->chn))
     {
@@ -222,7 +228,7 @@ struct_action_res *snd_CreateWavNode()
     struct_action_res *tmp;
     tmp = ScrSys_CreateActRes(NODE_TYPE_MUSIC);
 
-    tmp->nodes.node_music = NEW(musicnode);
+    tmp->nodes.node_music = NEW(musicnode_t);
     tmp->nodes.node_music->chn = -1;
     tmp->nodes.node_music->chunk = NULL;
     tmp->nodes.node_music->volume = 100;
@@ -247,7 +253,7 @@ struct_action_res *snd_CreateSyncNode()
     struct_action_res *tmp;
     tmp = ScrSys_CreateActRes(NODE_TYPE_SYNCSND);
 
-    tmp->nodes.node_sync = NEW(struct_syncnode);
+    tmp->nodes.node_sync = NEW(syncnode_t);
     tmp->nodes.node_sync->chn = -1;
     tmp->nodes.node_sync->chunk = NULL;
     tmp->nodes.node_sync->syncto = 0;
@@ -285,7 +291,7 @@ int snd_ProcessSync(struct_action_res *nod)
     if (nod->node_type != NODE_TYPE_SYNCSND)
         return NODE_RET_OK;
 
-    struct_syncnode *mnod = nod->nodes.node_sync;
+    syncnode_t *mnod = nod->nodes.node_sync;
 
     if (mnod->sub != NULL)
         sub_ProcessSub(mnod->sub, GetChanTime(mnod->chn) / 100);

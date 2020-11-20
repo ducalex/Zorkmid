@@ -1,8 +1,6 @@
 #ifndef SCRIPTSYSTEM_H_INCLUDED
 #define SCRIPTSYSTEM_H_INCLUDED
 
-#include "types.h"
-
 //Maximal number of same puzzles in the statebox stack
 //For increasing speed of engine
 //May cause errors, but should not
@@ -115,11 +113,11 @@
 #define NODE_RET_DELETE 1
 #define NODE_RET_NO 2
 
-struct StateBoxEnt
+typedef struct
 {
     puzzlenode *nod[MaxStateBoxEnts];
     int32_t cnt;
-};
+} StateBoxEnt_t;
 
 struct pzllst
 {
@@ -136,14 +134,14 @@ struct struct_action_res
     int8_t node_type;
     union nodes
     {
-        musicnode *node_music;
+        musicnode_t *node_music;
         animnode *node_anim;
         animnode *node_animpre;
         anim_preplay_node *node_animpreplay;
-        struct_syncnode *node_sync;
+        syncnode_t *node_sync;
         int32_t node_timer;
-        struct_ttytext *tty_text;
-        struct_distort *distort;
+        ttytext_t *tty_text;
+        distort_t *distort;
 
         int32_t node_pantracking;
         int32_t node_region;
@@ -164,26 +162,17 @@ void setGNode(int32_t indx, struct_action_res *data);
 
 void ScrSys_AddToActResList(void *);
 const char *ScrSys_ReturnListName(pzllst *lst);
-MList *ScrSys_FindResAllBySlot(int32_t slot);
 void ScrSys_ProcessAllRes();
-void ScrSys_SetSystemClass(char World, char Room);
-uint8_t ScrSys_GetSystemWorld();
-uint8_t ScrSys_GetSystemRoom();
 void ScrSys_DeleteAllRes();
 uint8_t ScrSys_GetFlag(uint32_t indx);
 void ScrSys_SetFlag(uint32_t indx, uint8_t newval);
-bool ScrSys_SlotIsOwned(uint32_t i);
 void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X, bool force_all);
 void ScrSys_exec_puzzle_list(pzllst *lst);
 int ScrSys_DeleteNode(struct_action_res *nod);
 void ScrSys_FlushResourcesByOwner(pzllst *owner);
 void ScrSys_FlushResourcesByType(int type);
-void ScrSys_HardFlushResourcesByType(int type);
 bool ScrSys_BreakExec();
 void ScrSys_SetBreak();
-bool ScrSys_SlotIsOwned2(int32_t i);
-void ScrSys_FlushGNodes();
-void ScrSys_RereadGNodes();
 void ScrSys_SaveGame(char *file);
 void ScrSys_LoadGame(char *file);
 void ScrSys_PrepareSaveBuffer();
@@ -194,7 +183,7 @@ struct_action_res *ScrSys_CreateActRes(int type);
 void SetgVarInt(int32_t indx, int var);
 int GetgVarInt(int32_t indx);
 void SetDirectgVarInt(uint32_t indx, int var);
-int *getdirectvar(uint32_t indx);
+int *GetDirectgVarInt(uint32_t indx);
 
 void LoadScriptFile(pzllst *lst, FManNode *filename, bool control, MList *controlst);
 void InitScriptsEngine();

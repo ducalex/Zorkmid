@@ -1,9 +1,76 @@
 #include "System.h"
 
-struct_txt_style *txt_init_txt_struct(struct_txt_style *style)
+static MList *FontList;
+
+void txt_LoadFonts(void)
+{
+    char fontsdir[512];
+    sprintf(fontsdir, "%s/%s", GetAppPath(), "FONTS");
+
+    FontList = CreateMList();
+
+    DIR *dr = opendir(fontsdir);
+
+    if (dr == NULL)
+    {
+        printf("Unable to open folder %s\n", fontsdir);
+        exit(1);
+    }
+
+    TTF_Init();
+
+    printf("Loading fonts from %s\n", fontsdir);
+
+    char buf[255];
+
+    dirent *de = readdir(dr);
+    while (de)
+    {
+        if (strcmp(de->d_name, "..") != 0 && strcmp(de->d_name, ".") != 0)
+        {
+            sprintf(buf, "%s/%s", fontsdir, de->d_name);
+
+            printf("Adding font '%s'\n", buf);
+
+            TTF_Font *fnt = TTF_OpenFont(buf, 10);
+            if (fnt != NULL)
+            {
+                graph_font_t *tmpfnt = NEW(graph_font_t);
+                strncpy(tmpfnt->Name, TTF_FontFaceFamilyName(fnt), 63);
+                strncpy(tmpfnt->path, buf, 255);
+                AddToMList(FontList, tmpfnt);
+                TTF_CloseFont(fnt);
+            }
+        }
+        de = readdir(dr);
+    }
+    closedir(dr);
+}
+
+TTF_Font *txt_get_font_by_name(char *name, int size)
+{
+    graph_font_t *fnt = NULL;
+
+    StartMList(FontList);
+    while (!eofMList(FontList))
+    {
+        fnt = (graph_font_t *)DataMList(FontList);
+        if (strCMP(fnt->Name, name) == 0)
+            break;
+
+        NextMList(FontList);
+    }
+
+    if (fnt == NULL)
+        return NULL;
+
+    return TTF_OpenFont(fnt->path, size);
+}
+
+txt_style_t *txt_init_txt_struct(txt_style_t *style)
 {
     if (style == NULL) {
-        style = NEW(struct_txt_style);
+        style = NEW(txt_style_t);
     }
 
     style->blue = 255;
@@ -24,7 +91,7 @@ struct_txt_style *txt_init_txt_struct(struct_txt_style *style)
     return style;
 }
 
-int8_t txt_parse_txt_params(struct_txt_style *style, const char *strin, int32_t len)
+int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
 {
     char buf[TXT_CFG_BUF_MAX_LEN];
     memcpy(buf, strin, len);
@@ -330,7 +397,7 @@ void txt_DrawTxtWithJustify(char *txt, TTF_Font *fnt, SDL_Color clr, SDL_Surface
     SDL_FreeSurface(aaa);
 }
 
-void txt_readfontstyle(struct_txt_style *style, char *strin)
+void txt_get_font_style(txt_style_t *style, char *strin)
 {
     int32_t strt = -1;
     int32_t endt = -1;
@@ -351,7 +418,7 @@ void txt_readfontstyle(struct_txt_style *style, char *strin)
     }
 }
 
-void txt_set_font_style(TTF_Font *font, struct_txt_style *fnt_stl)
+void txt_set_font_style(TTF_Font *font, txt_style_t *fnt_stl)
 {
     int32_t temp_stl = 0;
 
@@ -372,9 +439,9 @@ void txt_set_font_style(TTF_Font *font, struct_txt_style *fnt_stl)
     TTF_SetFontStyle(font, temp_stl);
 }
 
-int32_t txt_DrawTxt(char *txt, struct_txt_style *fnt_stl, SDL_Surface *dst)
+int32_t txt_DrawTxt(char *txt, txt_style_t *fnt_stl, SDL_Surface *dst)
 {
-    TTF_Font *temp_font = GetFontByName(fnt_stl->fontname, fnt_stl->size);
+    TTF_Font *temp_font = txt_get_font_by_name(fnt_stl->fontname, fnt_stl->size);
     if (!temp_font)
     {
         printf("TTF_OpenFont: %s\n", TTF_GetError());
@@ -398,7 +465,7 @@ int32_t txt_DrawTxt(char *txt, struct_txt_style *fnt_stl, SDL_Surface *dst)
     return w;
 }
 
-SDL_Surface *txt_RenderUTF8(TTF_Font *fnt, char *text, struct_txt_style *style)
+SDL_Surface *txt_RenderUTF8(TTF_Font *fnt, char *text, txt_style_t *style)
 {
     txt_set_font_style(fnt, style);
     SDL_Color clr = {style->red, style->green, style->blue, 255};
@@ -407,7 +474,7 @@ SDL_Surface *txt_RenderUTF8(TTF_Font *fnt, char *text, struct_txt_style *style)
 
 void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
 {
-    struct_txt_style style, style2;
+    txt_style_t style, style2;
     txt_init_txt_struct(&style);
     int32_t strt = -1;
     int32_t endt = -1;
@@ -432,7 +499,7 @@ void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
 
     TTF_Font *font = NULL;
 
-    font = GetFontByName(style.fontname, style.size);
+    font = txt_get_font_by_name(style.fontname, style.size);
     txt_set_font_style(font, &style);
 
     int32_t prevbufspace = 0, prevtxtspace = 0;
@@ -475,7 +542,7 @@ void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
                 if (ret & TXT_RET_FNTCHG)
                 {
                     TTF_CloseFont(font);
-                    font = GetFontByName(style.fontname, style.size);
+                    font = txt_get_font_by_name(style.fontname, style.size);
                     txt_set_font_style(font, &style);
                 }
                 if (ret & TXT_RET_FNTSTL)
@@ -578,7 +645,7 @@ struct_action_res *txt_CreateTTYtext()
 {
     struct_action_res *tmp = ScrSys_CreateActRes(NODE_TYPE_TTYTEXT);
 
-    tmp->nodes.tty_text = NEW(struct_ttytext);
+    tmp->nodes.tty_text = NEW(ttytext_t);
     tmp->nodes.tty_text->delay = 0;
     txt_init_txt_struct(&tmp->nodes.tty_text->style);
     tmp->nodes.tty_text->fnt = NULL;
@@ -619,13 +686,13 @@ int txt_DeleteTTYtext(struct_action_res *nod)
     return NODE_RET_DELETE;
 }
 
-void ttynewline(struct_ttytext *tty)
+void ttynewline(ttytext_t *tty)
 {
     tty->dy += tty->style.size;
     tty->dx = 0;
 }
 
-void ttyscroll(struct_ttytext *tty)
+void ttyscroll(ttytext_t *tty)
 {
     int32_t scroll = 0;
     while (tty->dy - scroll > tty->h - tty->style.size)
@@ -637,7 +704,7 @@ void ttyscroll(struct_ttytext *tty)
     tty->dy -= scroll;
 }
 
-void outchartotty(uint16_t chr, struct_ttytext *tty)
+void outchartotty(uint16_t chr, ttytext_t *tty)
 {
     SDL_Color clr = {tty->style.red, tty->style.green, tty->style.blue, 255};
 
@@ -671,7 +738,7 @@ int txt_ProcessTTYtext(struct_action_res *nod)
     if (nod->node_type != NODE_TYPE_TTYTEXT)
         return NODE_RET_NO;
 
-    struct_ttytext *tty = nod->nodes.tty_text;
+    ttytext_t *tty = nod->nodes.tty_text;
 
     tty->nexttime -= GetDTime();
 
@@ -694,7 +761,7 @@ int txt_ProcessTTYtext(struct_action_res *nod)
                     if (ret & TXT_RET_FNTCHG)
                     {
                         TTF_CloseFont(tty->fnt);
-                        tty->fnt = GetFontByName(tty->style.fontname, tty->style.size);
+                        tty->fnt = txt_get_font_by_name(tty->style.fontname, tty->style.size);
                         txt_set_font_style(tty->fnt, &tty->style);
                     }
                     if (ret & TXT_RET_FNTSTL)

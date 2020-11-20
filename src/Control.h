@@ -37,7 +37,7 @@
 #define CTRL_PUSH_EV_DWN 1
 #define CTRL_PUSH_EV_DBL 2
 
-struct Rect
+typedef struct
 {
     int32_t x;
     int32_t y;
@@ -51,11 +51,9 @@ struct Rect
         int32_t h;
         int32_t y2;
     };
-};
+} Rect_t;
 
-void InitRect(Rect *rct);
-
-struct pushnode
+typedef struct
 {
     bool flat; //true - flat, false - warp
     int32_t x;
@@ -65,61 +63,55 @@ struct pushnode
     int16_t count_to;
     int16_t cursor;
     int8_t event; // 0 - up, 1 - down, 2 - double
-};
+} pushnode_t;
 
-struct slotnode
+typedef struct
 {
     bool flat; //true - flat, false - warp
-    Rect rectangle;
-    //int warp;
+    Rect_t rectangle;
     char distance_id[MINIBUFSZ];
-    Rect hotspot;
-    //int do_skip;
-    //int8_t event;
+    Rect_t hotspot;
     int32_t *eligible_objects;
     int32_t eligable_cnt;
     int16_t cursor;
     int32_t loaded_img;
     SDL_Surface *srf;
-};
+} slotnode_t;
 
-struct inputnode
+typedef struct
 {
-    Rect rectangle;
-    Rect hotspot;
+    Rect_t rectangle;
+    Rect_t hotspot;
     SDL_Surface *rect;
     int32_t next_tab;
-
     char text[SAVE_NAME_MAX_LEN + 1];
     int16_t textwidth;
     bool textchanged;
-
     anim_surf *cursor;
     int32_t frame;
     int32_t period;
     bool readonly;
     bool enterkey;
-
     bool focused;
-    struct_txt_style string_init;
-    struct_txt_style string_chooser_init;
-};
+    txt_style_t string_init;
+    txt_style_t string_chooser_init;
+} inputnode_t;
 
-struct saveloadnode
+typedef struct
 {
     bool forsaving;
     int32_t inputslot[MAX_SAVES];
     ctrlnode *input_nodes[MAX_SAVES];
     char Names[MAX_SAVES][SAVE_NAME_MAX_LEN + 1];
-};
+} saveloadnode_t;
 
-struct levernode
+typedef struct
 {
     int16_t cursor;
     //int32_t animation_id;
     bool mirrored;
     //uint32_t skipcolor;
-    Rect AnimCoords;
+    Rect_t AnimCoords;
     int16_t frames;
     int16_t startpos;
     animnode *anm;
@@ -149,16 +141,16 @@ struct levernode
     int32_t autoseq;                                               //what frame initiate this seq
     int32_t autoseq_frm;                                           //current seq frame
     int32_t autoseq_time;                                          //time leave to next seq frame
-};
+} levernode_t;
 
-struct safenode
+typedef struct
 {
     int16_t num_states;
     int16_t cur_state;
     animnode *anm;
     int32_t center_x;
     int32_t center_y;
-    Rect rectangle;
+    Rect_t rectangle;
     int16_t radius_inner;
     int32_t radius_inner_sq;
     int16_t radius_outer;
@@ -168,33 +160,33 @@ struct safenode
     int32_t cur_frame;
     int32_t to_frame;
     int32_t frame_time;
-};
+} safenode_t;
 
-struct titlernode
+typedef struct
 {
     int16_t num_strings;
     char *strings[CTRL_TITLER_MAX_STRINGS];
-    Rect rectangle;
+    Rect_t rectangle;
     SDL_Surface *surface;
     int16_t current_string;
     int16_t next_string;
-};
+} titlernode_t;
 
-struct paintnode
+typedef struct
 {
     uint8_t *brush;
     int16_t b_w;
     int16_t b_h;
     SDL_Surface *paint;
-    Rect rectangle;
+    Rect_t rectangle;
     int32_t last_x;
     int32_t last_y;
     int32_t *eligible_objects;
     int32_t eligable_cnt;
     int16_t cursor;
-};
+} paintnode_t;
 
-struct fistnode
+typedef struct
 {
     uint32_t fiststatus;
     uint8_t fistnum;
@@ -203,12 +195,12 @@ struct fistnode
     struct fists_up
     {
         int32_t num_box;
-        Rect boxes[CTRL_FIST_MAX_BOXES];
+        Rect_t boxes[CTRL_FIST_MAX_BOXES];
     } fists_up[CTRL_FIST_MAX_FISTS];
     struct fists_dwn
     {
         int32_t num_box;
-        Rect boxes[CTRL_FIST_MAX_BOXES];
+        Rect_t boxes[CTRL_FIST_MAX_BOXES];
     } fists_dwn[CTRL_FIST_MAX_FISTS];
 
     int32_t num_entries;
@@ -222,15 +214,15 @@ struct fistnode
     } entries[CTRL_FIST_MAX_ENTRS];
 
     animnode *anm;
-    Rect anm_rect;
+    Rect_t anm_rect;
     int32_t soundkey;
     int32_t frame_cur;
     int32_t frame_end;
     int32_t frame_time;
     int32_t animation_id;
-};
+} fistnode_t;
 
-struct hotmvnode
+typedef struct
 {
     int32_t num_frames;
     int32_t frame_time;
@@ -238,10 +230,10 @@ struct hotmvnode
     int32_t rend_frame;
     int32_t cycle;
     int32_t num_cycles;
-    Rect *frame_list;
+    Rect_t *frame_list;
     animnode *anm;
-    Rect rect;
-};
+    Rect_t rect;
+} hotmvnode_t;
 
 struct ctrlnode
 {
@@ -250,47 +242,26 @@ struct ctrlnode
     int32_t venus;
     union node
     {
-        slotnode *slot;
-        pushnode *push;
-        inputnode *inp;
-        saveloadnode *svld;
-        levernode *lev;
-        safenode *safe;
-        fistnode *fist;
-        hotmvnode *hotmv;
-        paintnode *paint;
-        titlernode *titler;
+        slotnode_t *slot;
+        pushnode_t *push;
+        inputnode_t *inp;
+        saveloadnode_t *svld;
+        levernode_t *lev;
+        safenode_t *safe;
+        fistnode_t *fist;
+        hotmvnode_t *hotmv;
+        paintnode_t *paint;
+        titlernode_t *titler;
 
         void *unknown;
     } node;
     void (*func)(ctrlnode *);
 };
 
-void ctrl_setvenus(ctrlnode *nod);
-
-int Parse_Control(MList *controlst, mfile *fl, char *ctstr);
+int Parse_Control(MList *controlst, mfile_t *fl, char *ctstr);
 void ProcessControls(MList *ctrlst);
-
 void Ctrl_DrawControls();
-
-void DeleteControlList(MList *lst);
 void FlushControlList(MList *lst);
-
-void control_slot(ctrlnode *ct);
-void control_push(ctrlnode *ct);
-void control_input(ctrlnode *ct);
-void control_save(ctrlnode *ct);
-void control_lever(ctrlnode *ct);
-void control_safe(ctrlnode *ct);
-void control_safe_draw(ctrlnode *ct);
-void control_fist(ctrlnode *ct);
-void control_fist_draw(ctrlnode *ct);
-void control_titler(ctrlnode *ct);
-void control_titler_draw(ctrlnode *ct);
-void control_paint(ctrlnode *ct);
-void control_hotmv(ctrlnode *ct);
-void control_hotmv_draw(ctrlnode *ct);
-
 ctrlnode *GetControlByID(int32_t id);
 
 #endif // CONTROL_H_INCLUDED

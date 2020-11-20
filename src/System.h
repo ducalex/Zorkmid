@@ -8,7 +8,7 @@
 //if you plan to build engine with smpeg support
 //#define SMPEG_SUPPORT
 
-#define PREFERENCES_FILE (CUR_GAME == GAME_ZGI ? "prefs_zgi.ini" : "prefs_nem.ini")
+#define PREFERENCES_FILE (CUR_GAME == GAME_ZGI ? "INQUIS.INI" : "NEMESIS.INI")
 #define SYS_STRINGS_FILE (CUR_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR")
 #define CTRL_SAVE_FILE   (CUR_GAME == GAME_ZGI ? "inquis.sav" : "nemesis.sav")
 #define CTRL_SAVE_SAVES  (CUR_GAME == GAME_ZGI ? "inqsav%d.sav" : "nemsav%d.sav")
@@ -36,6 +36,7 @@
 
 #define STRBUFSIZE 0x400
 #define MINIBUFSZ 32
+#define PATHBUFSIZ 1024
 
 //speed tune
 #define FPS 15
@@ -90,8 +91,6 @@
 
 #define SDL_TTF_NUM_VERSION (SDL_TTF_MAJOR_VERSION * 10000 + SDL_TTF_MINOR_VERSION * 100 + SDL_TTF_PATCHLEVEL)
 
-#define DBL_CLK_TIME 250
-
 #ifdef WIN32
 static char *strcasestr(const char *h, const char *n)
 { /* h="haystack", n="needle" */
@@ -119,22 +118,23 @@ static char *strcasestr(const char *h, const char *n)
 }
 #endif
 
-struct mfile
-{
-    char *buf;
-    int32_t size;
-    int32_t pos;
-};
+struct puzzlenode;
+struct pzllst;
+struct anim_preplay_node;
+struct animnode;
+struct struct_action_res;
+struct struct_SubRect;
+struct struct_subtitles;
+struct FManNode;
+struct ctrlnode;
 
 #include "mylist.h"
-#include "types.h"
 #include "Sound.h"
-#include "Video.h"
 #include "Render.h"
 #include "Text.h"
 #include "Subtitles.h"
 #include "Mouse.h"
-#include "loader.h"
+#include "Loader.h"
 #include "Puzzle.h"
 #include "Timers.h"
 #include "Control.h"
@@ -145,17 +145,10 @@ struct mfile
 #include "Menu.h"
 #include "Game.h"
 
-void END();
-void UpdateGameSystem();
-
 //Game timer functions
 void InitMTime(float fps);
 void ProcMTime();
 bool GetBeat();
-bool GetNBeat(int n);
-bool Get2thBeat();
-bool Get4thBeat();
-uint64_t GetBeatCount();
 
 //Keyboard functions
 void FlushKeybKey(SDLKey key);
@@ -180,30 +173,7 @@ void InitVkKeys();
 uint8_t GetWinKey(SDLKey key);
 SDLKey GetLastKey();
 
-struct FManNode
-{
-    char *File;
-    char *Path;
-    zfs_file *zfs;
-};
-
-struct FManRepNode
-{
-    char ext[8];
-    char ext2[8];
-};
-
-mfile *mfopen_path(const char *file);
-mfile *mfopen(FManNode *nod);
-int32_t mfsize(FManNode *nod);
-void mfclose(mfile *fil);
-bool mfeof(mfile *fil);
-bool mfread(void *buf, int32_t bytes, mfile *file);
-void mfseek(mfile *fil, int32_t pos);
-char *mfgets(char *str, int32_t num, mfile *stream);
-void m_wide_to_utf8(mfile *file);
-
-void InitFileManage();
+void InitFileManager();
 void ListDir(char *dir);
 const char *GetFilePath(const char *chr);
 const char *GetExactFilePath(const char *chr);
@@ -228,16 +198,6 @@ uint16_t ReadUtf8Char(char *chr);
 
 #define strCMP(X, Y) strncasecmp(X, Y, strlen(Y))
 
-struct BinTreeNd;
-
-struct BinTreeNd
-{
-    BinTreeNd *zero;
-    BinTreeNd *one;
-    FManNode *nod;
-};
-
-BinTreeNd *CreateBinTreeNd();
 void AddToBinTree(FManNode *nod);
 FManNode *FindInBinTree(const char *chr);
 

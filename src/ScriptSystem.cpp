@@ -5,7 +5,7 @@ static int VAR_SLOTS_MAX = 20000;
 static int32_t gVars[30000];
 static struct_action_res *gNodes[30000];
 static uint8_t Flags[30000];
-static StateBoxEnt *StateBox[30000];
+static StateBoxEnt_t *StateBox[30000];
 
 static bool BreakExecute = false;
 
@@ -22,17 +22,10 @@ static uint32_t SaveCurrentSize = 0;
 
 const char *ScrSys_ReturnListName(pzllst *lst)
 {
-    if (lst == world)
-        return "world";
-
-    if (lst == uni)
-        return "universe";
-
-    if (lst == room)
-        return "room";
-
-    if (lst == view)
-        return "view";
+    if (lst == world) return "world";
+    if (lst == uni)   return "universe";
+    if (lst == room)  return "room";
+    if (lst == view)  return "view";
 
     return "unknown";
 }
@@ -94,7 +87,7 @@ int GetgVarInt(int32_t indx)
     return gVars[indx];
 }
 
-int *getdirectvar(uint32_t indx)
+int *GetDirectgVarInt(uint32_t indx)
 {
     return &gVars[indx];
 }
@@ -107,48 +100,6 @@ uint8_t ScrSys_GetFlag(uint32_t indx)
 void ScrSys_SetFlag(uint32_t indx, uint8_t newval)
 {
     Flags[indx] = newval;
-}
-
-//Don't call it from loops for mylists!! it's cause error
-bool ScrSys_SlotIsOwned(uint32_t i)
-{
-    MList *res = ScrSys_FindResAllBySlot(i);
-
-    if (res != NULL)
-    {
-        free(res);
-        return true;
-    }
-
-    return false;
-}
-
-bool ScrSys_SlotIsOwned2(int32_t i)
-{
-    if (getGNode(i) != NULL)
-        return true;
-    return false;
-}
-
-void ScrSys_FlushGNodes()
-{
-    memset(gNodes, 0x0, sizeof(gNodes));
-}
-
-void ScrSys_RereadGNodes()
-{
-    ScrSys_FlushGNodes();
-
-    MList *all = GetAction_res_List();
-    StartMList(all);
-    while (!eofMList(all))
-    {
-        struct_action_res *nod = (struct_action_res *)DataMList(all);
-
-        setGNode(nod->slot, nod);
-
-        NextMList(all);
-    }
 }
 
 struct_action_res *getGNode(int32_t indx)
@@ -173,7 +124,7 @@ void InitScriptsEngine()
     memset(StateBox, 0x0, sizeof(StateBox));
     memset(Flags, 0x0, sizeof(Flags));
     memset(gVars, 0x0, sizeof(gVars));
-    ScrSys_FlushGNodes();
+    memset(gNodes, 0x0, sizeof(gNodes));
 
     view = CreatePzlLst();
     room = CreatePzlLst();
@@ -201,7 +152,7 @@ void LoadScriptFile(pzllst *lst, FManNode *filename, bool control, MList *contro
         Rend_SetRenderer(RENDER_FLAT);
     }
 
-    mfile *fl = mfopen(filename);
+    mfile_t *fl = mfopen(filename);
     if (fl == NULL)
     {
         printf("Error opening file %s\n", filename->File);
@@ -461,7 +412,7 @@ void ScrSys_LoadGame(char *file)
 
 void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X, bool force_all) // world / room / view
 {
-    Locate temp;
+    Location_t temp;
     temp.World = w;
     temp.Room = r;
     temp.Node = v1;
@@ -506,7 +457,6 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         temp.World != GetgVarInt(SLOT_WORLD) ||
         force_all || view == NULL)
     {
-
         ScrSys_FlushResourcesByOwner(view);
 
         FlushPuzzleList(view);
@@ -577,11 +527,11 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
 
 void AddPuzzleToStateBox(int slot, puzzlenode *pzlnd)
 {
-    StateBoxEnt *ent = StateBox[slot];
+    StateBoxEnt_t *ent = StateBox[slot];
 
     if (ent == NULL)
     {
-        ent = NEW(StateBoxEnt);
+        ent = NEW(StateBoxEnt_t);
         StateBox[slot] = ent;
         ent->cnt = 0;
     }
@@ -610,7 +560,7 @@ void FillStateBoxFromList(pzllst *lst)
             StartMList(CriteriaLst);
             while (!eofMList(CriteriaLst))
             {
-                crit_node *crtnod = (crit_node *)DataMList(CriteriaLst);
+                crit_node_t *crtnod = (crit_node_t *)DataMList(CriteriaLst);
 
                 if (prevslot != crtnod->slot1)
                     AddPuzzleToStateBox(crtnod->slot1, pzlnod);
@@ -623,21 +573,6 @@ void FillStateBoxFromList(pzllst *lst)
             NextMList(pzlnod->CritList);
         }
         NextMList(lst->_list);
-    }
-}
-
-//Function clears trigger status for once_per_inst triggers
-void ClearUsedOnOPIPuzz(MList *lst)
-{
-    if (!lst)
-        return;
-    StartMList(lst);
-    while (!eofMList(lst))
-    {
-        puzzlenode *nod = (puzzlenode *)DataMList(lst);
-        if (ScrSys_GetFlag(nod->slot) & FLAG_ONCE_PER_I)
-            SetgVarInt(nod->slot, 0);
-        NextMList(lst);
     }
 }
 
@@ -675,21 +610,18 @@ void AddStateBoxToStk(puzzlenode *pzl)
 void ShakeStateBox(uint32_t indx)
 {
     //Nemesis don't use statebox, but this engine does, well make for nemesis it non revert.
-    if (StateBox[indx] != NULL)
+    if (!StateBox[indx])
+        return;
+
+    if (CUR_GAME == GAME_NEM)
     {
-#ifdef GAME_NEMESIS
         for (int i = 0; i < StateBox[indx]->cnt; i++)
-        {
-            //if (examine_criterias(StateBox[indx]->nod[i])) //may cause bug's
             AddStateBoxToStk(StateBox[indx]->nod[i]);
-        }
-#else
+    }
+    else
+    {
         for (int i = StateBox[indx]->cnt - 1; i >= 0; i--)
-        {
-            //if (examine_criterias(StateBox[indx]->nod[i])) //may cause bug's
             AddStateBoxToStk(StateBox[indx]->nod[i]);
-        }
-#endif
     }
 }
 
@@ -814,23 +746,6 @@ void ScrSys_ProcessAllRes()
     }
 }
 
-MList *ScrSys_FindResAllBySlot(int32_t slot)
-{
-    MList *lst = NEW(MList);
-    *lst = *GetAction_res_List();
-
-    StartMList(lst);
-    while (!eofMList(lst))
-    {
-        struct_action_res *nod = (struct_action_res *)DataMList(lst);
-        if (nod->slot == slot)
-            return lst;
-        NextMList(lst);
-    }
-    free(lst);
-    return NULL;
-}
-
 int ScrSys_DeleteNode(struct_action_res *nod)
 {
     switch (nod->node_type)
@@ -934,23 +849,6 @@ void ScrSys_FlushResourcesByType(int type)
     }
 }
 
-void ScrSys_HardFlushResourcesByType(int type)
-{
-    MList *all = GetAction_res_List();
-
-    StartMList(all);
-    while (!eofMList(all))
-    {
-        struct_action_res *nod = (struct_action_res *)DataMList(all);
-
-        if (nod->node_type == type)
-            if (ScrSys_DeleteNode(nod) == NODE_RET_DELETE)
-                DeleteCurrent(all);
-
-        NextMList(all);
-    }
-}
-
 struct_action_res *ScrSys_CreateActRes(int type)
 {
     struct_action_res *tmp = NEW(struct_action_res);
@@ -965,13 +863,11 @@ struct_action_res *ScrSys_CreateActRes(int type)
     return tmp;
 }
 
-#define pref_COUNT 17
-
-const struct
+static const struct
 {
     const char *name;
     int slot;
-} prefs[pref_COUNT] =
+} prefs[] =
     {
         {"KeyboardTurnSpeed", SLOT_KBD_ROTATE_SPEED},
         {"PanaRotateSpeed", SLOT_PANAROTATE_SPEED},
@@ -989,7 +885,8 @@ const struct
         {"ShowSubtitles", SLOT_SUBTITLE_FLAG},
         {"DebugCheats", SLOT_DEBUGCHEATS},
         {"JapaneseFonts", SLOT_JAPANESEFONTS},
-        {"Brightness", SLOT_BRIGHTNESS}};
+        {"Brightness", SLOT_BRIGHTNESS},
+        {NULL, 0}};
 
 void ScrSys_LoadPreferences()
 {
@@ -1004,7 +901,7 @@ void ScrSys_LoadPreferences()
         fgets(buffer, 128, fl);
         str = TrimLeft(TrimRight(buffer));
         if (str != NULL && strlen(str) > 0)
-            for (int i = 0; i < pref_COUNT; i++)
+            for (int i = 0; prefs[i].name != NULL; i++)
                 if (strCMP(str, prefs[i].name) == 0)
                 {
                     str = strstr(str, "=");
@@ -1026,9 +923,10 @@ void ScrSys_SavePreferences()
     FILE *fl = fopen(PREFERENCES_FILE, "wb");
     if (!fl) return;
 
-    fprintf(fl, "[%s]\r\n", "Zorkmid");
-    for (int i = 0; i < pref_COUNT; i++) {
+    fprintf(fl, "[Preferences]\r\n");
+    for (int i = 0; prefs[i].name != NULL; i++) {
         fprintf(fl, "%s=%d\r\n", prefs[i].name, GetgVarInt(prefs[i].slot));
     }
+
     fclose(fl);
 }

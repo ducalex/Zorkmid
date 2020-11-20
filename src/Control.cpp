@@ -1,11 +1,35 @@
 #include "Control.h"
 
-int FocusInput = 0;
-bool pushChangeMouse = false;
+static int FocusInput = 0;
+static bool pushChangeMouse = false;
 
-pushnode *CreatePushNode()
+static void control_slot(ctrlnode *ct);
+static void control_push(ctrlnode *ct);
+static void control_input(ctrlnode *ct);
+static void control_save(ctrlnode *ct);
+static void control_lever(ctrlnode *ct);
+static void control_safe(ctrlnode *ct);
+static void control_safe_draw(ctrlnode *ct);
+static void control_fist(ctrlnode *ct);
+static void control_fist_draw(ctrlnode *ct);
+static void control_titler(ctrlnode *ct);
+static void control_titler_draw(ctrlnode *ct);
+static void control_paint(ctrlnode *ct);
+static void control_hotmv(ctrlnode *ct);
+static void control_hotmv_draw(ctrlnode *ct);
+static void control_slot_draw(ctrlnode *nod);
+
+static void InitRect(Rect_t *rct)
 {
-    pushnode *tmp = NEW(pushnode);
+    rct->h = 0;
+    rct->w = 0;
+    rct->x = 0;
+    rct->y = 0;
+}
+
+pushnode_t *CreatePushNode()
+{
+    pushnode_t *tmp = NEW(pushnode_t);
     tmp->cursor = CURSOR_IDLE;
     tmp->flat = false;
     tmp->x = 0;
@@ -17,9 +41,9 @@ pushnode *CreatePushNode()
     return tmp;
 }
 
-inputnode *CreateInputNode()
+inputnode_t *CreateInputNode()
 {
-    inputnode *tmp = NEW(inputnode);
+    inputnode_t *tmp = NEW(inputnode_t);
     tmp->rect = NULL;
     InitRect(&tmp->rectangle);
     InitRect(&tmp->hotspot);
@@ -37,9 +61,9 @@ inputnode *CreateInputNode()
     return tmp;
 }
 
-slotnode *CreateSlotNode()
+slotnode_t *CreateSlotNode()
 {
-    slotnode *tmp = NEW(slotnode);
+    slotnode_t *tmp = NEW(slotnode_t);
     tmp->cursor = CURSOR_IDLE;
     tmp->eligable_cnt = 0;
     tmp->eligible_objects = NULL;
@@ -52,9 +76,9 @@ slotnode *CreateSlotNode()
     return tmp;
 }
 
-fistnode *CreateFistNode()
+fistnode_t *CreateFistNode()
 {
-    fistnode *tmp = NEW(fistnode);
+    fistnode_t *tmp = NEW(fistnode_t);
     tmp->cursor = CURSOR_IDLE;
     tmp->anm = NULL;
     tmp->soundkey = 0;
@@ -87,9 +111,9 @@ fistnode *CreateFistNode()
     return tmp;
 }
 
-hotmvnode *CreateHotMovieNode()
+hotmvnode_t *CreateHotMovieNode()
 {
-    hotmvnode *tmp = NEW(hotmvnode);
+    hotmvnode_t *tmp = NEW(hotmvnode_t);
     tmp->anm = NULL;
     tmp->cycle = 0;
     tmp->cur_frame = -1;
@@ -102,9 +126,9 @@ hotmvnode *CreateHotMovieNode()
     return tmp;
 }
 
-levernode *CreateLeverNode()
+levernode_t *CreateLeverNode()
 {
-    levernode *tmp = NEW(levernode);
+    levernode_t *tmp = NEW(levernode_t);
     tmp->cursor = CURSOR_IDLE;
     InitRect(&tmp->AnimCoords);
     tmp->anm = NULL;
@@ -140,9 +164,9 @@ levernode *CreateLeverNode()
     return tmp;
 }
 
-saveloadnode *CreateSaveNode()
+saveloadnode_t *CreateSaveNode()
 {
-    saveloadnode *tmp = NEW(saveloadnode);
+    saveloadnode_t *tmp = NEW(saveloadnode_t);
 
     tmp->forsaving = false;
 
@@ -156,9 +180,9 @@ saveloadnode *CreateSaveNode()
     return tmp;
 }
 
-safenode *CreateSafeNode()
+safenode_t *CreateSafeNode()
 {
-    safenode *tmp = NEW(safenode);
+    safenode_t *tmp = NEW(safenode_t);
 
     tmp->anm = NULL;
     tmp->center_y = 0;
@@ -176,9 +200,9 @@ safenode *CreateSafeNode()
     return tmp;
 }
 
-paintnode *CreatePaintNode()
+paintnode_t *CreatePaintNode()
 {
-    paintnode *tmp = NEW(paintnode);
+    paintnode_t *tmp = NEW(paintnode_t);
 
     tmp->eligable_cnt = 0;
     tmp->eligible_objects = NULL;
@@ -191,9 +215,9 @@ paintnode *CreatePaintNode()
     return tmp;
 }
 
-titlernode *CreateTitlerNode()
+titlernode_t *CreateTitlerNode()
 {
-    titlernode *tmp = NEW(titlernode);
+    titlernode_t *tmp = NEW(titlernode_t);
 
     tmp->num_strings = 0;
     tmp->surface = NULL;
@@ -274,15 +298,7 @@ ctrlnode *Ctrl_CreateNode(int type)
     return tmp;
 }
 
-void InitRect(Rect *rct)
-{
-    rct->h = 0;
-    rct->w = 0;
-    rct->x = 0;
-    rct->y = 0;
-}
-
-bool Ctrl_Eligeblity(int obj, slotnode *slot)
+bool Ctrl_Eligeblity(int obj, slotnode_t *slot)
 {
     for (int i = 0; i < slot->eligable_cnt; i++)
         if (obj == slot->eligible_objects[i])
@@ -298,9 +314,18 @@ bool Ctrl_Eligeblity_Slots(int obj, int32_t *slots, int32_t count)
     return false;
 }
 
-void control_slot_draw(ctrlnode *nod)
+static void ctrl_setvenus(ctrlnode *nod)
 {
-    slotnode *slut = nod->node.slot;
+    if (nod->venus >= 0)
+    {
+        if (GetgVarInt(nod->venus) > 0)
+            SetgVarInt(SLOT_VENUS, nod->venus);
+    }
+}
+
+static void control_slot_draw(ctrlnode *nod)
+{
+    slotnode_t *slut = nod->node.slot;
 
     int tmp1 = GetgVarInt(nod->slot);
 
@@ -323,7 +348,7 @@ void control_slot_draw(ctrlnode *nod)
             else
                 sprintf(bff, "%d%sOBJ.TGA", tmp1, slut->distance_id);
 
-            slut->srf = loader_LoadFile(bff, 0, Rend_MapScreenRGB(0, 0, 0));
+            slut->srf = loader_LoadFile_key(bff, 0, Rend_MapScreenRGB(0, 0, 0));
 
             slut->loaded_img = tmp1;
         }
@@ -353,9 +378,9 @@ void control_slot_draw(ctrlnode *nod)
     }
 }
 
-void control_input_draw(ctrlnode *ct)
+static void control_input_draw(ctrlnode *ct)
 {
-    inputnode *inp = ct->node.inp;
+    inputnode_t *inp = ct->node.inp;
 
     if (strlen(inp->text))
     {
@@ -402,9 +427,9 @@ void control_input_draw(ctrlnode *ct)
     }
 }
 
-void control_lever_draw(ctrlnode *ct)
+static void control_lever_draw(ctrlnode *ct)
 {
-    levernode *lev = ct->node.lev;
+    levernode_t *lev = ct->node.lev;
     if (lev->curfrm == lev->rendfrm)
         return;
 
@@ -446,9 +471,9 @@ void Ctrl_DrawControls()
     }
 }
 
-void control_input(ctrlnode *ct)
+static void control_input(ctrlnode *ct)
 {
-    inputnode *inp = ct->node.inp;
+    inputnode_t *inp = ct->node.inp;
     bool mousein = false;
 
     if (inp->rectangle.x <= Rend_GetMouseGameX() &&
@@ -589,9 +614,9 @@ void control_input(ctrlnode *ct)
     }
 }
 
-void control_slot(ctrlnode *ct)
+static void control_slot(ctrlnode *ct)
 {
-    slotnode *slot = ct->node.slot;
+    slotnode_t *slot = ct->node.slot;
     bool mousein = false;
 
     if (slot->hotspot.x <= Rend_GetMouseGameX() &&
@@ -654,10 +679,10 @@ void control_slot(ctrlnode *ct)
     }
 }
 
-void control_paint(ctrlnode *ct)
+static void control_paint(ctrlnode *ct)
 {
     bool mousein = false;
-    paintnode *paint = ct->node.paint;
+    paintnode_t *paint = ct->node.paint;
 
     if (!Rend_MouseInGamescr())
         return;
@@ -750,10 +775,10 @@ void control_paint(ctrlnode *ct)
     }
 }
 
-void control_fist(ctrlnode *ct)
+static void control_fist(ctrlnode *ct)
 {
     bool mousein = false;
-    fistnode *fist = ct->node.fist;
+    fistnode_t *fist = ct->node.fist;
     int32_t n_fist = -1;
 
     if (!Rend_MouseInGamescr())
@@ -868,9 +893,9 @@ void control_fist(ctrlnode *ct)
     }
 }
 
-void control_fist_draw(ctrlnode *ct)
+static void control_fist_draw(ctrlnode *ct)
 {
-    fistnode *fist = ct->node.fist;
+    fistnode_t *fist = ct->node.fist;
 
     if (fist->frame_cur >= 0 && fist->frame_end >= 0)
         if (fist->frame_cur <= fist->frame_end)
@@ -945,11 +970,11 @@ void control_fist_draw(ctrlnode *ct)
      }*/
 }
 
-void control_hotmv(ctrlnode *ct)
+static void control_hotmv(ctrlnode *ct)
 {
     bool mousein = false;
 
-    hotmvnode *hotm = ct->node.hotmv;
+    hotmvnode_t *hotm = ct->node.hotmv;
 
     if (hotm->cycle < hotm->num_cycles)
     {
@@ -1009,9 +1034,9 @@ void control_hotmv(ctrlnode *ct)
     }
 }
 
-void control_titler(ctrlnode *ct)
+static void control_titler(ctrlnode *ct)
 {
-    titlernode *titler = ct->node.titler;
+    titlernode_t *titler = ct->node.titler;
     if (titler->current_string != titler->next_string && titler->next_string >= 0 && titler->next_string < CTRL_TITLER_MAX_STRINGS)
     {
         titler->current_string = titler->next_string;
@@ -1021,17 +1046,17 @@ void control_titler(ctrlnode *ct)
     }
 }
 
-void control_titler_draw(ctrlnode *ct)
+static void control_titler_draw(ctrlnode *ct)
 {
-    titlernode *titler = ct->node.titler;
+    titlernode_t *titler = ct->node.titler;
 
     if (titler->surface)
         Rend_DrawImageUpGamescr(titler->surface, titler->rectangle.x + GAMESCREEN_FLAT_X, titler->rectangle.y);
 }
 
-void control_hotmv_draw(ctrlnode *ct)
+static void control_hotmv_draw(ctrlnode *ct)
 {
-    hotmvnode *hotm = ct->node.hotmv;
+    hotmvnode_t *hotm = ct->node.hotmv;
     if (hotm->cur_frame == hotm->rend_frame)
         return;
 
@@ -1041,13 +1066,13 @@ void control_hotmv_draw(ctrlnode *ct)
         anim_RenderAnimFrame(hotm->anm, hotm->rect.x, hotm->rect.y, hotm->rect.w, hotm->rect.h, hotm->cur_frame);
 }
 
-void control_safe(ctrlnode *ct)
+static void control_safe(ctrlnode *ct)
 {
     bool mousein = false;
 
     if (!Rend_MouseInGamescr())
         return;
-    safenode *safe = ct->node.safe;
+    safenode_t *safe = ct->node.safe;
 
     int32_t mX = Rend_GetMouseGameX();
     int32_t mY = Rend_GetMouseGameY();
@@ -1101,9 +1126,9 @@ void control_safe(ctrlnode *ct)
     }
 }
 
-void control_safe_draw(ctrlnode *ct)
+static void control_safe_draw(ctrlnode *ct)
 {
-    safenode *safe = ct->node.safe;
+    safenode_t *safe = ct->node.safe;
     if (safe->cur_frame == safe->to_frame)
         return;
 
@@ -1126,7 +1151,7 @@ void control_safe_draw(ctrlnode *ct)
     }
 }
 
-void control_push(ctrlnode *ct)
+static void control_push(ctrlnode *ct)
 {
     bool mousein = false;
 
@@ -1136,7 +1161,7 @@ void control_push(ctrlnode *ct)
 
     if (!Rend_MouseInGamescr())
         return;
-    pushnode *psh = ct->node.push;
+    pushnode_t *psh = ct->node.push;
 
     if (psh->x <= Rend_GetMouseGameX() &&
         psh->x + psh->w >= Rend_GetMouseGameX() &&
@@ -1195,9 +1220,9 @@ void control_push(ctrlnode *ct)
     }
 }
 
-void control_save(ctrlnode *ct)
+static void control_save(ctrlnode *ct)
 {
-    saveloadnode *sv = ct->node.svld;
+    saveloadnode_t *sv = ct->node.svld;
     for (int i = 0; i < MAX_SAVES; i++)
         if (sv->inputslot[i] != -1)
             if (sv->input_nodes[i]->node.inp->enterkey)
@@ -1257,9 +1282,9 @@ void control_save(ctrlnode *ct)
             }
 }
 
-void control_lever(ctrlnode *ct)
+static void control_lever(ctrlnode *ct)
 {
-    levernode *lev = ct->node.lev;
+    levernode_t *lev = ct->node.lev;
     if (lev->curfrm < CTRL_LEVER_MAX_FRAMES)
     {
         if (!lev->mouse_captured)
@@ -1363,13 +1388,13 @@ int Parse_Control_Flat()
     return 1;
 }
 
-int Parse_Control_Lever(MList *controlst, mfile *fl, uint32_t slot)
+int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_LEVER);
-    levernode *lev = ctnode->node.lev;
+    levernode_t *lev = ctnode->node.lev;
 
     AddToMList(controlst, ctnode);
 
@@ -1530,34 +1555,16 @@ int Parse_Control_Lever(MList *controlst, mfile *fl, uint32_t slot)
 
     fclose(file2);
 
-    /*    if (lev->anm)
-        {
-            if (lev->AnimCoords.w > lev->anm->rel_w)
-                lev->AnimCoords.w = round((double)lev->AnimCoords.w / (double)lev->anm->rel_w) * lev->anm->rel_w;
-            else
-                lev->AnimCoords.w = lev->anm->rel_w / round((double)lev->anm->rel_w/(double)lev->AnimCoords.w);
-
-            if (lev->AnimCoords.h > lev->anm->rel_h)
-                lev->AnimCoords.h = round((double)lev->AnimCoords.h / (double)lev->anm->rel_h) * lev->anm->rel_h;
-            else
-                lev->AnimCoords.h = lev->anm->rel_h / round((double)lev->anm->rel_h/(double)lev->AnimCoords.h);
-
-            if (lev->AnimCoords.w == 0)
-                lev->AnimCoords.w = lev->anm->rel_w;
-            if (lev->AnimCoords.h == 0)
-                lev->AnimCoords.h = lev->anm->rel_h;
-        }
-    */
     return 1;
 }
 
-int Parse_Control_HotMov(MList *controlst, mfile *fl, uint32_t slot)
+int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_HOTMV);
-    hotmvnode *hotm = ctnode->node.hotmv;
+    hotmvnode_t *hotm = ctnode->node.hotmv;
 
     AddToMList(controlst, ctnode);
 
@@ -1584,7 +1591,7 @@ int Parse_Control_HotMov(MList *controlst, mfile *fl, uint32_t slot)
         {
             str = GetParams(str);
             hotm->num_frames = atoi(str) + 1;
-            hotm->frame_list = (Rect *)calloc(hotm->num_frames, sizeof(Rect));
+            hotm->frame_list = NEW_ARRAY(Rect_t, hotm->num_frames);
         }
         else if (strCMP(str, "num_cycles") == 0)
         {
@@ -1642,7 +1649,7 @@ int Parse_Control_HotMov(MList *controlst, mfile *fl, uint32_t slot)
     return 1;
 }
 
-int Parse_Control_Panorama(mfile *fl)
+int Parse_Control_Panorama(mfile_t *fl)
 {
     char buf[STRBUFSIZE];
     char *str;
@@ -1698,7 +1705,7 @@ int Parse_Control_Panorama(mfile *fl)
     return good;
 }
 
-int Parse_Control_Tilt(mfile *fl)
+int Parse_Control_Tilt(mfile_t *fl)
 {
     char buf[STRBUFSIZE];
     char *str;
@@ -1748,14 +1755,14 @@ int Parse_Control_Tilt(mfile *fl)
     return good;
 }
 
-int Parse_Control_Save(MList *controlst, mfile *fl, uint32_t slot)
+int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_SAVE);
-    saveloadnode *sv = ctnode->node.svld;
+    saveloadnode_t *sv = ctnode->node.svld;
 
     AddToMList(controlst, ctnode);
 
@@ -1847,14 +1854,14 @@ int Parse_Control_Save(MList *controlst, mfile *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_Titler(MList *controlst, mfile *fl, uint32_t slot)
+int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_TITLER);
-    titlernode *titler = ctnode->node.titler;
+    titlernode_t *titler = ctnode->node.titler;
 
     AddToMList(controlst, ctnode);
     ctnode->slot = slot;
@@ -1888,7 +1895,7 @@ int Parse_Control_Titler(MList *controlst, mfile *fl, uint32_t slot)
             if (tmp != NULL)
             {
                 titler->num_strings = 0;
-                mfile *fl2 = mfopen_path(tmp);
+                mfile_t *fl2 = mfopen_path(tmp);
 
                 m_wide_to_utf8(fl2);
 
@@ -1915,14 +1922,14 @@ int Parse_Control_Titler(MList *controlst, mfile *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_Input(MList *controlst, mfile *fl, uint32_t slot)
+int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_INPUT);
-    inputnode *inp = ctnode->node.inp;
+    inputnode_t *inp = ctnode->node.inp;
 
     AddToMList(controlst, ctnode);
 
@@ -1992,14 +1999,14 @@ int Parse_Control_Input(MList *controlst, mfile *fl, uint32_t slot)
             str = GetParams(str);
             char *tmp = GetSystemString(atoi(str));
             if (tmp != NULL)
-                txt_readfontstyle(&inp->string_init, tmp);
+                txt_get_font_style(&inp->string_init, tmp);
         }
         else if (strCMP(str, "chooser_init_string") == 0)
         {
             str = GetParams(str);
             char *tmp = GetSystemString(atoi(str));
             if (tmp != NULL)
-                txt_readfontstyle(&inp->string_chooser_init, tmp);
+                txt_get_font_style(&inp->string_chooser_init, tmp);
         }
         else if (strCMP(str, "venus_id") == 0)
         {
@@ -2011,14 +2018,14 @@ int Parse_Control_Input(MList *controlst, mfile *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_Paint(MList *controlst, mfile *fl, uint32_t slot)
+int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_PAINT);
-    paintnode *paint = ctnode->node.paint;
+    paintnode_t *paint = ctnode->node.paint;
 
     AddToMList(controlst, ctnode);
     ctnode->slot = slot;
@@ -2144,14 +2151,14 @@ int Parse_Control_Paint(MList *controlst, mfile *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_Slot(MList *controlst, mfile *fl, uint32_t slot)
+int Parse_Control_Slot(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_SLOT);
-    slotnode *slut = ctnode->node.slot;
+    slotnode_t *slut = ctnode->node.slot;
 
     AddToMList(controlst, ctnode);
     ctnode->slot = slot;
@@ -2235,7 +2242,7 @@ int Parse_Control_Slot(MList *controlst, mfile *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_PushTgl(MList *controlst, mfile *fl, uint32_t slot)
+int Parse_Control_PushTgl(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -2244,7 +2251,7 @@ int Parse_Control_PushTgl(MList *controlst, mfile *fl, uint32_t slot)
     //    SetgVarInt(slot,0);
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_PUSH);
-    pushnode *psh = ctnode->node.push;
+    pushnode_t *psh = ctnode->node.push;
     ctnode->slot = slot;
 
     psh->cursor = CURSOR_IDLE;
@@ -2316,14 +2323,14 @@ int Parse_Control_PushTgl(MList *controlst, mfile *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_Fist(MList *controlst, mfile *fl, uint32_t slot)
+int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_FIST);
-    fistnode *fist = ctnode->node.fist;
+    fistnode_t *fist = ctnode->node.fist;
     ctnode->slot = slot;
 
     char filename[MINIBUFSZ];
@@ -2502,14 +2509,14 @@ int Parse_Control_Fist(MList *controlst, mfile *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_Safe(MList *controlst, mfile *fl, uint32_t slot)
+int Parse_Control_Safe(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_SAFE);
-    safenode *safe = ctnode->node.safe;
+    safenode_t *safe = ctnode->node.safe;
     ctnode->slot = slot;
 
     while (!mfeof(fl))
@@ -2590,7 +2597,7 @@ int Parse_Control_Safe(MList *controlst, mfile *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control(MList *controlst, mfile *fl, char *ctstr)
+int Parse_Control(MList *controlst, mfile_t *fl, char *ctstr)
 {
     int good = 0;
 
@@ -2813,22 +2820,6 @@ void DeleteSelControl(ctrlnode *nod)
     free(nod);
 }
 
-void DeleteControlList(MList *lst)
-{
-
-    StartMList(lst);
-    while (!eofMList(lst))
-    {
-        ctrlnode *nod = (ctrlnode *)DataMList(lst);
-
-        DeleteSelControl(nod);
-
-        NextMList(lst);
-    }
-
-    DeleteMList(lst);
-}
-
 void FlushControlList(MList *lst)
 {
     StartMList(lst);
@@ -2864,13 +2855,4 @@ ctrlnode *GetControlByID(int32_t id)
 
     popMList(lst);
     return NULL;
-}
-
-void ctrl_setvenus(ctrlnode *nod)
-{
-    if (nod->venus >= 0)
-    {
-        if (GetgVarInt(nod->venus) > 0)
-            SetgVarInt(SLOT_VENUS, nod->venus);
-    }
 }

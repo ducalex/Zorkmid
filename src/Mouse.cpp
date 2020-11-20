@@ -98,11 +98,6 @@ Cursor_t *Mouse_GetCursor(int indx)
         return &DefCursors[indx][stt];
 }
 
-Cursor_t *Mouse_GetCurrentCursor()
-{
-    return cur;
-}
-
 bool Mouse_IsCurrentCur(int indx)
 {
     return indx == cursor_index;

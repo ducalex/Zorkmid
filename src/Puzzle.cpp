@@ -12,7 +12,7 @@ pzllst *CreatePzlLst()
 void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 {
     char buf[255];
-    func_node *nod;
+    func_node_t *nod;
     const char *params = " ";
 
     char *str = instr;
@@ -41,7 +41,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "set_screen") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -53,7 +53,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "debug") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -65,7 +65,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "assign") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -76,7 +76,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "timer") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -87,7 +87,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "set_partial_screen") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -99,7 +99,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "change_location") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -111,7 +111,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "dissolve") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -123,7 +123,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "disable_control") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -134,7 +134,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "enable_control") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -145,7 +145,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "add") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -156,7 +156,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "random") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -167,7 +167,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "animplay") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -178,7 +178,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "universe_music") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -189,7 +189,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "music") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -201,7 +201,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "kill") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -213,7 +213,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "stop") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -225,7 +225,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "inventory") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -237,7 +237,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "crossfade") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -249,7 +249,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "streamvideo") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -261,7 +261,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "animpreload") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -272,7 +272,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "playpreload") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -283,7 +283,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "syncsound") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -295,7 +295,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "menu_bar_enable") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -307,7 +307,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "delay_render") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -319,7 +319,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "ttytext") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -331,7 +331,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "attenuate") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -343,7 +343,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "pan_track") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -355,7 +355,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "animunload") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -367,7 +367,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "flush_mouse_events") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -379,7 +379,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "save_game") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -391,7 +391,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "restore_game") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -403,7 +403,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "quit") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -415,7 +415,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "rotate_to") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -427,7 +427,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "distort") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -439,7 +439,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "preferences") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -451,7 +451,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 
     if (strCMP(buf, "region") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -462,7 +462,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "display_message") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -473,7 +473,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "set_venus") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -484,7 +484,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
     if (strCMP(buf, "disable_venus") == 0)
     {
-        nod = NEW(func_node);
+        nod = NEW(func_node_t);
         AddToMList(lst, nod);
 
         nod->param = strdup(params);
@@ -495,7 +495,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
     }
 }
 
-int Parse_Puzzle_Flags(puzzlenode *pzl, mfile *fl)
+int Parse_Puzzle_Flags(puzzlenode *pzl, mfile_t *fl)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -528,7 +528,7 @@ int Parse_Puzzle_Flags(puzzlenode *pzl, mfile *fl)
     return good;
 }
 
-int Parse_Puzzle_Criteria(puzzlenode *pzl, mfile *fl)
+int Parse_Puzzle_Criteria(puzzlenode *pzl, mfile_t *fl)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -550,7 +550,7 @@ int Parse_Puzzle_Criteria(puzzlenode *pzl, mfile *fl)
         }
         else if (str[0] == '[')
         {
-            crit_node *nod = NEW(crit_node);
+            crit_node_t *nod = NEW(crit_node_t);
             AddToMList(crit_nodes_lst, nod);
 
             sscanf(&str[1], "%d", &nod->slot1);
@@ -607,7 +607,7 @@ int Parse_Puzzle_Criteria(puzzlenode *pzl, mfile *fl)
     return good;
 }
 
-int Parse_Puzzle_Results(puzzlenode *pzl, mfile *fl)
+int Parse_Puzzle_Results(puzzlenode *pzl, mfile_t *fl)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -637,7 +637,7 @@ int Parse_Puzzle_Results(puzzlenode *pzl, mfile *fl)
     return good;
 }
 
-int Parse_Puzzle(pzllst *lst, mfile *fl, char *ctstr)
+int Parse_Puzzle(pzllst *lst, mfile_t *fl, char *ctstr)
 {
     int good = 0;
 
@@ -722,8 +722,7 @@ void DeletePuzzleList(pzllst *lst)
             StartMList(criteries);
             while (!eofMList(criteries))
             {
-                crit_node *critnd = (crit_node *)DataMList(criteries);
-                free(critnd);
+                free(DataMList(criteries));
                 NextMList(criteries);
             }
             DeleteMList(criteries);
@@ -735,7 +734,7 @@ void DeletePuzzleList(pzllst *lst)
         StartMList(nod->ResList);
         while (!eofMList(nod->ResList))
         {
-            func_node *fun = (func_node *)DataMList(nod->ResList);
+            func_node_t *fun = (func_node_t *)DataMList(nod->ResList);
             if (fun->param != NULL)
                 free(fun->param);
             free(fun);
@@ -772,8 +771,7 @@ void FlushPuzzleList(pzllst *lst)
             StartMList(criteries);
             while (!eofMList(criteries))
             {
-                crit_node *critnd = (crit_node *)DataMList(criteries);
-                free(critnd);
+                free(DataMList(criteries));
                 NextMList(criteries);
             }
             DeleteMList(criteries);
@@ -785,7 +783,7 @@ void FlushPuzzleList(pzllst *lst)
         StartMList(nod->ResList);
         while (!eofMList(nod->ResList))
         {
-            func_node *fun = (func_node *)DataMList(nod->ResList);
+            func_node_t *fun = (func_node_t *)DataMList(nod->ResList);
             if (fun->param != NULL)
                 free(fun->param);
             free(fun);
@@ -811,7 +809,7 @@ bool ProcessCriteries(MList *lst)
     StartMList(lst);
     while (!eofMList(lst))
     {
-        crit_node *critnd = (crit_node *)DataMList(lst);
+        crit_node_t *critnd = (crit_node_t *)DataMList(lst);
 #ifdef FULLTRACE
         printf("        [%d] %d [%d] %d\n", critnd->slot1, critnd->oper, critnd->slot2, critnd->var2);
 #endif
@@ -871,7 +869,7 @@ int execute_puzzle_node(puzzlenode *nod)
     StartMList(nod->ResList);
     while (!eofMList(nod->ResList))
     {
-        func_node *fun = (func_node *)DataMList(nod->ResList);
+        func_node_t *fun = (func_node_t *)DataMList(nod->ResList);
         if (fun->func(fun->param, fun->slot, nod->owner) == ACTION_BREAK)
         {
             return ACTION_BREAK;

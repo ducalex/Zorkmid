@@ -4,16 +4,16 @@
 #define MLIST_STACK 0x10
 
 //node structure
-struct MList_node
+typedef struct MList_node_s
 {
-    MList_node *next; //pointer to next node
-    MList_node *prev; //pointer to next node
+    MList_node_s *next; //pointer to next node
+    MList_node_s *prev; //pointer to next node
     void *data;       //pointer to data
     unsigned int idx;
-};
+} MList_node;
 
 //List structure
-struct MList
+typedef struct
 {
     MList_node *CurNode; //pointer to current node
     MList_node *Head;    //pointer to first node
@@ -23,7 +23,7 @@ struct MList
     MList_node *Stack[MLIST_STACK];
     unsigned int stkpos;
     bool dontstp;
-};
+} MList;
 
 //Linked-list functions
 MList *CreateMList();
@@ -40,7 +40,6 @@ void FlushMList(MList *lst);
 void DeleteCurrent(MList *lst);
 bool eofMList(MList *lst);
 int getIndxMList(MList *lst);
-
 bool pushMList(MList *lst);
 bool popMList(MList *lst);
 

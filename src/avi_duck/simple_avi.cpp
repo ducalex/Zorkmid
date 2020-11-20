@@ -434,7 +434,7 @@ Mix_Chunk *avi_get_audio(avi_file *av)
             raw[10] = asz * 2;
             tmp = 0;
 
-            adpcm_context ctx;
+            adpcm_context_t ctx;
             memset(&ctx, 0, sizeof(ctx));
 
             for (int32_t i = 0; i < av->achunk_cnt; i++)
@@ -515,9 +515,9 @@ void avi_to_surf(avi_file *av, SDL_Surface *srf)
                     {
                         uint8_t r, g, b;
                         COLOR_RGBA16_5551(*img, b, g, r);
-                        r = FiveBitToEightBitLookupTable_SDL[r];
-                        g = FiveBitToEightBitLookupTable_SDL[g];
-                        b = FiveBitToEightBitLookupTable_SDL[b];
+                        r *= 8;
+                        g *= 8;
+                        b *= 8;
                         line[x] = 0xFF000000 | r << 16 | g << 8 | b;
                         img++;
                     }
@@ -532,9 +532,9 @@ void avi_to_surf(avi_file *av, SDL_Surface *srf)
                     {
                         uint8_t r, g, b;
                         COLOR_RGBA16_5551(img[x * av->h + y], b, g, r);
-                        r = FiveBitToEightBitLookupTable_SDL[r];
-                        g = FiveBitToEightBitLookupTable_SDL[g];
-                        b = FiveBitToEightBitLookupTable_SDL[b];
+                        r *= 8;
+                        g *= 8;
+                        b *= 8;
                         line[x] = 0xFF000000 | r << 16 | g << 8 | b;
                     }
                 }
@@ -597,9 +597,9 @@ void avi_to_surf(avi_file *av, SDL_Surface *srf)
                     {
                         uint8_t r, g, b;
                         COLOR_RGBA16_5551(img[av->w * (int32_t)(y * yperc) + (int32_t)(x * xperc)], b, g, r);
-                        r = FiveBitToEightBitLookupTable_SDL[r];
-                        g = FiveBitToEightBitLookupTable_SDL[g];
-                        b = FiveBitToEightBitLookupTable_SDL[b];
+                        r *= 8;
+                        g *= 8;
+                        b *= 8;
                         line[x] = 0xFF000000 | r << 16 | g << 8 | b;
                     }
                 }
@@ -613,9 +613,9 @@ void avi_to_surf(avi_file *av, SDL_Surface *srf)
                     {
                         uint8_t r, g, b;
                         COLOR_RGBA16_5551(img[(int32_t)(x * yperc) * av->h + (int32_t)(y * xperc)], b, g, r);
-                        r = FiveBitToEightBitLookupTable_SDL[r];
-                        g = FiveBitToEightBitLookupTable_SDL[g];
-                        b = FiveBitToEightBitLookupTable_SDL[b];
+                        r *= 8;
+                        g *= 8;
+                        b *= 8;
                         line[x] = 0xFF000000 | r << 16 | g << 8 | b;
                     }
                 }

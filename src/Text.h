@@ -21,7 +21,7 @@
 #define TXT_CFG_TEXTURES_LINES 256
 #define TXT_CFG_TEXTURES_PER_LINE 6
 
-struct struct_txt_style
+typedef struct
 {
     char fontname[TXT_CFG_FONTNAME_MAX_LEN];
     int8_t justify; //0 - center, 1-left, 2-right
@@ -38,13 +38,13 @@ struct struct_txt_style
     int8_t skipcolor; //0 - OFF, 1 - ON
     int32_t statebox;
     //char image ??
-};
+} txt_style_t;
 
-struct struct_ttytext
+typedef struct
 {
     int32_t x, y;
     int32_t w, h;
-    struct_txt_style style;
+    txt_style_t style;
     TTF_Font *fnt;
     char *txtbuf;
     int32_t txtpos;
@@ -53,15 +53,22 @@ struct struct_ttytext
     int32_t nexttime;
     SDL_Surface *img;
     int32_t dx, dy;
-};
+} ttytext_t;
 
-struct_txt_style *txt_init_txt_struct(struct_txt_style *style);
-int8_t txt_parse_txt_params(struct_txt_style *style, const char *string, int32_t len);
+typedef struct
+{
+    char Name[64];
+    char path[255];
+} graph_font_t;
+
+void txt_LoadFonts(void);
+txt_style_t *txt_init_txt_struct(txt_style_t *style);
+int8_t txt_parse_txt_params(txt_style_t *style, const char *string, int32_t len);
 void txt_DrawTxtWithJustify(char *txt, TTF_Font *fnt, SDL_Color clr, SDL_Surface *dst, int dy, int justify);
-int32_t txt_get_linelen_for_width();
-void txt_readfontstyle(struct_txt_style *style, char *strin);
-void txt_set_font_style(TTF_Font *font, struct_txt_style *fnt_stl);
-int32_t txt_DrawTxt(char *txt, struct_txt_style *fnt_stl, SDL_Surface *dst);
+void txt_get_font_style(txt_style_t *style, char *strin);
+void txt_set_font_style(TTF_Font *font, txt_style_t *fnt_stl);
+TTF_Font *txt_get_font_by_name(char *name, int size);
+int32_t txt_DrawTxt(char *txt, txt_style_t *fnt_stl, SDL_Surface *dst);
 void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst);
 
 struct_action_res *txt_CreateTTYtext();

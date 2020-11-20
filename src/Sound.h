@@ -1,22 +1,18 @@
 #ifndef SOUND_H_INCLUDED
 #define SOUND_H_INCLUDED
 
-void InitMusic();
+void InitSound();
 void DeinitMusic();
-
 int GetFreeChannel();
 void LockChan(int i);
 void UnlockChan(int i);
-
 void SaveVol();
 void SilenceVol();
 void RestoreVol();
-
 uint32_t GetChanTime(int i);
-
 int GetLogVol(uint8_t linear);
 
-struct musicnode
+typedef struct
 {
     Mix_Chunk *chunk;
     int32_t chn;
@@ -40,16 +36,15 @@ struct musicnode
     bool universe; //universe_music or music
 
     struct_subtitles *sub;
-};
+} musicnode_t;
 
-struct struct_syncnode
+typedef struct
 {
     int syncto;
     Mix_Chunk *chunk;
     int chn;
-
     struct_subtitles *sub;
-};
+} syncnode_t;
 
 void snd_DeleteLoopedWavsByOwner(pzllst *owner);
 void snd_DeleteNoUniverse(pzllst *owner);

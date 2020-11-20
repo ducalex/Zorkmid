@@ -1,7 +1,6 @@
 #ifndef PUZZLE_H_INCLUDED
 #define PUZZLE_H_INCLUDED
 
-#include "types.h"
 #include "ScriptSystem.h"
 
 struct puzzlenode
@@ -12,24 +11,24 @@ struct puzzlenode
     pzllst *owner;
 };
 
-struct func_node
+typedef struct
 {
     int (*func)(char *, int, pzllst *);
     char *param;
     puzzlenode *owner;
     int slot;
-};
+} func_node_t;
 
-struct crit_node
+typedef struct
 {
     int32_t slot1;
     int32_t slot2;
     uint8_t oper;
     bool var2; //if true: slot2 is slot; false: slot2 - number
-};
+} crit_node_t;
 
 pzllst *CreatePzlLst();
-int Parse_Puzzle(pzllst *lst, mfile *fl, char *ctstr);
+int Parse_Puzzle(pzllst *lst, mfile_t *fl, char *ctstr);
 int Puzzle_try_exec(puzzlenode *pzlnod);
 
 void FlushPuzzleList(pzllst *lst);

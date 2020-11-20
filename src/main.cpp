@@ -1,54 +1,14 @@
 #include "System.h"
 
-bool done = false;
-
-void END()
-{
-    done = true;
-}
-
-void UpdateGameSystem()
-{
-    ProcMTime();
-    UpdateDTime();
-    // message processing loop
-    SDL_Event event;
-
-    //Clear all hits
-    FlushHits();
-    while (SDL_PollEvent(&event))
-    {
-        // check for messages
-        switch (event.type)
-        {
-            // exit if the window is closed
-        case SDL_QUIT:
-            done = true;
-            break;
-
-            // check for keyhit's (one per press)
-        case SDL_KEYDOWN:
-            SetHit(event.key.keysym.sym);
-            break;
-        }
-    }
-    //check for keydown (continous)
-    UpdateKeyboard();
-
-    FpsCounter();
-
-    if ((KeyDown(SDLK_RALT) || KeyDown(SDLK_LALT)) && KeyHit(SDLK_RETURN))
-        Rend_SwitchFullscreen();
-}
-
 int main(int argc, char **argv)
 {
-    InitFileManage();
+    InitFileManager();
 
     char buf[512];
     char buf2[512];
     bool fullscreen = false;
     const char *pa = "./";
+
     for (int i = 1; i < argc; i++)
     {
         if (strcasecmp(argv[i], "-f") == 0)
@@ -106,31 +66,15 @@ int main(int argc, char **argv)
 
     fclose(fp);
 
-    InitVkKeys();
+    GameInit(fullscreen);
 
-    sprintf(buf, "%s/%s", pa, "FONTS");
-    Rend_InitGraphics(fullscreen, buf);
-
-    sprintf(buf, "%s/%s", pa, SYS_STRINGS_FILE);
-    ReadSystemStrings(buf);
-
-    menu_LoadGraphics();
-
-    InitScriptsEngine();
-
-    InitGameLoop();
-
-    InitMTime(35.0);
-
-    while (!done)
+    while (true)
     {
-        UpdateGameSystem();
+        GameUpdate();
         GameLoop();
     }
 
-    SDL_SetGamma(1.0, 1.0, 1.0);
-
-    SDL_Quit();
+    GameQuit();
 
     return 0;
 }

@@ -1,6 +1,6 @@
 #include "Game.h"
 
-static Locate Need_Locate;
+static Location_t Need_Locate;
 static bool NeedToLoadScript = false;
 static int8_t NeedToLoadScriptDelay = CHANGELOCATIONDELAY;
 static int32_t View_start_Loops = 0;
@@ -14,6 +14,47 @@ const char *GetGameTitle()
         case GAME_NEM: return "Zork: Nemesis";
         default: "Unknown";
     }
+}
+
+static void LoadSystemStrings(void)
+{
+    char filename[PATHBUFSIZ];
+    sprintf(filename, "%s/%s", GetAppPath(), SYS_STRINGS_FILE);
+
+    memset(SystemStrings, 0, sizeof(SystemStrings));
+
+    mfile_t *fl = mfopen_path(filename);
+
+    if (fl == NULL)
+    {
+        printf("File %s not found\n", filename);
+        exit(-1);
+    }
+
+    m_wide_to_utf8(fl);
+
+    int32_t ii = 0;
+
+    char buf[STRBUFSIZE];
+
+    while (!mfeof(fl))
+    {
+        mfgets(buf, STRBUFSIZE, fl);
+        if (ii < SYSTEM_STRINGS_NUM)
+        {
+            SystemStrings[ii] = strdup(TrimRight(buf));
+        }
+        ii++;
+    }
+
+    mfclose(fl);
+}
+
+char *GetSystemString(int32_t indx)
+{
+    if (indx < SYSTEM_STRINGS_NUM)
+        return SystemStrings[indx];
+    return NULL;
 }
 
 void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X)
@@ -47,12 +88,21 @@ void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X)
     }
 }
 
-void InitGameLoop()
+void GameInit(bool fullscreen)
 {
+    Rend_InitGraphics(fullscreen);
+    InitSound();
+    InitVkKeys();
+    menu_LoadGraphics();
+
+    InitScriptsEngine();
+
     pzllst *uni = GetUni();
     LoadScriptFile(uni, FindInBinTree("universe.scr"), false, NULL);
 
     ScrSys_ChangeLocation(InitWorld, InitRoom, InitNode, InitView, 0, true);
+
+    LoadSystemStrings();
 
     //Hack
     SetDirectgVarInt(SLOT_LASTWORLD, InitWorld);
@@ -70,7 +120,7 @@ void InitGameLoop()
 
     //\Hack
 
-    // Rend_EF_Wave_Setup(10,360,3,5,4,1,0.1);
+    InitMTime(35.0);
 }
 
 void EasterEggsAndDebug()
@@ -193,30 +243,8 @@ void EasterEggsAndDebug()
     }
 }
 
-void shortcuts()
-{
-    int32_t m_en = menu_GetMenuBarVal();
-
-    if (KeyHit(SDLK_s) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
-        if (m_en & menu_BAR_SAVE)
-            SetNeedLocate(SaveWorld, SaveRoom, SaveNode, SaveView, 0);
-
-    if (KeyHit(SDLK_r) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
-        if (m_en & menu_BAR_RESTORE)
-            SetNeedLocate(LoadWorld, LoadRoom, LoadNode, LoadView, 0);
-
-    if (KeyHit(SDLK_p) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
-        if (m_en & menu_BAR_SETTINGS)
-            SetNeedLocate(PrefWorld, PrefRoom, PrefNode, PrefView, 0);
-
-    if (KeyHit(SDLK_q) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
-        if (m_en & menu_BAR_EXIT)
-            ifquit();
-}
-
 void GameLoop()
 {
-
     Mouse_SetCursor(CURSOR_IDLE);
 
     if (GetgVarInt(SLOT_MOUSE_RIGHT_CLICK) != 0)
@@ -234,10 +262,10 @@ void GameLoop()
         if (MouseUp(SDL_BUTTON_RIGHT))
             SetgVarInt(SLOT_MOUSE_RIGHT_CLICK, 1);
 
-#ifdef GAME_NEMESIS
-        if (MouseUp(SDL_BUTTON_RIGHT))
-            inv_cycle();
-#endif
+        if (CUR_GAME == GAME_NEM)
+            if (MouseUp(SDL_BUTTON_RIGHT))
+                inv_cycle();
+
         if (GetgVarInt(SLOT_MOUSE_RIGHT_CLICK) != 1)
             if (MouseDown(SDL_BUTTON_LEFT))
                 SetgVarInt(SLOT_MOUSE_DOWN, 1);
@@ -245,27 +273,20 @@ void GameLoop()
 
     ScrSys_ProcessAllRes();
 
-    pzllst *room = Getroom();
-    pzllst *view = Getview();
-    pzllst *world = Getworld();
-    pzllst *uni = GetUni();
+    if (!ScrSys_BreakExec())
+        ScrSys_exec_puzzle_list(Getworld());
 
     if (!ScrSys_BreakExec())
-        ScrSys_exec_puzzle_list(world);
+        ScrSys_exec_puzzle_list(Getroom());
 
     if (!ScrSys_BreakExec())
-        ScrSys_exec_puzzle_list(room);
+        ScrSys_exec_puzzle_list(Getview());
 
     if (!ScrSys_BreakExec())
-        ScrSys_exec_puzzle_list(view);
-
-    if (!ScrSys_BreakExec())
-        ScrSys_exec_puzzle_list(uni);
+        ScrSys_exec_puzzle_list(GetUni());
 
     if (!ScrSys_BreakExec())
         menu_UpdateMenuBar();
-
-    MList *ctrl = Getctrl();
 
     if (!NeedToLoadScript)
     {
@@ -273,7 +294,7 @@ void GameLoop()
             Rend_MouseInteractOfRender();
 
         if (!ScrSys_BreakExec())
-            ProcessControls(ctrl);
+            ProcessControls(Getctrl());
 
         if (!ScrSys_BreakExec())
             Rend_RenderFunc();
@@ -292,49 +313,69 @@ void GameLoop()
     }
 
     EasterEggsAndDebug();
-    shortcuts();
+
+    // Keyboard shortcuts
+    if (menu_GetMenuBarVal())
+    {
+        if (KeyHit(SDLK_s) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
+            if (menu_GetMenuBarVal() & menu_BAR_SAVE)
+                SetNeedLocate(SaveWorld, SaveRoom, SaveNode, SaveView, 0);
+
+        if (KeyHit(SDLK_r) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
+            if (menu_GetMenuBarVal() & menu_BAR_RESTORE)
+                SetNeedLocate(LoadWorld, LoadRoom, LoadNode, LoadView, 0);
+
+        if (KeyHit(SDLK_p) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
+            if (menu_GetMenuBarVal() & menu_BAR_SETTINGS)
+                SetNeedLocate(PrefWorld, PrefRoom, PrefNode, PrefView, 0);
+
+        if (KeyHit(SDLK_q) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
+            if (menu_GetMenuBarVal() & menu_BAR_EXIT)
+                ifquit();
+    }
 
     Rend_ScreenFlip();
 }
 
-void ReadSystemStrings(char *filename)
+void GameQuit()
 {
-    memset(SystemStrings, 0, sizeof(SystemStrings));
-
-    mfile *fl = mfopen_path(filename);
-
-    if (fl == NULL)
-    {
-        printf("File %s not found\n", filename);
-        exit(-1);
-    }
-
-    m_wide_to_utf8(fl);
-
-    int32_t ii = 0;
-
-    char buf[STRBUFSIZE];
-
-    while (!mfeof(fl))
-    {
-        mfgets(buf, STRBUFSIZE, fl);
-        char *str = TrimRight(buf);
-        if (ii < SYSTEM_STRINGS_NUM)
-        {
-            SystemStrings[ii] = (char *)malloc(strlen(str) + 1);
-            strcpy(SystemStrings[ii], str);
-        }
-        ii++;
-    }
-
-    mfclose(fl);
+    SDL_SetGamma(1.0, 1.0, 1.0);
+    SDL_Quit();
+    exit(0);
 }
 
-char *GetSystemString(int32_t indx)
+void GameUpdate()
 {
-    if (indx < SYSTEM_STRINGS_NUM)
-        return SystemStrings[indx];
-    return NULL;
+    ProcMTime();
+    UpdateDTime();
+
+    // message processing loop
+    SDL_Event event;
+
+    //Clear all hits
+    FlushHits();
+    while (SDL_PollEvent(&event))
+    {
+        // check for messages
+        switch (event.type)
+        {
+            // exit if the window is closed
+        case SDL_QUIT:
+            GameQuit();
+            break;
+
+            // check for keyhit's (one per press)
+        case SDL_KEYDOWN:
+            SetHit(event.key.keysym.sym);
+            break;
+        }
+    }
+
+    UpdateKeyboard();
+    FpsCounter();
+
+    if ((KeyDown(SDLK_RALT) || KeyDown(SDLK_LALT)) && KeyHit(SDLK_RETURN))
+        Rend_SwitchFullscreen();
 }
 
 void game_timed_message(int32_t milsecs, const char *str)
@@ -370,7 +411,7 @@ void game_delay_message(int32_t milsecs, const char *str)
 
     while (!KeyDown(SDLK_SPACE) && !KeyDown(SDLK_RETURN) && !KeyDown(SDLK_ESCAPE) && nexttime > cur_time)
     {
-        UpdateGameSystem();
+        GameUpdate();
         cur_time = millisec();
         Rend_RenderFunc();
         Rend_ScreenFlip();
@@ -389,10 +430,11 @@ bool game_question_message(const char *str)
 
     FlushKeybKey(SDLK_y);
     FlushKeybKey(SDLK_n);
+    FlushKeybKey(SDLK_o);
 
-    while (!KeyDown(SDLK_y) && !KeyDown(SDLK_n))
+    while (!KeyDown(SDLK_y) && !KeyDown(SDLK_n) && !KeyDown(SDLK_o))
     {
-        UpdateGameSystem();
+        GameUpdate();
         Rend_RenderFunc();
         Rend_ScreenFlip();
         SDL_Delay(5);
@@ -400,13 +442,11 @@ bool game_question_message(const char *str)
 
     Rend_DeleteSubRect(zzz);
 
-    if (KeyDown(SDLK_y))
-        return true;
-    return false;
+    return (KeyDown(SDLK_y) || KeyDown(SDLK_o));
 }
 
 void ifquit()
 {
     if (game_question_message(GetSystemString(SYSTEM_STR_EXITPROMT)))
-        END();
+        GameQuit();
 }

@@ -7,28 +7,26 @@
 
 #include "Render.h"
 
-struct struct_one_subtitle
+typedef struct
 {
     int start;
     int stop;
     int sub;
-};
+} one_subtitle_t;
 
-struct struct_textfile
+typedef struct
 {
     int count;
     char *buffer; //for all subs
     char **subs;  //for access to subs
-};
+} sub_textfile_t;
 
 struct struct_subtitles
 {
     struct_SubRect *SubRect;
     int subscount; //number of subs;
-
-    struct_one_subtitle *subs;
-    struct_textfile *txt; //array
-
+    one_subtitle_t *subs;
+    sub_textfile_t *txt; //array
     int currentsub;
 };
 

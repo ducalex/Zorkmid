@@ -24,13 +24,11 @@ void tmr_DeleteTimerByOwner(pzllst *owner)
     while (!eofMList(allres))
     {
         struct_action_res *nod = (struct_action_res *)DataMList(allres);
-        if (nod->node_type == NODE_TYPE_TIMER)
-            if (nod->owner == owner)
-            {
-                tmr_DeleteTimer(nod);
-
-                DeleteCurrent(allres);
-            }
+        if (nod->node_type == NODE_TYPE_TIMER && nod->owner == owner)
+        {
+            tmr_DeleteTimer(nod);
+            DeleteCurrent(allres);
+        }
 
         NextMList(allres);
     }
@@ -51,8 +49,6 @@ int tmr_ProcessTimer(struct_action_res *nod)
         return NODE_RET_DELETE;
     }
 
-    //if (GetNBeat(3)) //10fps
-    //    nod->nodes.node_timer--;
     nod->nodes.node_timer -= GetDTime();
 
     return NODE_RET_OK;

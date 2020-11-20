@@ -1,8 +1,8 @@
 #include "System.h"
 
-struct_textfile *sub_LoadTextFile(FManNode *file)
+sub_textfile_t *sub_LoadTextFile(FManNode *file)
 {
-    mfile *f = mfopen(file);
+    mfile_t *f = mfopen(file);
 
     if (f == NULL)
         return NULL;
@@ -11,7 +11,7 @@ struct_textfile *sub_LoadTextFile(FManNode *file)
 
     int sz = f->size;
 
-    struct_textfile *tmp = NEW(struct_textfile);
+    sub_textfile_t *tmp = NEW(sub_textfile_t);
 
     tmp->buffer = (char *)calloc(sz + 1, 1);
 
@@ -72,7 +72,7 @@ struct_textfile *sub_LoadTextFile(FManNode *file)
     return tmp;
 }
 
-void sub_DeleteTextFile(struct_textfile *txt)
+void sub_DeleteTextFile(sub_textfile_t *txt)
 {
     free(txt->buffer);
     free(txt->subs);
@@ -100,7 +100,7 @@ struct_subtitles *sub_LoadSubtitles(char *filename)
     tmp->SubRect = NULL;
     tmp->subscount = 0;
 
-    mfile *f = mfopen(fil);
+    mfile_t *f = mfopen(fil);
     while (!mfeof(f))
     {
         mfgets(buf, STRBUFSIZE, f);
@@ -147,7 +147,7 @@ struct_subtitles *sub_LoadSubtitles(char *filename)
                 }
 
                 tmp->txt = sub_LoadTextFile(fil2);
-                tmp->subs = (struct_one_subtitle *)calloc(tmp->txt->count, sizeof(struct_one_subtitle));
+                tmp->subs = (one_subtitle_t *)calloc(tmp->txt->count, sizeof(one_subtitle_t));
                 subscount = tmp->txt->count;
             }
             else //it's must be sub info
