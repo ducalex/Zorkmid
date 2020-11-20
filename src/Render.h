@@ -3,6 +3,19 @@
 
 #include "Subtitles.h"
 
+extern int GAME_W;
+extern int GAME_H;
+extern int GAME_BPP;
+extern int GAMESCREEN_W;
+extern int GAMESCREEN_P;
+extern int GAMESCREEN_H;
+extern int GAMESCREEN_X;
+extern int GAMESCREEN_Y;
+extern int GAMESCREEN_FLAT_X;
+
+#define GAMESCREEN_H_2 (GAMESCREEN_H >> 1)
+#define GAMESCREEN_W_2 (GAMESCREEN_W >> 1)
+
 #define RENDER_FLAT 0
 #define RENDER_PANA 1
 #define RENDER_TILT 2
@@ -112,6 +125,8 @@ int Rend_deleteRegion(struct_action_res *nod);
 int8_t Rend_GetScreenPart(int32_t *x, int32_t *y, int32_t w, int32_t h, SDL_Surface *dst);
 
 /***************Effects section******************/
+
+#define EFFECTS_MAX_CNT 32
 
 #define EFFECT_WAVE 1
 #define EFFECT_LIGH 2

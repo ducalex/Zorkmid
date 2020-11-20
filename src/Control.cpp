@@ -317,12 +317,11 @@ void control_slot_draw(ctrlnode *nod)
         if (slut->srf == NULL && slut->loaded_img != tmp1)
         {
             char bff[16];
-#ifdef GAME_ZGI
-            sprintf(bff, CTRL_SLOT_FILE_NAME, slut->distance_id, tmp1);
-#endif
-#ifdef GAME_NEMESIS
-            sprintf(bff, CTRL_SLOT_FILE_NAME, tmp1, slut->distance_id);
-#endif
+
+            if (CUR_GAME == GAME_ZGI)
+                sprintf(bff, "g0z%1.1su%2.2x1.tga", slut->distance_id, tmp1);
+            else
+                sprintf(bff, "%d%sOBJ.TGA", tmp1, slut->distance_id);
 
             slut->srf = loader_LoadFile(bff, 0, Rend_MapScreenRGB(0, 0, 0));
 
@@ -1366,7 +1365,7 @@ int Parse_Control_Flat()
 
 int Parse_Control_Lever(MList *controlst, mfile *fl, uint32_t slot)
 {
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_LEVER);
@@ -1380,7 +1379,7 @@ int Parse_Control_Lever(MList *controlst, mfile *fl, uint32_t slot)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -1413,7 +1412,7 @@ int Parse_Control_Lever(MList *controlst, mfile *fl, uint32_t slot)
 
     while (!feof(file2))
     {
-        fgets(buf, FILE_LN_BUF, file2);
+        fgets(buf, STRBUFSIZE, file2);
         str = PrepareString(buf);
 
         if (strCMP(str, "animation_id") == 0)
@@ -1488,7 +1487,7 @@ int Parse_Control_Lever(MList *controlst, mfile *fl, uint32_t slot)
                     lev->hotspots[t1].y = t3;
                     char *token;
                     const char *find = " ";
-                    char tmpbuf[FILE_LN_BUF];
+                    char tmpbuf[STRBUFSIZE];
                     strcpy(tmpbuf, str);
                     token = strtok(tmpbuf, find);
                     while (token != NULL)
@@ -1554,7 +1553,7 @@ int Parse_Control_Lever(MList *controlst, mfile *fl, uint32_t slot)
 
 int Parse_Control_HotMov(MList *controlst, mfile *fl, uint32_t slot)
 {
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_HOTMV);
@@ -1569,7 +1568,7 @@ int Parse_Control_HotMov(MList *controlst, mfile *fl, uint32_t slot)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -1626,7 +1625,7 @@ int Parse_Control_HotMov(MList *controlst, mfile *fl, uint32_t slot)
 
     while (!feof(file2))
     {
-        fgets(buf, FILE_LN_BUF, file2);
+        fgets(buf, STRBUFSIZE, file2);
         int32_t t1, t2, t3, t4, tt;
         sscanf(buf, "%d:%d %d %d %d~", &tt, &t1, &t2, &t3, &t4);
         if (tt >= 0 && tt < hotm->num_frames)
@@ -1645,7 +1644,7 @@ int Parse_Control_HotMov(MList *controlst, mfile *fl, uint32_t slot)
 
 int Parse_Control_Panorama(mfile *fl)
 {
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
     int good = 0;
 
@@ -1657,7 +1656,7 @@ int Parse_Control_Panorama(mfile *fl)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -1701,7 +1700,7 @@ int Parse_Control_Panorama(mfile *fl)
 
 int Parse_Control_Tilt(mfile *fl)
 {
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
     int good = 0;
 
@@ -1713,7 +1712,7 @@ int Parse_Control_Tilt(mfile *fl)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -1752,7 +1751,7 @@ int Parse_Control_Tilt(mfile *fl)
 int Parse_Control_Save(MList *controlst, mfile *fl, uint32_t slot)
 {
     int good = 0;
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_SAVE);
@@ -1774,7 +1773,7 @@ int Parse_Control_Save(MList *controlst, mfile *fl, uint32_t slot)
 
     for (int i = 0; i < MAX_SAVES; i++)
     {
-        fgets(buf, FILE_LN_BUF, f);
+        fgets(buf, STRBUFSIZE, f);
         memset(sv->Names[i], 0, SAVE_NAME_MAX_LEN + 1);
         str = TrimRight(buf);
         if (strlen(str) > 0)
@@ -1794,7 +1793,7 @@ int Parse_Control_Save(MList *controlst, mfile *fl, uint32_t slot)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -1851,7 +1850,7 @@ int Parse_Control_Save(MList *controlst, mfile *fl, uint32_t slot)
 int Parse_Control_Titler(MList *controlst, mfile *fl, uint32_t slot)
 {
     int good = 0;
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_TITLER);
@@ -1862,7 +1861,7 @@ int Parse_Control_Titler(MList *controlst, mfile *fl, uint32_t slot)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -1893,11 +1892,11 @@ int Parse_Control_Titler(MList *controlst, mfile *fl, uint32_t slot)
 
                 m_wide_to_utf8(fl2);
 
-                char bf[FILE_LN_BUF];
+                char bf[STRBUFSIZE];
 
                 while (!mfeof(fl2) && titler->num_strings < CTRL_TITLER_MAX_STRINGS)
                 {
-                    mfgets(bf, FILE_LN_BUF, fl2);
+                    mfgets(bf, STRBUFSIZE, fl2);
                     char *str2 = PrepareString(bf);
                     int32_t bflen = strlen(str2);
                     if (bf > 0)
@@ -1919,7 +1918,7 @@ int Parse_Control_Titler(MList *controlst, mfile *fl, uint32_t slot)
 int Parse_Control_Input(MList *controlst, mfile *fl, uint32_t slot)
 {
     int good = 0;
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_INPUT);
@@ -1932,7 +1931,7 @@ int Parse_Control_Input(MList *controlst, mfile *fl, uint32_t slot)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -2015,7 +2014,7 @@ int Parse_Control_Input(MList *controlst, mfile *fl, uint32_t slot)
 int Parse_Control_Paint(MList *controlst, mfile *fl, uint32_t slot)
 {
     int good = 0;
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_PAINT);
@@ -2028,7 +2027,7 @@ int Parse_Control_Paint(MList *controlst, mfile *fl, uint32_t slot)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -2148,7 +2147,7 @@ int Parse_Control_Paint(MList *controlst, mfile *fl, uint32_t slot)
 int Parse_Control_Slot(MList *controlst, mfile *fl, uint32_t slot)
 {
     int good = 0;
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_SLOT);
@@ -2160,7 +2159,7 @@ int Parse_Control_Slot(MList *controlst, mfile *fl, uint32_t slot)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -2239,7 +2238,7 @@ int Parse_Control_Slot(MList *controlst, mfile *fl, uint32_t slot)
 int Parse_Control_PushTgl(MList *controlst, mfile *fl, uint32_t slot)
 {
     int good = 0;
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     //    SetgVarInt(slot,0);
@@ -2252,7 +2251,7 @@ int Parse_Control_PushTgl(MList *controlst, mfile *fl, uint32_t slot)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -2320,7 +2319,7 @@ int Parse_Control_PushTgl(MList *controlst, mfile *fl, uint32_t slot)
 int Parse_Control_Fist(MList *controlst, mfile *fl, uint32_t slot)
 {
     int good = 0;
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_FIST);
@@ -2331,7 +2330,7 @@ int Parse_Control_Fist(MList *controlst, mfile *fl, uint32_t slot)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -2374,7 +2373,7 @@ int Parse_Control_Fist(MList *controlst, mfile *fl, uint32_t slot)
 
         while (!feof(fil))
         {
-            fgets(buf, FILE_LN_BUF, fil);
+            fgets(buf, STRBUFSIZE, fil);
             str = PrepareString(buf);
             int32_t ln = strlen(str);
             if (str[ln - 1] == '~')
@@ -2506,7 +2505,7 @@ int Parse_Control_Fist(MList *controlst, mfile *fl, uint32_t slot)
 int Parse_Control_Safe(MList *controlst, mfile *fl, uint32_t slot)
 {
     int good = 0;
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     ctrlnode *ctnode = Ctrl_CreateNode(CTRL_SAFE);
@@ -2515,7 +2514,7 @@ int Parse_Control_Safe(MList *controlst, mfile *fl, uint32_t slot)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')

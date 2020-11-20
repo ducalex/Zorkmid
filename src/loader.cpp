@@ -368,12 +368,10 @@ Mix_Chunk *loader_LoadChunk(const char *file)
 
     if (((strCMP(buf, "src") == 0) || (strCMP(buf, "raw") == 0) || (strCMP(buf, "ifp") == 0)) && (mfil != NULL))
     {
-#ifdef GAME_ZGI
-        chunk = Load_ZGI(mfil, fil[t_len - 5]);
-#endif
-#ifdef GAME_NEMESIS
-        chunk = Load_ZNEM(mfil, fil[t_len - 6]);
-#endif
+        if (CUR_GAME == GAME_ZGI)
+            chunk = Load_ZGI(mfil, fil[t_len - 5]);
+        else
+            chunk = Load_ZNEM(mfil, fil[t_len - 6]);
     }
     else if (!mfil)
     {

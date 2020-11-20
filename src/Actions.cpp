@@ -62,9 +62,8 @@ int action_set_partial_screen(char *params, int aSlot, pzllst *owner)
 
 int action_assign(char *params, int aSlot, pzllst *owner)
 {
-#ifdef TRACE
-    printf("        action:assign(%s)\n", params);
-#endif
+    TRACE_ACTION();
+
     char tmp1[16], tmp2[16];
     sscanf(params, "%s %s", tmp1, tmp2);
 
@@ -109,10 +108,7 @@ int action_change_location(char *params, int aSlot, pzllst *owner)
 {
     TRACE_ACTION();
 
-    char tmp[4];
-    char tmp2[4];
-    char tmp3[4];
-    char tmp4[16];
+    char tmp[4], tmp2[4], tmp3[4], tmp4[16];
     sscanf(params, "%c %c %c%c %s", tmp, tmp2, tmp3, tmp3 + 1, tmp4);
 
     SetNeedLocate(tolower(tmp[0]), tolower(tmp2[0]), tolower(tmp3[0]), tolower(tmp3[1]), GetIntVal(tmp4));
@@ -497,7 +493,7 @@ int music_music(char *params, int aSlot, pzllst *owner, bool universe)
 
     if (type == 4)
     {
-        char fil[FILE_LN_BUF];
+        char fil[STRBUFSIZE];
         int32_t instr = atoi(file);
         int32_t pitch = atoi(loop);
         sprintf(fil, "%s/MIDI/%d/%d.wav", GetAppPath(), instr, pitch);

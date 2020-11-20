@@ -46,17 +46,21 @@ void Mouse_LoadCursors()
     for (int i = 0; i < 18; i++)
     {
         Free_Cursor(&DefCursors[i][CURSOR_UP_STATE]);
-        #ifdef GAME_ZGI
+
+        if (CUR_GAME == GAME_ZGI)
+        {
             loader_LoadZcr(CurFiles_zgi[i], &DefCursors[i][CURSOR_UP_STATE]);
             strcpy(buffer, CurFiles_zgi[i]);
             buffer[3] += 2;
             loader_LoadZcr(buffer, &DefCursors[i][CURSOR_DW_STATE]);
-        #else
+        }
+        else
+        {
             sprintf(buffer, "%sa.zcr", CurFiles_znemesis[i]);
             loader_LoadZcr(buffer, &DefCursors[i][CURSOR_UP_STATE]);
             sprintf(buffer, "%sb.zcr", CurFiles_znemesis[i]);
             loader_LoadZcr(buffer, &DefCursors[i][CURSOR_DW_STATE]);
-        #endif
+        }
     }
 
     cur = &DefCursors[CURSOR_IDLE][0];
@@ -193,7 +197,8 @@ void Mouse_LoadObjCursor(int num)
 
     char buf[16];
 
-    #ifdef GAME_ZGI
+    if (CUR_GAME == GAME_ZGI)
+    {
         sprintf(buf, "g0b%cc%2.2x1.zcr", 'a', current_obj_cur);
         loader_LoadZcr(buf, &ObjCursors[0][CURSOR_UP_STATE]);
         sprintf(buf, "g0b%cc%2.2x1.zcr", 'b', current_obj_cur);
@@ -202,7 +207,9 @@ void Mouse_LoadObjCursor(int num)
         loader_LoadZcr(buf, &ObjCursors[0][CURSOR_DW_STATE]);
         sprintf(buf, "g0b%cc%2.2x1.zcr", 'd', current_obj_cur);
         loader_LoadZcr(buf, &ObjCursors[1][CURSOR_DW_STATE]);
-    #else
+    }
+    else
+    {
         sprintf(buf, "%2.2didle%c.zcr", current_obj_cur, 'a');
         loader_LoadZcr(buf, &ObjCursors[0][CURSOR_UP_STATE]);
         sprintf(buf, "%2.2didle%c.zcr", current_obj_cur, 'b');
@@ -211,5 +218,5 @@ void Mouse_LoadObjCursor(int num)
         loader_LoadZcr(buf, &ObjCursors[1][CURSOR_UP_STATE]);
         sprintf(buf, "%2.2dact%c.zcr", current_obj_cur, 'b');
         loader_LoadZcr(buf, &ObjCursors[1][CURSOR_DW_STATE]);
-    #endif
+    }
 }

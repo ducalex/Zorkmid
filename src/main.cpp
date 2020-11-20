@@ -55,6 +55,14 @@ int main(int argc, char **argv)
         {
             fullscreen = true;
         }
+        else if (strcasecmp(argv[i], "-zgi") == 0)
+        {
+            // CUR_GAME = GAME_ZGI;
+        }
+        else if (strcasecmp(argv[i], "-nem") == 0)
+        {
+            // CUR_GAME = GAME_NEM;
+        }
         else
         {
             pa = argv[i];
@@ -69,7 +77,7 @@ int main(int argc, char **argv)
     if (!fp)
     {
         // If file not exists then use ZORK_DIR
-        char *(dirs[]) = ZORK_DIR;
+        // char *(dirs[]) = ZORK_DIR;
 
         // If read error then bail:
         printf("Can't open %s\n", buf);

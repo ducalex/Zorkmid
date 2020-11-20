@@ -1,29 +1,24 @@
 #include "System.h"
 
-int32_t gVars[VAR_SLOTS_MAX];
+static int VAR_SLOTS_MAX = 20000;
 
-struct_action_res *gNodes[VAR_SLOTS_MAX];
+static int32_t gVars[30000];
+static struct_action_res *gNodes[30000];
+static uint8_t Flags[30000];
+static StateBoxEnt *StateBox[30000];
 
-uint8_t Flags[VAR_SLOTS_MAX];
+static bool BreakExecute = false;
 
-StateBoxEnt *StateBox[VAR_SLOTS_MAX];
+static pzllst *uni = NULL;   //universe script
+static pzllst *world = NULL; //world script
+static pzllst *room = NULL;  //room script
+static pzllst *view = NULL;  //view script
 
-puzzlenode *StateBoxStk[STATEBOX_STACK_MAX];
-uint32_t StateBoxStkSz = 0;
+static MList *ctrl = NULL; //contorls
+static MList *actres = NULL; //sounds, animations, ttytexts and other.
 
-bool BreakExecute = false;
-
-pzllst *uni = NULL;   //universe script
-pzllst *world = NULL; //world script
-pzllst *room = NULL;  //room script
-pzllst *view = NULL;  //view script
-
-MList *ctrl = NULL; //contorls
-
-MList *actres = NULL; //sounds, animations, ttytexts and other.
-
-uint8_t *SaveBuffer = NULL;
-uint32_t SaveCurrentSize = 0;
+static uint8_t *SaveBuffer = NULL;
+static uint32_t SaveCurrentSize = 0;
 
 const char *ScrSys_ReturnListName(pzllst *lst)
 {
@@ -137,7 +132,7 @@ bool ScrSys_SlotIsOwned2(int32_t i)
 
 void ScrSys_FlushGNodes()
 {
-    memset(gNodes, 0x0, VAR_SLOTS_MAX * sizeof(struct_action_res *));
+    memset(gNodes, 0x0, sizeof(gNodes));
 }
 
 void ScrSys_RereadGNodes()
@@ -172,22 +167,20 @@ void setGNode(int32_t indx, struct_action_res *data)
 
 void InitScriptsEngine()
 {
-    memset(gVars, 0x0, VAR_SLOTS_MAX * sizeof(gVars[0]));
+    // 20_000 slots for ZGI and 30_000 for Nemesis
+    VAR_SLOTS_MAX = (CUR_GAME == GAME_ZGI) ? 20000 : 30000;
+
+    memset(StateBox, 0x0, sizeof(StateBox));
+    memset(Flags, 0x0, sizeof(Flags));
+    memset(gVars, 0x0, sizeof(gVars));
     ScrSys_FlushGNodes();
 
     view = CreatePzlLst();
     room = CreatePzlLst();
     world = CreatePzlLst();
     uni = CreatePzlLst();
-
     ctrl = CreateMList();
-
     actres = CreateMList();
-
-    memset(StateBox, 0x0, VAR_SLOTS_MAX * sizeof(StateBoxEnt *));
-    StateBoxStkSz = 0;
-
-    memset(Flags, 0x0, VAR_SLOTS_MAX * sizeof(uint8_t));
 
     //needed for znemesis
     SetDirectgVarInt(SLOT_CPU, 1);
@@ -216,11 +209,11 @@ void LoadScriptFile(pzllst *lst, FManNode *filename, bool control, MList *contro
         return;
     }
 
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
 
         char *str = PrepareString(buf);
 
@@ -245,15 +238,12 @@ void ScrSys_ClearStateBox()
             free(StateBox[i]);
         StateBox[i] = NULL;
     }
-
-    //memset(StateBox,0,VAR_SLOTS_MAX * sizeof(StateBoxEnt *));
-    StateBoxStkSz = 0;
 }
 
 void ScrSys_PrepareSaveBuffer()
 {
     if (SaveBuffer == NULL)
-        SaveBuffer = (uint8_t *)malloc(SAVEBUFFER_SIZE);
+        SaveBuffer = (uint8_t *)malloc(512 * 1024);
 
     int buffpos = 0;
 
@@ -659,7 +649,7 @@ void ClearUsedOnOPIPuzz(MList *lst)
 void AddStateBoxToStk(puzzlenode *pzl)
 {
     pzllst *owner = pzl->owner;
-    if (owner->stksize < pzlSTACK)
+    if (owner->stksize < PuzzleStack)
     {
         if (owner->stksize > 0)
         {
@@ -668,7 +658,7 @@ void AddStateBoxToStk(puzzlenode *pzl)
             {
                 if (owner->stack[i] == pzl)
                 {
-                    if (numb < MAX_PUZZLS_IN_STACK)
+                    if (numb < MaxPuzzlesInStack)
                         numb++;
                     else
                         return;
@@ -1008,7 +998,11 @@ const struct
 
 void ScrSys_LoadPreferences()
 {
-    FILE *fl = fopen(pref_FileName, "rb");
+    char filename[128];
+    strcpy(filename, GetGameTag());
+    strcat(filename, ".ini");
+
+    FILE *fl = fopen(filename, "rb");
     if (fl == NULL)
         return;
 
@@ -1040,10 +1034,14 @@ void ScrSys_LoadPreferences()
 
 void ScrSys_SavePreferences()
 {
-    FILE *fl = fopen(pref_FileName, "wb");
+    char filename[128];
+    strcpy(filename, GetGameTag());
+    strcat(filename, ".ini");
+
+    FILE *fl = fopen(filename, "wb");
     if (fl == NULL)
         return;
-    fprintf(fl, "[%s]\r\n", pref_TagString);
+    fprintf(fl, "[%s]\r\n", GetGameTag());
     for (int16_t i = 0; i < pref_COUNT; i++)
         fprintf(fl, "%s=%d\r\n", prefs[i].name, GetgVarInt(prefs[i].slot));
 

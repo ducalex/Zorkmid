@@ -1,5 +1,7 @@
 #include "System.h"
 
+#define TRY_CHANNELS 16
+
 static int CHANNELS = 0;
 
 static uint8_t chanvol[TRY_CHANNELS];
@@ -30,7 +32,7 @@ int GetLogVol(uint8_t linear)
 void InitMusic()
 {
     Mix_OpenAudio(audio_rate, audio_format, audio_channels, audio_buffers);
-    memset(ChanStatus, 0, TRY_CHANNELS * sizeof(bool));
+    memset(ChanStatus, 0, sizeof(ChanStatus));
     CHANNELS = Mix_AllocateChannels(TRY_CHANNELS);
 }
 

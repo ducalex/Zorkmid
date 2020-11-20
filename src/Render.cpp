@@ -1,5 +1,16 @@
 #include "System.h"
 
+//Graphics
+int GAME_W = 640;
+int GAME_H = 480;
+int GAME_BPP = 32;
+int GAMESCREEN_W = 640;
+int GAMESCREEN_P = 60;
+int GAMESCREEN_H = 344;
+int GAMESCREEN_X = 0;
+int GAMESCREEN_Y = 68;
+int GAMESCREEN_FLAT_X = 0;
+
 uint8_t Renderer = RENDER_FLAT;
 
 MList *sublist = NULL;
@@ -27,8 +38,8 @@ struct xy
     int32_t y;
 };
 
-xy render_table[GAMESCREEN_W][GAMESCREEN_H];
-int32_t new_render_table[GAMESCREEN_W * GAMESCREEN_H];
+xy render_table[1024][1024];
+int32_t new_render_table[1024 * 1024];
 
 int32_t *view_X;
 
@@ -205,6 +216,37 @@ void Rend_pana_SetTable()
 
 void Rend_InitGraphics(bool fullscreen, char *fontsdir)
 {
+    // To do : Use a nice struct instead
+    if (CUR_GAME == GAME_ZGI)
+    {
+        GAME_W = 640;
+        GAME_H = 480;
+        GAME_BPP = 32;
+        GAMESCREEN_W = 640;
+        GAMESCREEN_P = 60;
+        GAMESCREEN_H = 344;
+        GAMESCREEN_X = 0;
+        GAMESCREEN_Y = 68;
+        GAMESCREEN_FLAT_X = 0;
+        #ifdef WIDESCREEN
+        GAME_W = 854;
+        GAMESCREEN_W = 854;
+        GAMESCREEN_FLAT_X = 107;
+        #endif
+    }
+    else
+    {
+        GAME_W = 640;
+        GAME_H = 480;
+        GAME_BPP = 32;
+        GAMESCREEN_W = 512;
+        GAMESCREEN_P = 60;
+        GAMESCREEN_H = 320;
+        GAMESCREEN_X = 64; //(640-512)/2
+        GAMESCREEN_Y = 80; //(480-320)/2
+        GAMESCREEN_FLAT_X = 0;
+    }
+
     screen = InitGraphicAndSound(GAME_W, GAME_H, GAME_BPP, fullscreen, fontsdir);
 
     Rend_InitSubList();
@@ -457,109 +499,6 @@ void Rend_FlatRender_pre()
     DrawImageToSurf(scrbuf, GAMESCREEN_FLAT_X, 0, tempbuf);
 }
 
-//void Rend_DrawPanorama2()
-//{
-//    //hehe
-//    //float hhx = 5.0/10.0;
-//    /////
-//    int asddsa= SDL_GetTicks();
-//
-//    SDL_LockSurface(tempbuf);
-//    SDL_LockSurface(scrbuf);
-//    if (GAME_BPP == 32)
-//    {
-//    int *nww = ((int *)tempbuf->pixels) ;
-//    for(int y = 0; y < GAMESCREEN_H>>2; y++)
-//    {
-//        //int *nww = ((int *)tempbuf->pixels) + (tempbuf->w * y*4); // only for 32 bit color
-//
-//        for(int x = 0; x < GAMESCREEN_W>>2; x++)
-//        {
-//            // int *nww = (int *)screen->pixels;
-//            int *old = (int *)scrbuf->pixels;    // only for 32 bit color
-//
-//            int newx = fishtable[(x<<2)][(y<<2)].x  /* *hhx */   + *PanaX;
-//
-//            if (newx < 0)
-//                newx += scrbuf->w;
-//            else if (newx > scrbuf->w)
-//                newx -= scrbuf->w;
-//
-//            *nww = old[newx + fishtable[(x<<2)][(y<<2)].y * scrbuf->w];
-//            nww++; //more faster than mul %)
-//            *nww = old[newx + fishtable[(x<<2)+1][(y<<2)].y * scrbuf->w];
-//            nww++;
-//            *nww = old[newx + fishtable[(x<<2)+2][(y<<2)].y * scrbuf->w];
-//            nww++; //more faster than mul %)
-//            *nww = old[newx + fishtable[(x<<2)+3][(y<<2)].y * scrbuf->w];
-//            nww++;
-//            int *nw2=nww;
-//
-//            nw2+=tempbuf->w-4;
-//            *nw2 = old[newx + fishtable[(x<<2)][(y<<2)+1].y * scrbuf->w];
-//            nw2++; //more faster than mul %)
-//            *nw2 = old[newx + fishtable[(x<<2)+1][(y<<2)+1].y * scrbuf->w];
-//            nw2++; //more faster than mul %)
-//            *nw2 = old[newx + fishtable[(x<<2)+2][(y<<2)+1].y * scrbuf->w];
-//            nw2++; //more faster than mul %)
-//            *nw2 = old[newx + fishtable[(x<<2)+3][(y<<2)+1].y * scrbuf->w];
-//
-//            nw2+=tempbuf->w-3;
-//            *nw2 = old[newx + fishtable[(x<<2)][(y<<2)+2].y * scrbuf->w];
-//            nw2++; //more faster than mul %)
-//            *nw2 = old[newx + fishtable[(x<<2)+1][(y<<2)+2].y * scrbuf->w];
-//            nw2++; //more faster than mul %)
-//            *nw2 = old[newx + fishtable[(x<<2)+2][(y<<2)+2].y * scrbuf->w];
-//            nw2++; //more faster than mul %)
-//            *nw2 = old[newx + fishtable[(x<<2)+3][(y<<2)+2].y * scrbuf->w];
-//
-//            nw2+=tempbuf->w-3;
-//            *nw2 = old[newx + fishtable[(x<<2)][(y<<2)+3].y * scrbuf->w];
-//            nw2++; //more faster than mul %)
-//            *nw2 = old[newx + fishtable[(x<<2)+1][(y<<2)+3].y * scrbuf->w];
-//            nw2++; //more faster than mul %)
-//            *nw2 = old[newx + fishtable[(x<<2)+2][(y<<2)+3].y * scrbuf->w];
-//            nw2++; //more faster than mul %)
-//            *nw2 = old[newx + fishtable[(x<<2)+3][(y<<2)+3].y * scrbuf->w];
-//
-//        }
-//        nww+=tempbuf->w+tempbuf->w+tempbuf->w;
-//    }
-//    }
-//    else if (GAME_BPP == 16)
-//    {
-//    for(int y = 0; y < GAMESCREEN_H; y++)
-//    {
-//        short *nww = ((short *)tempbuf->pixels) + (tempbuf->w * y); // only for 16 bit color
-//
-//        for(int x = 0; x < GAMESCREEN_W; x++)
-//        {
-//            // int *nww = (int *)screen->pixels;
-//            short *old = (short *)scrbuf->pixels;    // only for 16 bit color
-//
-//            int newx = fishtable[x][y].x + *PanaX;
-//
-//            if (newx < 0)
-//                newx += scrbuf->w;
-//            else if (newx > scrbuf->w)
-//                newx -= scrbuf->w;
-//
-//            *nww = old[newx + fishtable[x][y].y * scrbuf->w];
-//            nww++; //more faster than mul %)
-//        }
-//    }
-//    }
-//    else
-//    {
-//        printf("Write panorama code for %d bpp\n",GAME_BPP);
-//        exit(0);
-//    }
-//    SDL_UnlockSurface(tempbuf);
-//    SDL_UnlockSurface(scrbuf);
-//
-//    printf("%d\n",SDL_GetTicks()-asddsa);
-//}
-
 void Rend_DrawPanorama_pre()
 {
     DrawImageToSurf(scrbuf, GAMESCREEN_W_2 - *view_X, 0, tempbuf);
@@ -606,63 +545,6 @@ void Rend_DrawPanorama()
     }
     SDL_UnlockSurface(tempbuf);
     SDL_UnlockSurface(viewportbuf);
-
-    //    SDL_LockSurface(tempbuf);
-    //    SDL_LockSurface(viewportbuf);
-    //    if (GAME_BPP == 32)
-    //    {
-    //    int *nww = ((int *)tempbuf->pixels);
-    //    int *old = (int *)scrbuf->pixels;    // only for 32 bit color
-    //    for(int y = 0; y < GAMESCREEN_H; y++)
-    //    {
-    //         // only for 32 bit color
-    //
-    //        for(int x = 0; x < GAMESCREEN_W; x++)
-    //        {
-    //            // int *nww = (int *)screen->pixels;
-    //
-    //            int newx = render_table[x][y].x  /* *hhx */  + GAMESCREEN_W2;
-    //
-    //            if (newx < 0)
-    //                newx += scrbuf->w;
-    //            else if (newx > scrbuf->w)
-    //                newx -= scrbuf->w;
-    //
-    //            *nww = old[newx + render_table[x][y].y * scrbuf->w];
-    //            nww++; //more faster than mul %)
-    //        }
-    //    }
-    //    }
-    //    else if (GAME_BPP == 16)
-    //    {
-    //    short *nww = ((short *)tempbuf->pixels); // only for 16 bit color
-    //    short *old = (short *)scrbuf->pixels;    // only for 16 bit color
-    //    for(int y = 0; y < GAMESCREEN_H; y++)
-    //    {
-    //        for(int x = 0; x < GAMESCREEN_W; x++)
-    //        {
-    //            // int *nww = (int *)screen->pixels;
-    //
-    //            int newx = render_table[x][y].x + GAMESCREEN_W2;
-    //
-    //            if (newx < 0)
-    //                newx += scrbuf->w;
-    //            else if (newx > scrbuf->w)
-    //                newx -= scrbuf->w;
-    //
-    //            *nww = old[newx + render_table[x][y].y * scrbuf->w];
-    //            nww++; //more faster than mul %)
-    //        }
-    //    }
-    //    }
-    //    else
-    //    {
-    //        printf("Write panorama code for %d bpp\n",GAME_BPP);
-    //        exit(0);
-    //    }
-    //    SDL_UnlockSurface(tempbuf);
-    //    SDL_UnlockSurface(viewportbuf);
-    // printf("%d\n",SDL_GetTicks()-asddsa);
 }
 
 void Rend_PanaMouseInteract()

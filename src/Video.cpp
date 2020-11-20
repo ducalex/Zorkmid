@@ -93,7 +93,6 @@ SDL_Surface *SwitchFullscreen()
 
 SDL_Surface *InitGraphicAndSound(uint16_t wi, uint16_t he, uint16_t b, bool ful, char *fontsdir)
 {
-
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
     {
         printf("Unable to init SDL: %s\n", SDL_GetError());
@@ -109,7 +108,9 @@ SDL_Surface *InitGraphicAndSound(uint16_t wi, uint16_t he, uint16_t b, bool ful,
     else
         screen = SDL_SetVideoMode(wi, he, b, SFTYPE);
 
-    SDL_WM_SetCaption(TITLE, NULL);
+    char buffer[128];
+    sprintf(buffer, "Zorkmid: %s [build: " __DATE__ " " __TIME__ "]", GetGameTitle());
+    SDL_WM_SetCaption(buffer, NULL);
 
     InitMusic();
     TTF_Init();

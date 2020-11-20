@@ -82,7 +82,7 @@ void sub_DeleteTextFile(struct_textfile *txt)
 struct_subtitles *sub_LoadSubtitles(char *filename)
 {
 
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str1;        // without left spaces, paramname
     char *str2 = NULL; // params
 
@@ -103,7 +103,7 @@ struct_subtitles *sub_LoadSubtitles(char *filename)
     mfile *f = mfopen(fil);
     while (!mfeof(f))
     {
-        mfgets(buf, FILE_LN_BUF, f);
+        mfgets(buf, STRBUFSIZE, f);
         str1 = TrimLeft(buf);
 
         str2 = NULL;

@@ -1,14 +1,29 @@
 #include "Game.h"
 
-Locate Need_Locate;
-bool NeedToLoadScript = false;
-int8_t NeedToLoadScriptDelay = CHANGELOCATIONDELAY;
+static Locate Need_Locate;
+static bool NeedToLoadScript = false;
+static int8_t NeedToLoadScriptDelay = CHANGELOCATIONDELAY;
+static int32_t View_start_Loops = 0;
+static int8_t SaveSlot = 0;
+static char *SystemStrings[SYSTEM_STRINGS_NUM];
 
-int32_t View_start_Loops = 0;
+const char *GetGameTitle()
+{
+    switch (CUR_GAME) {
+        case GAME_ZGI: return "Zork: Grand Inquisitor";
+        case GAME_NEM: return "Zork: Nemesis";
+        default: "Unknown";
+    }
+}
 
-int8_t SaveSlot = 0;
-
-char *SystemStrings[SYSTEM_STRINGS_NUM];
+const char *GetGameTag()
+{
+    switch (CUR_GAME) {
+        case GAME_ZGI: return "ZorkGrandInquisitor";
+        case GAME_NEM: return "ZorkNemesis";
+        default: "Zork";
+    }
+}
 
 void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X)
 {
@@ -69,11 +84,10 @@ void InitGameLoop()
 
 void EasterEggsAndDebug()
 {
-    char message_buffer[STRBUFSZ];
+    char message_buffer[STRBUFSIZE];
 
     if (KeyAnyHit())
     {
-
         if ((KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)) && (KeyHit(SDLK_EQUALS) || KeyHit(SDLK_PLUS)))
         {
             setGamma(getGamma() + 0.1);
@@ -88,88 +102,74 @@ void EasterEggsAndDebug()
             game_timed_debug_message(1500, message_buffer);
         }
 
-        //        if (CheckKeyboardMessage("M?????T?",8))
-        //        {
-        //            char abc[6];
-        //            abc[0] = GetKeyBuffered(6);
-        //            abc[1] = GetKeyBuffered(5);
-        //            abc[2] = GetKeyBuffered(4);
-        //            abc[3] = GetKeyBuffered(3);
-        //            abc[4] = GetKeyBuffered(2);
-        //            abc[5] = 0;
-        //            int ii = atoi(abc);
-        //            abc[0] = GetKeyBuffered(0);
-        //            abc[1] = 0;
-        //            int ii2 = atoi(abc);
-        //            SetgVarInt(ii,ii2);
-        //        }
-
-#ifdef GAME_ZGI
-        if (CheckKeyboardMessage("IMNOTDEAF", 9))
+        if (CUR_GAME == GAME_ZGI)
         {
-            //TODO: unknown
+            if (CheckKeyboardMessage("IMNOTDEAF", 9))
+            {
+                //TODO: unknown
+            }
+
+            if (CheckKeyboardMessage("3100OPB", 7))
+            {
+                sprintf(message_buffer, "Current location: %c%c%c%c", GetgVarInt(SLOT_WORLD),
+                        GetgVarInt(SLOT_ROOM),
+                        GetgVarInt(SLOT_NODE),
+                        GetgVarInt(SLOT_VIEW));
+                game_timed_debug_message(3000, message_buffer);
+            }
+
+            if (CheckKeyboardMessage("KILLMENOW", 9))
+            {
+                SetNeedLocate('g', 'j', 'd', 'e', 0);
+                SetgVarInt(2201, 35);
+            }
+
+            if (CheckKeyboardMessage("MIKESPANTS", 10))
+            {
+                NeedToLoadScript = true;
+                SetNeedLocate('g', 'j', 't', 'm', 0);
+            }
         }
 
-        if (CheckKeyboardMessage("3100OPB", 7))
+        if (CUR_GAME == GAME_NEM)
         {
-            sprintf(message_buffer, "Current location: %c%c%c%c", GetgVarInt(SLOT_WORLD),
-                    GetgVarInt(SLOT_ROOM),
-                    GetgVarInt(SLOT_NODE),
-                    GetgVarInt(SLOT_VIEW));
-            game_timed_debug_message(3000, message_buffer);
-        }
+            if (CheckKeyboardMessage("CHLOE", 5))
+            {
+                SetNeedLocate('t', 'm', '2', 'g', 0);
+                SetgVarInt(224, 1);
+            }
 
-        if (CheckKeyboardMessage("KILLMENOW", 9))
-        {
-            SetNeedLocate('g', 'j', 'd', 'e', 0);
-            SetgVarInt(2201, 35);
-        }
+            if (CheckKeyboardMessage("77MASSAVE", 9))
+            {
+                sprintf(message_buffer, "Current location: %c%c%c%c", GetgVarInt(SLOT_WORLD),
+                        GetgVarInt(SLOT_ROOM),
+                        GetgVarInt(SLOT_NODE),
+                        GetgVarInt(SLOT_VIEW));
+                game_timed_debug_message(3000, message_buffer);
+            }
 
-        if (CheckKeyboardMessage("MIKESPANTS", 10))
-        {
-            NeedToLoadScript = true;
-            SetNeedLocate('g', 'j', 't', 'm', 0);
-        }
-#endif
+            if (CheckKeyboardMessage("IDKFA", 5))
+            {
+                SetNeedLocate('t', 'w', '3', 'f', 0);
+                SetgVarInt(249, 1);
+            }
 
-#ifdef GAME_NEMESIS
-        if (CheckKeyboardMessage("CHLOE", 5))
-        {
-            SetNeedLocate('t', 'm', '2', 'g', 0);
-            SetgVarInt(224, 1);
-        }
+            if (CheckKeyboardMessage("309NEWDORMA", 11))
+            {
+                SetNeedLocate('g', 'j', 'g', 'j', 0);
+            }
 
-        if (CheckKeyboardMessage("77MASSAVE", 9))
-        {
-            sprintf(message_buffer, "Current location: %c%c%c%c", GetgVarInt(SLOT_WORLD),
-                    GetgVarInt(SLOT_ROOM),
-                    GetgVarInt(SLOT_NODE),
-                    GetgVarInt(SLOT_VIEW));
-            game_timed_debug_message(3000, message_buffer);
-        }
+            if (CheckKeyboardMessage("HELLOSAILOR", 11))
+            {
+                if (GetgVarInt(SLOT_WORLD) == 'v' && GetgVarInt(SLOT_ROOM) == 'b' &&
+                    GetgVarInt(SLOT_NODE) == '1' && GetgVarInt(SLOT_VIEW) == '0')
+                    sprintf(message_buffer, "0 %s 0", "v000hpta.raw");
+                else
+                    sprintf(message_buffer, "0 %s 0", "v000hnta.raw");
 
-        if (CheckKeyboardMessage("IDKFA", 5))
-        {
-            SetNeedLocate('t', 'w', '3', 'f', 0);
-            SetgVarInt(249, 1);
+                action_universe_music(message_buffer, 0, GetUni());
+            }
         }
-
-        if (CheckKeyboardMessage("309NEWDORMA", 11))
-        {
-            SetNeedLocate('g', 'j', 'g', 'j', 0);
-        }
-
-        if (CheckKeyboardMessage("HELLOSAILOR", 11))
-        {
-            if (GetgVarInt(SLOT_WORLD) == 'v' && GetgVarInt(SLOT_ROOM) == 'b' &&
-                GetgVarInt(SLOT_NODE) == '1' && GetgVarInt(SLOT_VIEW) == '0')
-                sprintf(message_buffer, "0 %s 0", "v000hpta.raw");
-            else
-                sprintf(message_buffer, "0 %s 0", "v000hnta.raw");
-
-            action_universe_music(message_buffer, 0, GetUni());
-        }
-#endif
 
         if (CheckKeyboardMessage("FRAME", 5))
         {
@@ -196,7 +196,7 @@ void EasterEggsAndDebug()
 
         if (KeyDown(SDLK_v) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
         {
-            sprintf(message_buffer, "<FONT \"ZorkNormal\" BOLD on JUSTIFY center POINT 18 RED 150 GREEN 100 BLUE 50>Zengine %s:<RED 255 GREEN 255 BLUE 255><NEWLINE>%s", ZENGINE_VER, GAME_TITLE);
+            sprintf(message_buffer, "<FONT \"ZorkNormal\" BOLD on JUSTIFY center POINT 18 RED 150 GREEN 100 BLUE 50>Zengine %s:<RED 255 GREEN 255 BLUE 255><NEWLINE>%s", ZORKMID_VER, GetGameTitle());
             game_timed_message(3000, message_buffer);
         }
     }
@@ -308,7 +308,7 @@ void GameLoop()
 
 void ReadSystemStrings(char *filename)
 {
-    memset(SystemStrings, 0, sizeof(SystemStrings[0]) * SYSTEM_STRINGS_NUM);
+    memset(SystemStrings, 0, sizeof(SystemStrings));
 
     mfile *fl = mfopen_path(filename);
 
@@ -322,11 +322,11 @@ void ReadSystemStrings(char *filename)
 
     int32_t ii = 0;
 
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         char *str = TrimRight(buf);
         if (ii < SYSTEM_STRINGS_NUM)
         {

@@ -13,7 +13,7 @@ static int32_t Mx, My, LMx, LMy;
 static uint8_t LMstate, Mstate;
 static int32_t M_dbl_time;
 static bool M_dbl_clk = false;
-static char apppath[FILE_LN_BUF];
+static char apppath[STRBUFSIZE];
 
 static MList *FMan;
 static MList *FManRepl;

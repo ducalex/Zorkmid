@@ -2,7 +2,14 @@
 #define SCRIPTSYSTEM_H_INCLUDED
 
 #include "types.h"
-#include "config.h"
+
+//Maximal number of same puzzles in the statebox stack
+//For increasing speed of engine
+//May cause errors, but should not
+#define MaxPuzzlesInStack 2
+
+#define MaxStateBoxEnts 0x800 //0xFF is very small
+#define PuzzleStack 0x800
 
 #include "Puzzle.h"
 
@@ -117,7 +124,7 @@ struct StateBoxEnt
 struct pzllst
 {
     MList *_list;
-    puzzlenode *stack[pzlSTACK];
+    puzzlenode *stack[PuzzleStack];
     int16_t stksize;
     uint8_t exec_times;
 };

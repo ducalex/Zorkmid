@@ -509,12 +509,12 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 int Parse_Puzzle_Flags(puzzlenode *pzl, mfile *fl)
 {
     int good = 0;
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -542,7 +542,7 @@ int Parse_Puzzle_Flags(puzzlenode *pzl, mfile *fl)
 int Parse_Puzzle_Criteria(puzzlenode *pzl, mfile *fl)
 {
     int good = 0;
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     MList *crit_nodes_lst = CreateMList();
@@ -551,7 +551,7 @@ int Parse_Puzzle_Criteria(puzzlenode *pzl, mfile *fl)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -621,12 +621,12 @@ int Parse_Puzzle_Criteria(puzzlenode *pzl, mfile *fl)
 int Parse_Puzzle_Results(puzzlenode *pzl, mfile *fl)
 {
     int good = 0;
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')
@@ -652,7 +652,7 @@ int Parse_Puzzle(pzllst *lst, mfile *fl, char *ctstr)
 {
     int good = 0;
 
-    char buf[FILE_LN_BUF];
+    char buf[STRBUFSIZE];
     char *str;
 
     uint32_t slot;
@@ -673,7 +673,7 @@ int Parse_Puzzle(pzllst *lst, mfile *fl, char *ctstr)
 
     while (!mfeof(fl))
     {
-        mfgets(buf, FILE_LN_BUF, fl);
+        mfgets(buf, STRBUFSIZE, fl);
         str = PrepareString(buf);
 
         if (str[0] == '}')

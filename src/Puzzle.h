@@ -1,7 +1,6 @@
 #ifndef PUZZLE_H_INCLUDED
 #define PUZZLE_H_INCLUDED
 
-#include "config.h"
 #include "types.h"
 #include "ScriptSystem.h"
 
