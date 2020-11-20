@@ -6,13 +6,13 @@ int tmr_DeleteTimer(struct_action_res *nod)
         return NODE_RET_NO;
 
     if (nod->nodes.node_timer < 0)
-        SetgVarInt(nod->slot,2);
+        SetgVarInt(nod->slot, 2);
     else
         SetgVarInt(nod->slot, nod->nodes.node_timer);
 
     setGNode(nod->slot, NULL);
 
-    delete nod;
+    free(nod);
 
     return NODE_RET_DELETE;
 }
@@ -23,14 +23,14 @@ void tmr_DeleteTimerByOwner(pzllst *owner)
     StartMList(allres);
     while (!eofMList(allres))
     {
-        struct_action_res *nod=(struct_action_res *)DataMList(allres);
+        struct_action_res *nod = (struct_action_res *)DataMList(allres);
         if (nod->node_type == NODE_TYPE_TIMER)
-        if (nod->owner == owner)
-        {
-            tmr_DeleteTimer(nod);
+            if (nod->owner == owner)
+            {
+                tmr_DeleteTimer(nod);
 
-            DeleteCurrent(allres);
-        }
+                DeleteCurrent(allres);
+            }
 
         NextMList(allres);
     }
@@ -44,7 +44,7 @@ int tmr_ProcessTimer(struct_action_res *nod)
     if (nod->nodes.node_timer < 0)
     {
 #ifdef TRACE
-        printf ("Timer #%d End's\n",nod->slot);
+        printf("Timer #%d End's\n", nod->slot);
 #endif
         tmr_DeleteTimer(nod);
 
@@ -55,5 +55,5 @@ int tmr_ProcessTimer(struct_action_res *nod)
     //    nod->nodes.node_timer--;
     nod->nodes.node_timer -= GetDTime();
 
-return NODE_RET_OK;
+    return NODE_RET_OK;
 }

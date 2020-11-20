@@ -1,33 +1,32 @@
-#include "System.h"
-#include "anims.h"
+#include "Anims.h"
 
 int32_t AnnimID = 0;
 
 animnode *anim_CreateAnim()
 {
     animnode *tmp;
-    tmp = new (animnode);
-    tmp->scal    = NULL;
-    tmp->anim.avi= NULL;
-    tmp->CurFr   = 0;
-    tmp->end     = 0;
-    tmp->h       = 0;
+    tmp = NEW(animnode);
+    tmp->scal = NULL;
+    tmp->anim.avi = NULL;
+    tmp->CurFr = 0;
+    tmp->end = 0;
+    tmp->h = 0;
     tmp->loopcnt = 0;
-    tmp->loops   = 0;
-    tmp->start   = 0;
-    tmp->unk1    = 0;
-    tmp->unk2    = 0;
-    tmp->mask    = 0;
+    tmp->loops = 0;
+    tmp->start = 0;
+    tmp->unk1 = 0;
+    tmp->unk2 = 0;
+    tmp->mask = 0;
     tmp->framerate = 0;
-    tmp->vid     = 0;
-    tmp->w       = 0;
-    tmp->x       = 0;
-    tmp->y       = 0;
-    tmp->rel_h   = 0;
-    tmp->rel_w   = 0;
+    tmp->vid = 0;
+    tmp->w = 0;
+    tmp->x = 0;
+    tmp->y = 0;
+    tmp->rel_h = 0;
+    tmp->rel_w = 0;
     tmp->nexttick = 0;
-    tmp->playID  = 0;
-    tmp->playing  = false;
+    tmp->playID = 0;
+    tmp->playing = false;
     return tmp;
 }
 
@@ -55,44 +54,44 @@ struct_action_res *anim_CreateAnimPlayPreNode()
     struct_action_res *tmp;
     tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPRPL);
 
-    tmp->nodes.node_animpreplay = new(anim_preplay_node);
-    tmp->nodes.node_animpreplay ->playerid = 0;
-    tmp->nodes.node_animpreplay ->pointingslot = 0;
-    tmp->nodes.node_animpreplay ->point = NULL;
-    tmp->nodes.node_animpreplay ->end     = 0;
-    tmp->nodes.node_animpreplay ->h       = 0;
-    tmp->nodes.node_animpreplay ->loop = 0;
-    tmp->nodes.node_animpreplay ->start   = 0;
-    tmp->nodes.node_animpreplay ->w       = 0;
-    tmp->nodes.node_animpreplay ->x       = 0;
-    tmp->nodes.node_animpreplay ->y       = 0;
+    tmp->nodes.node_animpreplay = NEW(anim_preplay_node);
+    tmp->nodes.node_animpreplay->playerid = 0;
+    tmp->nodes.node_animpreplay->pointingslot = 0;
+    tmp->nodes.node_animpreplay->point = NULL;
+    tmp->nodes.node_animpreplay->end = 0;
+    tmp->nodes.node_animpreplay->h = 0;
+    tmp->nodes.node_animpreplay->loop = 0;
+    tmp->nodes.node_animpreplay->start = 0;
+    tmp->nodes.node_animpreplay->w = 0;
+    tmp->nodes.node_animpreplay->x = 0;
+    tmp->nodes.node_animpreplay->y = 0;
 
     return tmp;
 }
 
-void anim_LoadAnim(animnode *nod,char *filename,int u1, int u2, int32_t mask, int framerate)
+void anim_LoadAnim(animnode *nod, char *filename, int u1, int u2, int32_t mask, int framerate)
 {
 
     if (framerate != 0)
-        nod->framerate = 1000.0/framerate;
+        nod->framerate = 1000.0 / framerate;
     else
         nod->framerate = 0;
 
     nod->nexttick = 0;
-    nod->loops=0;
+    nod->loops = 0;
 
-    if (strcasestr(filename,"avi")!=NULL)
+    if (strcasestr(filename, ".avi") != NULL)
     {
-        nod->anim.avi = new(anim_avi);
-        nod->vid=1;
+        nod->anim.avi = NEW(anim_avi);
+        nod->vid = 1;
 
-        nod->anim.avi->av = avi_openfile(GetFilePath(filename),Rend_GetRenderer() == RENDER_PANA);
-        int16_t w,h;
+        nod->anim.avi->av = avi_openfile(GetFilePath(filename), Rend_GetRenderer() == RENDER_PANA);
+        int16_t w, h;
 
         w = nod->anim.avi->av->w;
         h = nod->anim.avi->av->h;
 
-        nod->anim.avi->img = CreateSurface(w,h);
+        nod->anim.avi->img = CreateSurface(w, h);
 
         nod->anim.avi->lastfrm = -1;
 
@@ -103,21 +102,21 @@ void anim_LoadAnim(animnode *nod,char *filename,int u1, int u2, int32_t mask, in
         nod->rel_w = w;
     }
 #ifdef SMPEG_SUPPORT
-    else if (strcasestr(filename,"mpg")!=NULL)
+    else if (strcasestr(filename, ".mpg") != NULL)
     {
-        nod->anim.mpg = new(anim_mpg);
-        nod->vid=2;
+        nod->anim.mpg = NEW(anim_mpg);
+        nod->vid = 2;
 
-        nod->anim.mpg->mpg=SMPEG_new(GetFilePath(filename),&nod->anim.mpg->inf,0);
-        int16_t w,h;
+        nod->anim.mpg->mpg = SMPEG_new(GetFilePath(filename), &nod->anim.mpg->inf, 0);
+        int16_t w, h;
 
         w = nod->anim.mpg->inf.width;
         h = nod->anim.mpg->inf.height;
 
-        nod->anim.mpg->img = CreateSurface(w,h);
+        nod->anim.mpg->img = CreateSurface(w, h);
 
-        SMPEG_setdisplay(nod->anim.mpg->mpg,nod->anim.mpg->img,0,0);
-        SMPEG_setdisplayregion(nod->anim.mpg->mpg, 0, 0, nod->anim.mpg->inf.width,nod->anim.mpg->inf.height);
+        SMPEG_setdisplay(nod->anim.mpg->mpg, nod->anim.mpg->img, 0, 0);
+        SMPEG_setdisplayregion(nod->anim.mpg->mpg, 0, 0, nod->anim.mpg->inf.width, nod->anim.mpg->inf.height);
 
         nod->anim.mpg->lastfrm = -1;
 
@@ -126,17 +125,16 @@ void anim_LoadAnim(animnode *nod,char *filename,int u1, int u2, int32_t mask, in
 
         nod->rel_h = h;
         nod->rel_w = w;
-
     }
 #endif
     else
     {
-        if (strcasestr(filename,"rlf")!=NULL)
-            nod->anim.rlf = loader_LoadRlf(filename,Rend_GetRenderer() == RENDER_PANA,mask);
+        if (strcasestr(filename, ".rlf") != NULL)
+            nod->anim.rlf = loader_LoadRlf(filename, Rend_GetRenderer() == RENDER_PANA, mask);
         else
-            nod->anim.rlf = LoadAnimImage(filename,mask);
+            nod->anim.rlf = LoadAnimImage(filename, mask);
 
-        nod->vid=0;
+        nod->vid = 0;
 
         if (nod->framerate == 0)
             nod->framerate = nod->anim.rlf->info.time;
@@ -145,7 +143,6 @@ void anim_LoadAnim(animnode *nod,char *filename,int u1, int u2, int32_t mask, in
         nod->rel_w = nod->anim.rlf->info.w;
     }
 }
-
 
 void anim_ProcessAnim(animnode *mnod)
 {
@@ -163,8 +160,8 @@ void anim_ProcessAnim(animnode *mnod)
 
             if (mnod->vid == 1)
             {
-                avi_renderframe(mnod->anim.avi->av,mnod->CurFr);
-                avi_to_surf(mnod->anim.avi->av,mnod->anim.avi->img);
+                avi_renderframe(mnod->anim.avi->av, mnod->CurFr);
+                avi_to_surf(mnod->anim.avi->av, mnod->anim.avi->img);
                 Rend_DrawScalerToGamescr(mnod->scal,
                                          mnod->x,
                                          mnod->y);
@@ -173,7 +170,7 @@ void anim_ProcessAnim(animnode *mnod)
             else if (mnod->vid == 2)
             {
                 SMPEG_renderFrame(mnod->anim.mpg->mpg,
-                                  mnod->CurFr+1);
+                                  mnod->CurFr + 1);
 
                 Rend_DrawScalerToGamescr(mnod->scal,
                                          mnod->x,
@@ -195,7 +192,7 @@ void anim_ProcessAnim(animnode *mnod)
 
                 if (mnod->loops < mnod->loopcnt || mnod->loopcnt == 0)
                 {
-                    mnod->CurFr=mnod->start;
+                    mnod->CurFr = mnod->start;
                     /*                            if (nod->vid)
                                                 {
                                                     //nod->nexttick=millisec() + 1.0/(((anim_avi *)nod->anim)->inf.current_fps) * 1000.0;
@@ -210,7 +207,7 @@ void anim_ProcessAnim(animnode *mnod)
 #ifdef TRACE
 //                        printf ("Animplay #%d End's\n",nod->slot);
 #endif
-//                        anim_DeleteAnimNod(nod);
+                    //                        anim_DeleteAnimNod(nod);
                     mnod->playing = false;
                 }
             }
@@ -253,34 +250,32 @@ int anim_ProcessAnimPrePlayNode(struct_action_res *nod)
 
     if (pre->playerid == 0)
     {
-        pre->playerid = anim_PlayAnim(pre->point,pre->x,
+        pre->playerid = anim_PlayAnim(pre->point, pre->x,
                                       pre->y,
                                       pre->w,
                                       pre->h,
                                       pre->start,
                                       pre->end,
                                       pre->loop);
-        SetgVarInt(pre->pointingslot,1);
+        SetgVarInt(pre->pointingslot, 1);
         if (nod->slot > 0)
-            SetgVarInt(nod->slot,1);
+            SetgVarInt(nod->slot, 1);
     }
     else
     {
         if (!pre->point->playing)
         {
-            SetgVarInt(nod->slot,2);
-            SetgVarInt(nod->nodes.node_animpreplay->pointingslot,2);
+            SetgVarInt(nod->slot, 2);
+            SetgVarInt(nod->nodes.node_animpreplay->pointingslot, 2);
             anim_DeleteAnimPrePlayNode(nod);
             return NODE_RET_DELETE;
         }
-
     }
-
 
     return NODE_RET_OK;
 }
 
-int anim_PlayAnim(animnode *nod,int x, int y, int w, int h, int start, int end, int loop)
+int anim_PlayAnim(animnode *nod, int x, int y, int w, int h, int start, int end, int loop)
 {
     nod->playing = true;
     AnnimID++;
@@ -296,13 +291,13 @@ int anim_PlayAnim(animnode *nod,int x, int y, int w, int h, int start, int end, 
         if (nod->scal != NULL)
             DeleteScaler(nod->scal);
 
-        nod->scal = CreateScaler(nod->anim.avi->img,nod->w,nod->h);
+        nod->scal = CreateScaler(nod->anim.avi->img, nod->w, nod->h);
 
-        nod->start= start;
-        nod->end= end;
+        nod->start = start;
+        nod->end = end;
 
-        avi_renderframe(nod->anim.avi->av,nod->start);
-        avi_to_surf(nod->anim.avi->av,nod->anim.avi->img);
+        avi_renderframe(nod->anim.avi->av, nod->start);
+        avi_to_surf(nod->anim.avi->av, nod->anim.avi->img);
     }
 #ifdef SMPEG_SUPPORT
     else if (nod->vid == 2)
@@ -310,20 +305,19 @@ int anim_PlayAnim(animnode *nod,int x, int y, int w, int h, int start, int end, 
         if (nod->scal != NULL)
             DeleteScaler(nod->scal);
 
-        nod->scal = CreateScaler(nod->anim.mpg->img,nod->w,nod->h);
+        nod->scal = CreateScaler(nod->anim.mpg->img, nod->w, nod->h);
 
-        nod->start= (start+1) *2;
-        nod->end= (end+1) *2;
+        nod->start = (start + 1) * 2;
+        nod->end = (end + 1) * 2;
 
-        SMPEG_renderFrame(nod->anim.mpg->mpg,nod->start);
+        SMPEG_renderFrame(nod->anim.mpg->mpg, nod->start);
     }
 #endif
     else
     {
-        nod->start= start;
-        nod->end= end;
+        nod->start = start;
+        nod->end = end;
     }
-
 
     nod->CurFr = nod->start;
     nod->loopcnt = loop;
@@ -331,7 +325,7 @@ int anim_PlayAnim(animnode *nod,int x, int y, int w, int h, int start, int end, 
     return nod->playID;
 }
 
-void anim_RenderAnimFrame(animnode *mnod,int16_t x, int16_t y,int16_t w, int16_t h, int16_t frame)
+void anim_RenderAnimFrame(animnode *mnod, int16_t x, int16_t y, int16_t w, int16_t h, int16_t frame)
 {
 
     if (mnod)
@@ -342,10 +336,9 @@ void anim_RenderAnimFrame(animnode *mnod,int16_t x, int16_t y,int16_t w, int16_t
             {
                 if (mnod->anim.avi->lastfrm != frame)
                 {
-                    avi_renderframe(mnod->anim.avi->av,frame);
-                    avi_to_surf(mnod->anim.avi->av,mnod->anim.avi->img);
+                    avi_renderframe(mnod->anim.avi->av, frame);
+                    avi_to_surf(mnod->anim.avi->av, mnod->anim.avi->img);
                 }
-
 
                 mnod->anim.avi->lastfrm = frame;
 
@@ -357,9 +350,9 @@ void anim_RenderAnimFrame(animnode *mnod,int16_t x, int16_t y,int16_t w, int16_t
                     }
 
                 if (!mnod->scal)
-                    mnod->scal = CreateScaler(mnod->anim.avi->img,w,h);
+                    mnod->scal = CreateScaler(mnod->anim.avi->img, w, h);
 
-                Rend_DrawScalerToGamescr(mnod->scal,x,y);
+                Rend_DrawScalerToGamescr(mnod->scal, x, y);
             }
         }
 #ifdef SMPEG_SUPPORT
@@ -369,12 +362,11 @@ void anim_RenderAnimFrame(animnode *mnod,int16_t x, int16_t y,int16_t w, int16_t
             {
                 if (mnod->anim.mpg->lastfrm != frame)
                 {
-                    SMPEG_renderFrame(mnod->anim.mpg->mpg, frame*2);
-                    SMPEG_renderFrame(mnod->anim.mpg->mpg, frame*2+1);
+                    SMPEG_renderFrame(mnod->anim.mpg->mpg, frame * 2);
+                    SMPEG_renderFrame(mnod->anim.mpg->mpg, frame * 2 + 1);
                     if (mnod->anim.mpg->lastfrm > frame)
-                        SMPEG_renderFinal(mnod->anim.mpg->mpg,mnod->anim.mpg->img,0,0);
+                        SMPEG_renderFinal(mnod->anim.mpg->mpg, mnod->anim.mpg->img, 0, 0);
                 }
-
 
                 mnod->anim.mpg->lastfrm = frame;
 
@@ -386,9 +378,9 @@ void anim_RenderAnimFrame(animnode *mnod,int16_t x, int16_t y,int16_t w, int16_t
                     }
 
                 if (!mnod->scal)
-                    mnod->scal = CreateScaler(mnod->anim.mpg->img,w,h);
+                    mnod->scal = CreateScaler(mnod->anim.mpg->img, w, h);
 
-                Rend_DrawScalerToGamescr(mnod->scal,x,y);
+                Rend_DrawScalerToGamescr(mnod->scal, x, y);
 
                 //Rend_DrawImageToGamescr(mnod->anim.mpg->img, x, y);
             }
@@ -407,25 +399,25 @@ void anim_DeleteAnim(animnode *nod)
     if (nod->vid == 1)
     {
         if (nod->anim.avi->img)
-            SDL_FreeSurface(nod-> anim.avi ->img);
+            SDL_FreeSurface(nod->anim.avi->img);
 
         avi_close(nod->anim.avi->av);
-        delete nod->anim.avi;
+        free(nod->anim.avi);
     }
 #ifdef SMPEG_SUPPORT
     else if (nod->vid == 2)
     {
         if (nod->anim.mpg->img)
-            SDL_FreeSurface(nod-> anim.mpg ->img);
-        SMPEG_stop(     nod-> anim.mpg ->mpg);
-        SMPEG_delete(   nod-> anim.mpg ->mpg);
-        delete nod->anim.mpg;
+            SDL_FreeSurface(nod->anim.mpg->img);
+        SMPEG_stop(nod->anim.mpg->mpg);
+        SMPEG_delete(nod->anim.mpg->mpg);
+        free(nod->anim.mpg);
     }
 #endif
     else
         FreeAnimImage(nod->anim.rlf);
 
-    delete nod;
+    free(nod);
 }
 
 int anim_DeleteAnimPlay(struct_action_res *nod)
@@ -437,11 +429,11 @@ int anim_DeleteAnimPlay(struct_action_res *nod)
 
     if (nod->slot > 0)
     {
-        SetgVarInt(nod->slot,2);
+        SetgVarInt(nod->slot, 2);
         setGNode(nod->slot, NULL);
     }
 
-    delete nod;
+    free(nod);
 
     return NODE_RET_DELETE;
 }
@@ -454,7 +446,7 @@ int anim_DeleteAnimPreNod(struct_action_res *nod)
     MList *lst = GetAction_res_List();
     pushMList(lst);
     StartMList(lst);
-    while(!eofMList(lst))
+    while (!eofMList(lst))
     {
         struct_action_res *nod2 = (struct_action_res *)DataMList(lst);
 
@@ -473,7 +465,7 @@ int anim_DeleteAnimPreNod(struct_action_res *nod)
 
     anim_DeleteAnim(nod->nodes.node_animpre);
     //delete nod->nodes.node_animpre;
-    delete nod;
+    free(nod);
 
     return NODE_RET_DELETE;
 }
@@ -485,16 +477,14 @@ int anim_DeleteAnimPrePlayNode(struct_action_res *nod)
 
     if (nod->slot > 0)
     {
-        SetgVarInt(nod->slot,2);
-        setGNode(nod->slot,NULL);
+        SetgVarInt(nod->slot, 2);
+        setGNode(nod->slot, NULL);
     }
 
     SetgVarInt(nod->nodes.node_animpreplay->pointingslot, 2);
 
     delete nod->nodes.node_animpreplay;
-    delete nod;
+    free(nod);
 
     return NODE_RET_DELETE;
 }
-
-

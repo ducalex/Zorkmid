@@ -1,45 +1,39 @@
-#include <stdlib.h>
-
-#include "mylist.h"
-
-
-
+#include "System.h"
 
 //Creates single linked-list object
 MList *CreateMList()
 {
     MList *tmp;
-    tmp = new (MList);
+    tmp = NEW(MList);
 
-    tmp->CurNode    = NULL;
-    tmp->Head       = NULL;
-    tmp->Tail       = NULL;
-    tmp->count      = 0;
-    tmp->indx       = 0;
-    tmp->stkpos     = 0;
-    tmp->dontstp    = false;
+    tmp->CurNode = NULL;
+    tmp->Head = NULL;
+    tmp->Tail = NULL;
+    tmp->count = 0;
+    tmp->indx = 0;
+    tmp->stkpos = 0;
+    tmp->dontstp = false;
     return tmp;
 }
 
 //Adds item to linked-list
-MList_node * AddToMList(MList *lst, void *item)
+MList_node *AddToMList(MList *lst, void *item)
 {
-    MList_node *tmp = new (MList_node);
+    MList_node *tmp = NEW(MList_node);
     tmp->data = item;
     tmp->next = NULL;
     tmp->prev = lst->Tail;
     tmp->idx = lst->indx;
     if (lst->count == 0)
     {
-        lst->Head=tmp;
-        lst->CurNode=tmp;
-        lst->Tail=tmp;
-
+        lst->Head = tmp;
+        lst->CurNode = tmp;
+        lst->Tail = tmp;
     }
     else
     {
-        lst->Tail->next=tmp;
-        lst->Tail=tmp;
+        lst->Tail->next = tmp;
+        lst->Tail = tmp;
     }
 
     lst->count++;
@@ -52,13 +46,13 @@ MList_node * AddToMList(MList *lst, void *item)
 void StartMList(MList *lst)
 {
     lst->CurNode = lst->Head;
-    lst->dontstp    = false;
+    lst->dontstp = false;
 }
 
 void LastMList(MList *lst)
 {
     lst->CurNode = lst->Tail;
-    lst->dontstp    = false;
+    lst->dontstp = false;
 }
 
 //Go to next linked-list item
@@ -68,16 +62,15 @@ bool NextSMList(MList *lst)
     if (lst->CurNode->next)
     {
         if (!lst->dontstp)
-            lst->CurNode=lst->CurNode->next;
-        lst->dontstp    = false;
+            lst->CurNode = lst->CurNode->next;
+        lst->dontstp = false;
         return true;
     }
     else
     {
-        lst->dontstp    = false;
+        lst->dontstp = false;
         return false;
     }
-
 }
 
 //Go to next linked-list item
@@ -87,7 +80,7 @@ bool PrevSMList(MList *lst)
     lst->dontstp = false;
     if (lst->CurNode->prev)
     {
-        lst->CurNode=lst->CurNode->prev;
+        lst->CurNode = lst->CurNode->prev;
         return true;
     }
     else
@@ -99,7 +92,7 @@ void NextMList(MList *lst)
 {
     if (lst->CurNode)
         if (!lst->dontstp)
-            lst->CurNode=lst->CurNode->next;
+            lst->CurNode = lst->CurNode->next;
 
     lst->dontstp = false;
 }
@@ -109,7 +102,7 @@ void PrevMList(MList *lst)
 {
     lst->dontstp = false;
     if (lst->CurNode)
-        lst->CurNode=lst->CurNode->prev;
+        lst->CurNode = lst->CurNode->prev;
 }
 
 //Go to element index
@@ -119,9 +112,9 @@ bool ToIndxMList(MList *lst, unsigned int indx)
     if (lst->indx > indx)
     {
         lst->CurNode = lst->Head;
-        while(lst->CurNode->next != NULL &&\
-                lst->CurNode->idx  != indx &&\
-                lst->CurNode->idx   < indx )
+        while (lst->CurNode->next != NULL &&
+               lst->CurNode->idx != indx &&
+               lst->CurNode->idx < indx)
             lst->CurNode = lst->CurNode->next;
 
         if (lst->CurNode->idx == indx)
@@ -153,12 +146,12 @@ void DeleteMList(MList *lst)
             lst->CurNode = nxt;
         }
     }
-    delete lst;
+    free(lst);
 }
 
 void DeleteMList(MList **plst)
 {
-    MList *lst=*plst;
+    MList *lst = *plst;
     if (lst->count > 0)
     {
         MList_node *nxt = lst->Head->next;
@@ -170,8 +163,8 @@ void DeleteMList(MList **plst)
             lst->CurNode = nxt;
         }
     }
-    delete lst;
-    *plst=NULL;
+    free(lst);
+    *plst = NULL;
 }
 
 void FlushMList(MList *lst)
@@ -188,13 +181,13 @@ void FlushMList(MList *lst)
         }
     }
 
-    lst->CurNode    = NULL;
-    lst->Head       = NULL;
-    lst->Tail       = NULL;
-    lst->count      = 0;
-    lst->indx       = 0;
-    lst->stkpos     = 0;
-    lst->dontstp    = false;
+    lst->CurNode = NULL;
+    lst->Head = NULL;
+    lst->Tail = NULL;
+    lst->count = 0;
+    lst->indx = 0;
+    lst->stkpos = 0;
+    lst->dontstp = false;
 }
 
 void DeleteCurrent(MList *lst)
@@ -202,8 +195,6 @@ void DeleteCurrent(MList *lst)
 
     if (lst->stkpos != 0)
         exit(1);
-
-
 
     lst->dontstp = false;
 
@@ -222,7 +213,6 @@ void DeleteCurrent(MList *lst)
         lst->dontstp = true;
     }
 
-
     MList_node *nod;
 
     if (lst->CurNode->prev)
@@ -232,15 +222,15 @@ void DeleteCurrent(MList *lst)
 
     delete lst->CurNode;
 
-    lst->stkpos  = 0; //Clean Stack!
+    lst->stkpos = 0; //Clean Stack!
     lst->CurNode = nod;
     lst->count--;
 
-    if (lst->count==0)
+    if (lst->count == 0)
     {
-        lst->CurNode=NULL;
-        lst->Head=NULL;
-        lst->Tail=NULL;
+        lst->CurNode = NULL;
+        lst->Head = NULL;
+        lst->Tail = NULL;
     }
 }
 
@@ -258,11 +248,10 @@ bool pushMList(MList *lst)
 bool popMList(MList *lst)
 {
     if (lst->stkpos <= 0)
-        {
-            lst->CurNode = lst->Head;
-            return false;
-        }
-
+    {
+        lst->CurNode = lst->Head;
+        return false;
+    }
 
     lst->stkpos--;
     lst->CurNode = lst->Stack[lst->stkpos];

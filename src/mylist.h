@@ -6,23 +6,23 @@
 //node structure
 struct MList_node
 {
-    MList_node  *next;      //pointer to next node
-    MList_node  *prev;      //pointer to next node
-    void        *data;      //pointer to data
+    MList_node *next; //pointer to next node
+    MList_node *prev; //pointer to next node
+    void *data;       //pointer to data
     unsigned int idx;
 };
 
 //List structure
 struct MList
 {
-    MList_node  *CurNode;   //pointer to current node
-    MList_node  *Head;      //pointer to first node
-    MList_node  *Tail;      //pointer to last node
-    unsigned int count;     //count of elements
-    unsigned int indx;     //count of elements
-    MList_node  *Stack[MLIST_STACK];
+    MList_node *CurNode; //pointer to current node
+    MList_node *Head;    //pointer to first node
+    MList_node *Tail;    //pointer to last node
+    unsigned int count;  //count of elements
+    unsigned int indx;   //count of elements
+    MList_node *Stack[MLIST_STACK];
     unsigned int stkpos;
-    bool         dontstp;
+    bool dontstp;
 };
 
 //Linked-list functions

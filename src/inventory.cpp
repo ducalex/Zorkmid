@@ -1,130 +1,108 @@
 #include "System.h"
 
-int32_t inv_get_cnt()
+static int get_count()
 {
     return GetgVarInt(SLOT_INV_STORAGE_S1);
 }
 
-void inv_set_cnt(int32_t cnt)
+static void set_count(int n)
 {
-    SetgVarInt(SLOT_INV_STORAGE_S1,cnt);
+    SetgVarInt(SLOT_INV_STORAGE_S1, n);
 }
 
-int32_t inv_get_item(int32_t index)
+static int get_item(int index)
 {
     if (index < 49 && index >= 0)
         return GetgVarInt(SLOT_INV_STORAGE_0 + index);
     return -1;
 }
 
-void inv_set_item(int32_t index, int32_t item)
+static void set_item(int index, int item)
 {
     if (index < 49 && index >= 0)
-        SetgVarInt(SLOT_INV_STORAGE_0 + index,item);
+        SetgVarInt(SLOT_INV_STORAGE_0 + index, item);
 }
 
+static void equip_item(int n)
+{
+    SetgVarInt(SLOT_INVENTORY_MOUSE, get_item(n));
+}
 
 void inv_drop(int item)
 {
-
-    int32_t items_cnt = inv_get_cnt();
+    int items_cnt = get_count();
 
     //if items in inventory > 0
-    if ( items_cnt != 0)
+    if (items_cnt != 0)
     {
-        int32_t index = 0;
+        int index = 0;
 
         //finding needed item
         while (index < items_cnt)
         {
-            if ( inv_get_item(index) == item )
+            if (get_item(index) == item)
                 break;
 
             index++;
         }
 
         // if item in the inventory
-        if ( items_cnt !=index )
+        if (items_cnt != index)
         {
             //shift all items left with rewrite founded item
-            for (int32_t v = index; v < items_cnt-1 ; v++)
-                inv_set_item(v, inv_get_item(v+1));
+            for (int v = index; v < items_cnt - 1; v++)
+                set_item(v, get_item(v + 1));
 
             //del last item
-            inv_set_item(items_cnt-1, 0);
-            inv_set_cnt(inv_get_cnt() - 1);
-
-            SetgVarInt(SLOT_INVENTORY_MOUSE, inv_get_item(0));
+            set_item(items_cnt - 1, 0);
+            set_count(get_count() - 1);
+            equip_item(0);
         }
     }
 }
 
-void inv_add_put(int item)
-{
-    int32_t cnt = inv_get_cnt();
-
-    for ( int32_t i = cnt; i > 0; --i )
-        inv_set_item(i, inv_get_item(i-1));
-
-    inv_set_item(0,item);
-
-    SetgVarInt(SLOT_INVENTORY_MOUSE, item);
-
-    inv_set_cnt(inv_get_cnt() + 1);
-}
-
 void inv_add(int item)
 {
-    int32_t cnt = inv_get_cnt();
+    int cnt = get_count();
 
     if (cnt < 49)
     {
-
-
-        int8_t flag = 1;
+        bool flag = 1;
 
         if (cnt == 0)
         {
-            inv_set_item(0,0);
-            inv_set_cnt(1); //we needed empty item for cycle code
+            set_item(0, 0);
+            set_count(1);
             cnt = 1;
         }
 
-        for(int32_t cur = 0; cur < cnt; cur++)
-            if (inv_get_item(cur) == item)
+        for (int cur = 0; cur < cnt; cur++)
+            if (get_item(cur) == item)
             {
                 flag = 0;
                 break;
             }
 
-
         if (flag)
         {
-            for ( int32_t i = cnt; i > 0; --i )
-                inv_set_item(i, inv_get_item(i-1));
-
-            inv_set_item(0,item);
-
-            SetgVarInt(SLOT_INVENTORY_MOUSE, item);
-
-            inv_set_cnt(cnt + 1);
+            for (int i = cnt; i > 0; --i)
+                set_item(i, get_item(i - 1));
+            set_item(0, item);
+            set_count(cnt + 1);
+            equip_item(0);
         }
-
     }
 }
 
 void inv_cycle()
 {
-    int32_t item_cnt = inv_get_cnt();
-    int32_t cur_item = inv_get_item(0);
-    if ( item_cnt > 1 )
+    int item_cnt = get_count();
+    int cur_item = get_item(0);
+    if (item_cnt > 1)
     {
-        for ( int32_t i = 0; i < item_cnt-1; i++)
-            inv_set_item(i, inv_get_item(i+1));
-
-        inv_set_item(item_cnt - 1, cur_item);
-
-        SetgVarInt(SLOT_INVENTORY_MOUSE,inv_get_item(0));
-
+        for (int i = 0; i < item_cnt - 1; i++)
+            set_item(i, get_item(i + 1));
+        set_item(item_cnt - 1, cur_item);
+        equip_item(0);
     }
 }

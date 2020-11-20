@@ -1,12 +1,11 @@
 #ifndef LOADER_H_INCLUDED
 #define LOADER_H_INCLUDED
 
-Mix_Chunk *loader_LoadFile(const char *file);
+Mix_Chunk *loader_LoadChunk(const char *file);
 SDL_Surface *loader_LoadFile(const char *file, int8_t transpose);
-SDL_Surface *loader_LoadFile(const char *file, int8_t transpose,uint32_t key);
-SDL_Surface *buf_to_surf(void *buf, int32_t w, int32_t h, int8_t transpose);
-anim_surf *loader_LoadRlf(const char *file, int8_t transpose,int32_t mask);
-void loader_LoadMouseCursor(const char *file, Cursor *cur);
+SDL_Surface *loader_LoadFile(const char *file, int8_t transpose, uint32_t key);
+anim_surf *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask);
+void loader_LoadMouseCursor(const char *file, Cursor_t *cur);
 
 struct zfs_arch
 {
@@ -21,7 +20,7 @@ struct zfs_file
     zfs_arch *archive;
 };
 
-void loader_openzfs(const char *file , MList *list);
+void loader_openzfs(const char *file, MList *list);
 void *loader_zload(zfs_file *fil);
 
 struct adpcm_context
@@ -30,6 +29,6 @@ struct adpcm_context
     uint32_t j;
 };
 
-void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n,adpcm_context *ctx);
+void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context *ctx);
 
 #endif // LOADER_H_INCLUDED

@@ -4,8 +4,8 @@
 #include <SDL/SDL_audio.h>
 #include <SDL/SDL_mixer.h>
 
-#define AVI_PLAY    1
-#define AVI_STOP    0
+#define AVI_PLAY 1
+#define AVI_STOP 0
 
 struct avi_strm_hdr
 {
@@ -67,7 +67,7 @@ struct vframes
     bool kfrm;
 };
 
-#define MAX_MOVI    10
+#define MAX_MOVI 10
 
 struct avi_file
 {
@@ -79,7 +79,7 @@ struct avi_file
     uint32_t size;
     uint32_t cframe;
 
-    int32_t w,h;
+    int32_t w, h;
 
     struct header
     {
@@ -101,7 +101,7 @@ struct avi_file
         uint32_t fofset;
         uint32_t offset;
         uint32_t ssize;
-    } movi [MAX_MOVI];
+    } movi[MAX_MOVI];
 
     uint32_t movi_cnt;
 
@@ -128,7 +128,6 @@ struct avi_file
 
     uint8_t translate;
 };
-
 
 avi_file *avi_openfile(const char *fle, uint8_t transl = 0);
 void avi_set_dem(avi_file *av, int32_t w, int32_t h);
