@@ -25,7 +25,6 @@ void Mouse_SetCursor(int indx);
 Cursor_t *Mouse_GetCursor(int indx);
 Cursor_t *Mouse_GetCurrentCursor();
 bool Mouse_IsCurrentCur(int indx);
-void Mouse_LoadCursor(const char *file, Cursor_t *cur);
 void Mouse_DrawCursor(int x, int y);
 int Mouse_GetCursorIndex(char *name);
 int Mouse_GetCurrentObjCur();

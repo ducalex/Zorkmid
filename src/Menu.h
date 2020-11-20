@@ -11,12 +11,8 @@
 void menu_SetMenuBarVal(uint16_t val);
 uint16_t menu_GetMenuBarVal();
 
-void menu_LoadGraphics_zgi();
-void menu_UpdateMenuBar_zgi();
-void menu_DrawMenuBar_zgi();
-
-void menu_LoadGraphics_znemesis();
-void menu_UpdateMenuBar_znemesis();
-void menu_DrawMenuBar_znemesis();
+void menu_LoadGraphics();
+void menu_UpdateMenuBar();
+void menu_DrawMenuBar();
 
 #endif // MENU_H_INCLUDED

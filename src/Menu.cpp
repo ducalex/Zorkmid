@@ -29,6 +29,15 @@
 #define menu_znemesis_but_max_frm 4
 #define menu_znemesis_but_clk_frm 5
 
+#define znem_but1_w 120
+#define znem_but1_x 0
+#define znem_but2_w 144
+#define znem_but2_x 120
+#define znem_but3_w 128
+#define znem_but3_x 264
+#define znem_but4_w 120
+#define znem_but4_x 392
+
 static uint16_t menu_bar_flag = 0xFFFF;
 static bool menu_Scrolled[3] = {false, false, false};
 static float menu_ScrollPos[3] = {0, 0, 0};
@@ -60,8 +69,9 @@ uint16_t menu_GetMenuBarVal()
     return menu_bar_flag;
 }
 
-void menu_LoadGraphics_zgi()
+void menu_LoadGraphics()
 {
+#ifdef GAME_ZGI
     char buf[255];
     for (int i = 1; i < 4; i++)
     {
@@ -83,12 +93,8 @@ void menu_LoadGraphics_zgi()
         menupicto[i][0] = NULL;
         menupicto[i][1] = NULL;
     }
-}
-
-void menu_LoadGraphics_znemesis()
-{
+#else
     char buf[255];
-
     for (int j = 1; j <= 4; j++)
         for (int i = 0; i < menu_znemesis_but_frames; i++)
         {
@@ -97,10 +103,12 @@ void menu_LoadGraphics_znemesis()
         }
 
     menubar_znem = loader_LoadFile("bar.tga", 0);
+#endif
 }
 
-void menu_UpdateMenuBar_zgi()
+void menu_UpdateMenuBar()
 {
+#ifdef GAME_ZGI
     mouse_on_item = -1;
 
     if (MouseY() <= menu_HOT_Y)
@@ -303,19 +311,7 @@ void menu_UpdateMenuBar_zgi()
         SetDirectgVarInt(SLOT_MENU_STATE, 0);
         menu_mousefocus = -1;
     }
-}
-
-#define znem_but1_w 120
-#define znem_but1_x 0
-#define znem_but2_w 144
-#define znem_but2_x 120
-#define znem_but3_w 128
-#define znem_but3_x 264
-#define znem_but4_w 120
-#define znem_but4_x 392
-
-void menu_UpdateMenuBar_znemesis()
-{
+#else
     mouse_on_item = -1;
 
     if (MouseY() <= menu_HOT_Y)
@@ -442,14 +438,15 @@ void menu_UpdateMenuBar_znemesis()
         else
             scrollpos_znem = -menubar_znem->h;
     }
+#endif
 }
 
-void menu_DrawMenuBar_zgi()
+void menu_DrawMenuBar()
 {
-    char buf[255];
-
+#ifdef GAME_ZGI
     if (inmenu)
     {
+        char buf[255];
 
         switch (menu_mousefocus)
         {
@@ -595,10 +592,7 @@ void menu_DrawMenuBar_zgi()
                 DrawImage(menuback[menu_MAGIC][1], GAME_W - menu_zgi_inv_hot_w, 0);
         }
     }
-}
-
-void menu_DrawMenuBar_znemesis()
-{
+#else
     if (inmenu)
     {
         DrawImage(menubar_znem, menu_MAIN_X, scrollpos_znem);
@@ -637,4 +631,5 @@ void menu_DrawMenuBar_znemesis()
     }
     else if (scrollpos_znem > -menubar_znem->h)
         DrawImage(menubar_znem, menu_MAIN_X, scrollpos_znem);
+#endif
 }

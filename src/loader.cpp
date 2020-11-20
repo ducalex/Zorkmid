@@ -993,7 +993,30 @@ void loader_LoadZcr(const char *file, Cursor_t *cur)
 #ifdef LOADTRACE
         printf("fallback-mechanism\n");
 #endif
-        Mouse_LoadCursor(file, cur);
+        char tmp[64];
+        strcpy(tmp, file);
+        int len = strlen(tmp);
+
+        cur->img = loader_LoadFile(tmp, 0, Rend_MapScreenRGB(0, 0, 0));
+
+        if (cur->img == NULL)
+            return;
+
+        tmp[len - 3] = 'p';
+        tmp[len - 2] = 'o';
+        tmp[len - 1] = 'i';
+        tmp[len] = 'n';
+        tmp[len + 1] = 't';
+        tmp[len + 2] = 0x0;
+
+        const char *tmp2 = GetExactFilePath(tmp);
+        if (tmp2 == NULL)
+            return;
+
+        FILE *f = fopen(tmp2, "rb");
+        fread(&cur->ox, 1, 2, f);
+        fread(&cur->oy, 1, 2, f);
+        fclose(f);
         return;
     }
 #ifdef LOADTRACE
@@ -1030,14 +1053,6 @@ void loader_LoadZcr(const char *file, Cursor_t *cur)
         SDL_SetColorKey(cur->img, SDL_SRCCOLORKEY, 0);
     }
     mfclose(f);
-}
-
-void loader_LoadMouseCursor(const char *file, Cursor_t *cur)
-{
-    if (strcasestr(file, "zcr") != NULL)
-        loader_LoadZcr(file, cur);
-    else
-        Mouse_LoadCursor(file, cur);
 }
 
 /******************** ZCR END************************/

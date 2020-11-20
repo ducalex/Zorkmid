@@ -47,15 +47,15 @@ void Mouse_LoadCursors()
     {
         Free_Cursor(&DefCursors[i][CURSOR_UP_STATE]);
         #ifdef GAME_ZGI
-            loader_LoadMouseCursor(CurFiles_zgi[i], &DefCursors[i][CURSOR_UP_STATE]);
+            loader_LoadZcr(CurFiles_zgi[i], &DefCursors[i][CURSOR_UP_STATE]);
             strcpy(buffer, CurFiles_zgi[i]);
             buffer[3] += 2;
-            loader_LoadMouseCursor(buffer, &DefCursors[i][CURSOR_DW_STATE]);
+            loader_LoadZcr(buffer, &DefCursors[i][CURSOR_DW_STATE]);
         #else
             sprintf(buffer, "%sa.zcr", CurFiles_znemesis[i]);
-            loader_LoadMouseCursor(buffer, &DefCursors[i][CURSOR_UP_STATE]);
+            loader_LoadZcr(buffer, &DefCursors[i][CURSOR_UP_STATE]);
             sprintf(buffer, "%sb.zcr", CurFiles_znemesis[i]);
-            loader_LoadMouseCursor(buffer, &DefCursors[i][CURSOR_DW_STATE]);
+            loader_LoadZcr(buffer, &DefCursors[i][CURSOR_DW_STATE]);
         #endif
     }
 
@@ -102,35 +102,6 @@ Cursor_t *Mouse_GetCurrentCursor()
 bool Mouse_IsCurrentCur(int indx)
 {
     return indx == cursor_index;
-}
-
-void Mouse_LoadCursor(const char *file, Cursor_t *cur)
-{
-    char tmp[64];
-    const char *tmp2;
-    strcpy(tmp, file);
-    int len = strlen(tmp);
-
-    cur->img = loader_LoadFile(tmp, 0, Rend_MapScreenRGB(0, 0, 0));
-
-    if (cur->img == NULL)
-        return;
-
-    tmp[len - 3] = 'p';
-    tmp[len - 2] = 'o';
-    tmp[len - 1] = 'i';
-    tmp[len] = 'n';
-    tmp[len + 1] = 't';
-    tmp[len + 2] = 0x0;
-
-    tmp2 = GetExactFilePath(tmp);
-    if (tmp2 == NULL)
-        return;
-
-    FILE *f = fopen(tmp2, "rb");
-    fread(&cur->ox, 1, 2, f);
-    fread(&cur->oy, 1, 2, f);
-    fclose(f);
 }
 
 void Mouse_DrawCursor(int x, int y)
@@ -224,21 +195,21 @@ void Mouse_LoadObjCursor(int num)
 
     #ifdef GAME_ZGI
         sprintf(buf, "g0b%cc%2.2x1.zcr", 'a', current_obj_cur);
-        loader_LoadMouseCursor(buf, &ObjCursors[0][CURSOR_UP_STATE]);
+        loader_LoadZcr(buf, &ObjCursors[0][CURSOR_UP_STATE]);
         sprintf(buf, "g0b%cc%2.2x1.zcr", 'b', current_obj_cur);
-        loader_LoadMouseCursor(buf, &ObjCursors[1][CURSOR_UP_STATE]);
+        loader_LoadZcr(buf, &ObjCursors[1][CURSOR_UP_STATE]);
         sprintf(buf, "g0b%cc%2.2x1.zcr", 'c', current_obj_cur);
-        loader_LoadMouseCursor(buf, &ObjCursors[0][CURSOR_DW_STATE]);
+        loader_LoadZcr(buf, &ObjCursors[0][CURSOR_DW_STATE]);
         sprintf(buf, "g0b%cc%2.2x1.zcr", 'd', current_obj_cur);
-        loader_LoadMouseCursor(buf, &ObjCursors[1][CURSOR_DW_STATE]);
+        loader_LoadZcr(buf, &ObjCursors[1][CURSOR_DW_STATE]);
     #else
         sprintf(buf, "%2.2didle%c.zcr", current_obj_cur, 'a');
-        loader_LoadMouseCursor(buf, &ObjCursors[0][CURSOR_UP_STATE]);
+        loader_LoadZcr(buf, &ObjCursors[0][CURSOR_UP_STATE]);
         sprintf(buf, "%2.2didle%c.zcr", current_obj_cur, 'b');
-        loader_LoadMouseCursor(buf, &ObjCursors[0][CURSOR_DW_STATE]);
+        loader_LoadZcr(buf, &ObjCursors[0][CURSOR_DW_STATE]);
         sprintf(buf, "%2.2dact%c.zcr", current_obj_cur, 'a');
-        loader_LoadMouseCursor(buf, &ObjCursors[1][CURSOR_UP_STATE]);
+        loader_LoadZcr(buf, &ObjCursors[1][CURSOR_UP_STATE]);
         sprintf(buf, "%2.2dact%c.zcr", current_obj_cur, 'b');
-        loader_LoadMouseCursor(buf, &ObjCursors[1][CURSOR_DW_STATE]);
+        loader_LoadZcr(buf, &ObjCursors[1][CURSOR_DW_STATE]);
     #endif
 }

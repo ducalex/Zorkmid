@@ -65,9 +65,6 @@
 #define TIMER_DELAY 100
 
 //MENU//
-#define menu_UpdateMenuBar menu_UpdateMenuBar_zgi
-#define menu_DrawMenuBar menu_DrawMenuBar_zgi
-#define menu_LoadGraphics menu_LoadGraphics_zgi
 #define menu_HOT_Y 40
 #define menu_MAIN_X ((GAME_W - 580) >> 1)
 #define menu_MAIN_CENTER (GAME_W >> 1)
@@ -176,9 +173,6 @@
 #define TIMER_DELAY 1000
 
 //MENU//
-#define menu_UpdateMenuBar menu_UpdateMenuBar_znemesis
-#define menu_DrawMenuBar menu_DrawMenuBar_znemesis
-#define menu_LoadGraphics menu_LoadGraphics_znemesis
 #define menu_HOT_Y 40
 #define menu_MAIN_X ((GAME_W - 512) >> 1)
 #define menu_MAIN_CENTER (GAME_W >> 1)
