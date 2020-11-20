@@ -91,11 +91,9 @@ int action_timer(char *params, int aSlot, pzllst *owner)
     nod->owner = owner;
     nod->node_type = NODE_TYPE_TIMER;
     nod->need_delete = false;
+    nod->nodes.node_timer = GetIntVal(PrepareString(tmp2)) * TIMER_DELAY;
 
     setGNode(aSlot, nod);
-
-    s = PrepareString(tmp2);
-    nod->nodes.node_timer = GetIntVal(s) * TIMER_DELAY;
 
     ScrSys_AddToActResList(nod);
 

@@ -211,7 +211,7 @@ int snd_DeleteWav(struct_action_res *nod)
 
     setGNode(nod->slot, NULL);
 
-    delete nod->nodes.node_music;
+    free(nod->nodes.node_music);
     free(nod);
 
     return NODE_RET_DELETE;
@@ -274,7 +274,7 @@ int snd_DeleteSync(struct_action_res *nod)
     if (nod->nodes.node_sync->sub != NULL)
         sub_DeleteSub(nod->nodes.node_sync->sub);
 
-    delete nod->nodes.node_sync;
+    free(nod->nodes.node_sync);
     free(nod);
 
     return NODE_RET_DELETE;

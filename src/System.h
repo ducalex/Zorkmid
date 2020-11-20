@@ -8,6 +8,7 @@
 //if you plan to build engine with smpeg support
 //#define SMPEG_SUPPORT
 
+#define PREFERENCES_FILE (CUR_GAME == GAME_ZGI ? "prefs_zgi.ini" : "prefs_nem.ini")
 #define SYS_STRINGS_FILE (CUR_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR")
 #define CTRL_SAVE_FILE   (CUR_GAME == GAME_ZGI ? "inquis.sav" : "nemesis.sav")
 #define CTRL_SAVE_SAVES  (CUR_GAME == GAME_ZGI ? "inqsav%d.sav" : "nemsav%d.sav")

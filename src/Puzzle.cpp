@@ -9,25 +9,14 @@ pzllst *CreatePzlLst()
     return tmp;
 }
 
-char *copy_params(const char *params)
-{
-    char *tmp = (char *)malloc(strlen(params) + 1);
-    strcpy(tmp, params);
-    return tmp;
-}
-
 void Parse_Puzzle_Results_Action(char *instr, MList *lst)
 {
-    char *str;
     char buf[255];
-    int slot;
-
     func_node *nod;
     const char *params = " ";
 
-    str = instr;
-
-    slot = 0;
+    char *str = instr;
+    int slot = 0;
 
     memset(buf, 0, 255);
 
@@ -55,7 +44,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_set_screen;
@@ -67,7 +56,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_debug;
@@ -79,7 +68,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_assign;
@@ -90,7 +79,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_timer;
@@ -101,7 +90,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_set_partial_screen;
@@ -113,7 +102,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_change_location;
@@ -125,7 +114,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_dissolve;
@@ -137,7 +126,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_disable_control;
@@ -148,7 +137,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_enable_control;
@@ -159,7 +148,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_add;
@@ -170,7 +159,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_random;
@@ -181,7 +170,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_animplay;
@@ -192,7 +181,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_universe_music;
@@ -203,7 +192,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_music;
@@ -215,7 +204,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_kill;
@@ -227,7 +216,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_stop;
@@ -239,7 +228,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_inventory;
@@ -251,7 +240,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_crossfade;
@@ -263,7 +252,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_streamvideo;
@@ -275,7 +264,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_animpreload;
@@ -286,7 +275,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_playpreload;
@@ -297,7 +286,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_syncsound;
@@ -309,7 +298,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_menu_bar_enable;
@@ -321,7 +310,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_delay_render;
@@ -333,7 +322,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_ttytext;
@@ -345,7 +334,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_attenuate;
@@ -357,7 +346,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_pan_track;
@@ -369,7 +358,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_animunload;
@@ -381,7 +370,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_flush_mouse_events;
@@ -393,7 +382,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_save_game;
@@ -405,7 +394,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_restore_game;
@@ -417,7 +406,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_quit;
@@ -429,7 +418,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_rotate_to;
@@ -441,7 +430,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_distort;
@@ -453,7 +442,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_preferences;
@@ -465,7 +454,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_region;
@@ -476,7 +465,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_display_message;
@@ -487,7 +476,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_set_venus;
@@ -498,7 +487,7 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         nod = NEW(func_node);
         AddToMList(lst, nod);
 
-        nod->param = copy_params(params);
+        nod->param = strdup(params);
         nod->slot = slot;
 
         nod->func = action_disable_venus;

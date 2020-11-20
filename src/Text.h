@@ -55,8 +55,7 @@ struct struct_ttytext
     int32_t dx, dy;
 };
 
-void txt_init_txt_struct(struct_txt_style *style);
-struct_txt_style *txt_NewTxt();
+struct_txt_style *txt_init_txt_struct(struct_txt_style *style);
 int8_t txt_parse_txt_params(struct_txt_style *style, const char *string, int32_t len);
 void txt_DrawTxtWithJustify(char *txt, TTF_Font *fnt, SDL_Color clr, SDL_Surface *dst, int dy, int justify);
 int32_t txt_get_linelen_for_width();

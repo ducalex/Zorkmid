@@ -71,7 +71,7 @@ struct struct_distort
 
 void Rend_DrawImageToScr(SDL_Surface *scr, int x, int y);
 void Rend_DrawImageToGamescr(SDL_Surface *scr, int x, int y);
-void Rend_DrawImageToGamescr(anim_surf *scr, int x, int y, int frame);
+void Rend_DrawAnimImageToGamescr(anim_surf *scr, int x, int y, int frame);
 int8_t Rend_LoadGamescr(const char *file);
 void Rend_ProcessCursor();
 int Rend_GetMouseGameX();
@@ -95,7 +95,7 @@ void Rend_SetRendererAngle(float angle);
 void Rend_SetRendererLinscale(float lin);
 void Rend_SetRendererTable();
 void Rend_DrawImageUpGamescr(SDL_Surface *scr, int x, int y);
-void Rend_DrawImageUpGamescr(anim_surf *scr, int x, int y, int frame);
+void Rend_DrawAnimImageUpGamescr(anim_surf *scr, int x, int y, int frame);
 void Rend_DrawScalerToGamescr(scaler *scl, int16_t x, int16_t y);
 int Rend_GetRenderer();
 void Rend_ProcessCursor();
@@ -110,7 +110,6 @@ SDL_Surface *Rend_GetLocationScreenImage();
 struct_SubRect *Rend_CreateSubRect(int x, int y, int w, int h);
 void Rend_DeleteSubRect(struct_SubRect *erect);
 void Rend_ClearSubs();
-void Rend_InitSubList();
 void Rend_ProcessSubs();
 struct_SubRect *Rend_GetSubById(int id);
 void Rend_DelaySubDelete(struct_SubRect *sub, int32_t time);
@@ -132,9 +131,7 @@ int8_t Rend_GetScreenPart(int32_t *x, int32_t *y, int32_t w, int32_t h, SDL_Surf
 #define EFFECT_LIGH 2
 #define EFFECT_9 4
 
-void Effects_Init();
 void Effects_Process();
-int32_t Effects_FindFree();
 void Effects_Delete(uint32_t index);
 struct_effect *Effects_GetEf(uint32_t index);
 int32_t Effects_AddEffect(int32_t type);

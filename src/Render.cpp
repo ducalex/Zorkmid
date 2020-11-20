@@ -11,43 +11,33 @@ int GAMESCREEN_X = 0;
 int GAMESCREEN_Y = 68;
 int GAMESCREEN_FLAT_X = 0;
 
-uint8_t Renderer = RENDER_FLAT;
+static uint8_t Renderer = RENDER_FLAT;
 
-MList *sublist = NULL;
-int32_t subid = 0;
+static MList *sublist = NULL;
+static int32_t subid = 0;
 
-//Game window surface
-SDL_Surface *screen;
+static SDL_Surface *screen;     // Game window surface
+static SDL_Surface *scrbuf;     // Surface loaded by setscreen, all changes by setpartialscreen and other similar modify this surface.
+static SDL_Surface *tempbuf;    // This surface used for effects(region action) and control draws.
+static SDL_Surface *viewportbuf;//This surface used for rendered viewport image with renderer processing.
 
-//Surface loaded by setscreen, all changes by setpartialscreen and other similar modify this surface.
-SDL_Surface *scrbuf = NULL;
+static int32_t RenderDelay = 0;
 
-//This surface used for effects(region action) and control draws.
-SDL_Surface *tempbuf = NULL;
+static struct_effect Effects[EFFECTS_MAX_CNT];
 
-//This surface used for rendered viewport image with renderer processing.
-SDL_Surface *viewportbuf = NULL;
-
-int32_t RenderDelay = 0;
-
-struct_effect *Effects[EFFECTS_MAX_CNT];
-
-struct xy
-{
+static struct {
     int32_t x;
     int32_t y;
-};
+} render_table[1024][1024];
 
-xy render_table[1024][1024];
-int32_t new_render_table[1024 * 1024];
+static int32_t new_render_table[1024 * 1024];
 
-int32_t *view_X;
+static int32_t *view_X;
 
-int32_t pana_PanaWidth = 1800;
-bool pana_ReversePana = false;
-float pana_angle = 60.0, pana_linscale = 1.00;
-
-int32_t pana_Zero = 0;
+static int32_t pana_PanaWidth = 1800;
+static bool pana_ReversePana = false;
+static float pana_angle = 60.0, pana_linscale = 1.00;
+static int32_t pana_Zero = 0;
 
 static const float sin_tab[] = {
     0.000000, 0.012272, 0.024541, 0.036807,
@@ -159,7 +149,7 @@ void Rend_pana_SetTable()
 {
     float angl = pana_angle;
     float k = pana_linscale;
-    memset(render_table, 0, sizeof(xy) * GAMESCREEN_W * GAMESCREEN_H);
+    memset(render_table, 0, sizeof(render_table));
 
     int32_t yy = GAMESCREEN_H;
     int32_t ww = GAMESCREEN_W;
@@ -249,7 +239,8 @@ void Rend_InitGraphics(bool fullscreen, char *fontsdir)
 
     screen = InitGraphicAndSound(GAME_W, GAME_H, GAME_BPP, fullscreen, fontsdir);
 
-    Rend_InitSubList();
+    sublist = CreateMList();
+    subid = 0;
 
     tempbuf = CreateSurface(GAMESCREEN_W, GAMESCREEN_H);
     viewportbuf = CreateSurface(GAMESCREEN_W, GAMESCREEN_H);
@@ -260,7 +251,7 @@ void Rend_InitGraphics(bool fullscreen, char *fontsdir)
 
     view_X = getdirectvar(SLOT_VIEW_POS);
 
-    Effects_Init();
+    memset(Effects, 0, sizeof(Effects));
 }
 
 void Rend_SwitchFullscreen()
@@ -274,7 +265,7 @@ void Rend_DrawImageToGamescr(SDL_Surface *scr, int x, int y)
         DrawImageToSurf(scr, x, y, scrbuf);
 }
 
-void Rend_DrawImageToGamescr(anim_surf *scr, int x, int y, int frame)
+void Rend_DrawAnimImageToGamescr(anim_surf *scr, int x, int y, int frame)
 {
     if (scrbuf)
         DrawAnimImageToSurf(scr, x, y, frame, scrbuf);
@@ -293,16 +284,14 @@ void Rend_DrawImageUpGamescr(SDL_Surface *scr, int x, int y)
     }
 }
 
-void Rend_DrawImageUpGamescr(anim_surf *scr, int x, int y, int frame)
+void Rend_DrawAnimImageUpGamescr(anim_surf *scr, int x, int y, int frame)
 {
-    if (tempbuf)
-        DrawAnimImageToSurf(scr, x, y, frame, tempbuf);
+    DrawAnimImageToSurf(scr, x, y, frame, tempbuf);
 }
 
 void Rend_DrawImageToScr(SDL_Surface *scr, int x, int y)
 {
-    if (screen)
-        DrawImageToSurf(scr, x, y, screen);
+    DrawImageToSurf(scr, x, y, screen);
 }
 
 int8_t Rend_LoadGamescr(const char *file)
@@ -684,12 +673,6 @@ struct_SubRect *Rend_CreateSubRect(int x, int y, int w, int h)
     return tmp;
 }
 
-void Rend___DeleteSubRect(struct_SubRect *erect)
-{
-    SDL_FreeSurface(erect->img);
-    free(erect);
-}
-
 void Rend_DeleteSubRect(struct_SubRect *erect)
 {
     erect->todelete = true;
@@ -701,19 +684,11 @@ void Rend_ClearSubs()
     while (!eofMList(sublist))
     {
         struct_SubRect *subrec = (struct_SubRect *)DataMList(sublist);
-        Rend___DeleteSubRect(subrec);
+        SDL_FreeSurface(subrec->img);
+        free(subrec);
         NextMList(sublist);
     }
     FlushMList(sublist);
-}
-
-void Rend_InitSubList()
-{
-    if (sublist == NULL)
-        sublist = CreateMList();
-    else
-        Rend_ClearSubs();
-    subid = 0;
 }
 
 void Rend_ProcessSubs()
@@ -732,7 +707,8 @@ void Rend_ProcessSubs()
 
         if (subrec->todelete)
         {
-            Rend___DeleteSubRect(subrec);
+            SDL_FreeSurface(subrec->img);
+            free(subrec);
             DeleteCurrent(sublist);
         }
         else
@@ -812,7 +788,7 @@ void Rend_tilt_SetTable()
 {
     float angl = tilt_angle;
     float k = tilt_linscale;
-    memset(render_table, 0, sizeof(xy) * GAMESCREEN_W * GAMESCREEN_H);
+    memset(render_table, 0, sizeof(render_table));
 
     int32_t yy = GAMESCREEN_H;
     int32_t xx = GAMESCREEN_W;
@@ -1554,126 +1530,110 @@ int8_t Rend_GetScreenPart(int32_t *x, int32_t *y, int32_t w, int32_t h, SDL_Surf
     return 0;
 }
 
-void Effects_Init()
-{
-    for (int32_t i = 0; i < EFFECTS_MAX_CNT; i++)
-        Effects[i] = NULL;
-}
-
 void Effects_Process()
 {
-    for (int32_t i = 0; i < EFFECTS_MAX_CNT; i++)
-        if (Effects[i] != NULL)
-        {
-            if (Effects[i]->type == EFFECT_WAVE)
-                Rend_EF_Wave_Draw(Effects[i]);
-
-            if (Effects[i]->type == EFFECT_LIGH)
-                Rend_EF_Light_Draw(Effects[i]);
-
-            if (Effects[i]->type == EFFECT_9)
-                Rend_EF_9_Draw(Effects[i]);
-        }
-}
-
-int32_t Effects_FindFree()
-{
-    int32_t tmp = -1;
-
-    for (int32_t i = 0; i < EFFECTS_MAX_CNT; i++)
-        if (Effects[i] == NULL)
-        {
-            tmp = i;
-            break;
-        }
-    return tmp;
+    for (int32_t i = 0; i < EFFECTS_MAX_CNT; i++) {
+        if (Effects[i].type == EFFECT_WAVE)
+            Rend_EF_Wave_Draw(&Effects[i]);
+        else if (Effects[i].type == EFFECT_LIGH)
+            Rend_EF_Light_Draw(&Effects[i]);
+        else if (Effects[i].type == EFFECT_9)
+            Rend_EF_9_Draw(&Effects[i]);
+    }
 }
 
 int32_t Effects_AddEffect(int32_t type)
 {
-    int32_t s = Effects_FindFree();
+    struct_effect *effect = NULL;
+    int s = 0;
 
-    if (s == -1)
+    for (; s < EFFECTS_MAX_CNT; s++) {
+        if (Effects[s].type == 0) {
+            effect = &Effects[s];
+            break;
+        }
+    }
+
+    if (effect == NULL)
         return -1;
 
-    Effects[s] = NEW(struct_effect);
-    Effects[s]->type = type;
-    Effects[s]->delay = 100;
-    Effects[s]->time = 0;
-    Effects[s]->x = 0;
-    Effects[s]->y = 0;
-    Effects[s]->w = 0;
-    Effects[s]->h = 0;
+    effect->type = type;
+    effect->delay = 100;
+    effect->time = 0;
+    effect->x = 0;
+    effect->y = 0;
+    effect->w = 0;
+    effect->h = 0;
 
     if (type == EFFECT_WAVE)
     {
-        Effects[s]->effect.ef0.ampls = NULL;
-        Effects[s]->effect.ef0.frame = 0;
-        Effects[s]->effect.ef0.frame_cnt = 0;
-        Effects[s]->effect.ef0.surface = NULL;
+        effect->effect.ef0.ampls = NULL;
+        effect->effect.ef0.frame = 0;
+        effect->effect.ef0.frame_cnt = 0;
+        effect->effect.ef0.surface = NULL;
     }
     else if (type == EFFECT_LIGH)
     {
-        Effects[s]->effect.ef1.map = NULL;
-        Effects[s]->effect.ef1.surface = NULL;
-        Effects[s]->effect.ef1.maxstp = 0;
-        Effects[s]->effect.ef1.sign = 1;
-        Effects[s]->effect.ef1.stp = 0;
+        effect->effect.ef1.map = NULL;
+        effect->effect.ef1.surface = NULL;
+        effect->effect.ef1.maxstp = 0;
+        effect->effect.ef1.sign = 1;
+        effect->effect.ef1.stp = 0;
     }
     else if (type == EFFECT_9)
     {
-        Effects[s]->effect.ef9.cloud = NULL;
-        Effects[s]->effect.ef9.cloud_mod = NULL;
-        Effects[s]->effect.ef9.mapping = NULL;
-        Effects[s]->effect.ef9.mask = NULL;
+        effect->effect.ef9.cloud = NULL;
+        effect->effect.ef9.cloud_mod = NULL;
+        effect->effect.ef9.mapping = NULL;
+        effect->effect.ef9.mask = NULL;
     }
     return s;
 }
 
 void Effects_Delete(uint32_t index)
 {
-    if (index < EFFECTS_MAX_CNT)
-        if (Effects[index] != NULL)
-        {
-            switch (Effects[index]->type)
-            {
-            case EFFECT_WAVE:
-                if (Effects[index]->effect.ef0.ampls)
-                {
-                    for (int32_t i = 0; i < Effects[index]->effect.ef0.frame_cnt; i++)
-                        free(Effects[index]->effect.ef0.ampls[i]);
-                    free(Effects[index]->effect.ef0.ampls);
-                }
-                if (Effects[index]->effect.ef0.surface)
-                    SDL_FreeSurface(Effects[index]->effect.ef0.surface);
-                break;
-            case EFFECT_LIGH:
-                if (Effects[index]->effect.ef1.map)
-                    free(Effects[index]->effect.ef1.map);
+    if (index < EFFECTS_MAX_CNT) {
 
-                if (Effects[index]->effect.ef1.surface)
-                    SDL_FreeSurface(Effects[index]->effect.ef1.surface);
-                break;
-            case EFFECT_9:
-                if (Effects[index]->effect.ef9.cloud)
-                    SDL_FreeSurface(Effects[index]->effect.ef9.cloud);
-                if (Effects[index]->effect.ef9.mapping)
-                    SDL_FreeSurface(Effects[index]->effect.ef9.mapping);
-                if (Effects[index]->effect.ef9.mask)
-                    SDL_FreeSurface(Effects[index]->effect.ef9.mask);
-                if (Effects[index]->effect.ef9.cloud_mod)
-                    free(Effects[index]->effect.ef9.cloud_mod);
-                break;
+        struct_effect *effect = &Effects[index];
+
+        switch (effect->type)
+        {
+        case EFFECT_WAVE:
+            if (effect->effect.ef0.ampls)
+            {
+                for (int32_t i = 0; i < effect->effect.ef0.frame_cnt; i++)
+                    free(effect->effect.ef0.ampls[i]);
+                free(effect->effect.ef0.ampls);
             }
-            delete Effects[index];
-            Effects[index] = NULL;
+            if (effect->effect.ef0.surface)
+                SDL_FreeSurface(effect->effect.ef0.surface);
+            break;
+        case EFFECT_LIGH:
+            if (effect->effect.ef1.map)
+                free(effect->effect.ef1.map);
+
+            if (effect->effect.ef1.surface)
+                SDL_FreeSurface(effect->effect.ef1.surface);
+            break;
+        case EFFECT_9:
+            if (effect->effect.ef9.cloud)
+                SDL_FreeSurface(effect->effect.ef9.cloud);
+            if (effect->effect.ef9.mapping)
+                SDL_FreeSurface(effect->effect.ef9.mapping);
+            if (effect->effect.ef9.mask)
+                SDL_FreeSurface(effect->effect.ef9.mask);
+            if (effect->effect.ef9.cloud_mod)
+                free(effect->effect.ef9.cloud_mod);
+            break;
         }
+        memset(effect, 0, sizeof(struct_effect));
+    }
 }
 
 struct_effect *Effects_GetEf(uint32_t index)
 {
     if (index < EFFECTS_MAX_CNT)
-        return Effects[index];
+        return &Effects[index];
     else
         return NULL;
 }

@@ -70,7 +70,6 @@ struct scaler
 };
 
 anim_surf *LoadAnimImage(const char *file, int32_t mask);
-void DrawAnimImage(anim_surf *anim, int x, int y, int frame);
 void DrawAnimImageToSurf(anim_surf *anim, int x, int y, int frame, SDL_Surface *surf);
 void FreeAnimImage(anim_surf *anim);
 

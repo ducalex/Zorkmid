@@ -1,11 +1,8 @@
 #include "Anims.h"
 
-int32_t AnnimID = 0;
-
 animnode *anim_CreateAnim()
 {
-    animnode *tmp;
-    tmp = NEW(animnode);
+    animnode *tmp = NEW(animnode);
     tmp->scal = NULL;
     tmp->anim.avi = NULL;
     tmp->CurFr = 0;
@@ -33,26 +30,20 @@ animnode *anim_CreateAnim()
 struct_action_res *anim_CreateAnimPlayNode()
 {
     struct_action_res *tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPLAY);
-
     tmp->nodes.node_anim = anim_CreateAnim();
-
     return tmp;
 }
 
 struct_action_res *anim_CreateAnimPreNode()
 {
-    struct_action_res *tmp;
-    tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPRE);
-
+    struct_action_res *tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPRE);
     tmp->nodes.node_animpre = anim_CreateAnim();
-
     return tmp;
 }
 
 struct_action_res *anim_CreateAnimPlayPreNode()
 {
-    struct_action_res *tmp;
-    tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPRPL);
+    struct_action_res *tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPRPL);
 
     tmp->nodes.node_animpreplay = NEW(anim_preplay_node);
     tmp->nodes.node_animpreplay->playerid = 0;
@@ -71,7 +62,6 @@ struct_action_res *anim_CreateAnimPlayPreNode()
 
 void anim_LoadAnim(animnode *nod, char *filename, int u1, int u2, int32_t mask, int framerate)
 {
-
     if (framerate != 0)
         nod->framerate = 1000.0 / framerate;
     else
@@ -151,7 +141,6 @@ void anim_ProcessAnim(animnode *mnod)
 
     if (mnod)
     {
-
         mnod->nexttick -= GetDTime();
 
         if (mnod->nexttick <= 0)
@@ -179,10 +168,7 @@ void anim_ProcessAnim(animnode *mnod)
             }
 #endif
             else
-                Rend_DrawImageToGamescr(mnod->anim.rlf,
-                                        mnod->x,
-                                        mnod->y,
-                                        mnod->CurFr);
+                Rend_DrawAnimImageToGamescr(mnod->anim.rlf, mnod->x, mnod->y, mnod->CurFr);
 
             mnod->CurFr++;
 
@@ -204,10 +190,6 @@ void anim_ProcessAnim(animnode *mnod)
 
                 else
                 {
-#ifdef TRACE
-//                        printf ("Animplay #%d End's\n",nod->slot);
-#endif
-                    //                        anim_DeleteAnimNod(nod);
                     mnod->playing = false;
                 }
             }
@@ -277,9 +259,10 @@ int anim_ProcessAnimPrePlayNode(struct_action_res *nod)
 
 int anim_PlayAnim(animnode *nod, int x, int y, int w, int h, int start, int end, int loop)
 {
+    static int AnimID = 1;
+
     nod->playing = true;
-    AnnimID++;
-    nod->playID = AnnimID;
+    nod->playID = AnimID++;
 
     nod->w = w;
     nod->h = h;
@@ -327,7 +310,6 @@ int anim_PlayAnim(animnode *nod, int x, int y, int w, int h, int start, int end,
 
 void anim_RenderAnimFrame(animnode *mnod, int16_t x, int16_t y, int16_t w, int16_t h, int16_t frame)
 {
-
     if (mnod)
     {
         if (mnod->vid == 1)
@@ -387,7 +369,7 @@ void anim_RenderAnimFrame(animnode *mnod, int16_t x, int16_t y, int16_t w, int16
         }
 #endif
         else if (mnod->anim.rlf != NULL)
-            Rend_DrawImageToGamescr(mnod->anim.rlf, x, y, frame);
+            Rend_DrawAnimImageToGamescr(mnod->anim.rlf, x, y, frame);
     }
 }
 
@@ -464,7 +446,6 @@ int anim_DeleteAnimPreNod(struct_action_res *nod)
     setGNode(nod->slot, NULL);
 
     anim_DeleteAnim(nod->nodes.node_animpre);
-    //delete nod->nodes.node_animpre;
     free(nod);
 
     return NODE_RET_DELETE;
@@ -483,7 +464,7 @@ int anim_DeleteAnimPrePlayNode(struct_action_res *nod)
 
     SetgVarInt(nod->nodes.node_animpreplay->pointingslot, 2);
 
-    delete nod->nodes.node_animpreplay;
+    free(nod->nodes.node_animpreplay);
     free(nod);
 
     return NODE_RET_DELETE;

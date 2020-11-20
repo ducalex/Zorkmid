@@ -383,7 +383,7 @@ void control_input_draw(ctrlnode *ct)
             if (inp->cursor != NULL)
             {
 
-                Rend_DrawImageUpGamescr(inp->cursor, inp->rectangle.x + GAMESCREEN_FLAT_X + inp->textwidth, inp->rectangle.y, inp->frame);
+                Rend_DrawAnimImageUpGamescr(inp->cursor, inp->rectangle.x + GAMESCREEN_FLAT_X + inp->textwidth, inp->rectangle.y, inp->frame);
 
                 inp->period -= GetDTime();
 

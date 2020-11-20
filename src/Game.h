@@ -24,7 +24,6 @@ void GameLoop();
 void InitGameLoop();
 void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X);
 const char *GetGameTitle();
-const char *GetGameTag();
 
 void ReadSystemStrings(char *filename);
 char *GetSystemString(int32_t indx);

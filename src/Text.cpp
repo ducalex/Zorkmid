@@ -1,7 +1,11 @@
 #include "System.h"
 
-void txt_init_txt_struct(struct_txt_style *style)
+struct_txt_style *txt_init_txt_struct(struct_txt_style *style)
 {
+    if (style == NULL) {
+        style = NEW(struct_txt_style);
+    }
+
     style->blue = 255;
     style->green = 255;
     style->red = 255;
@@ -16,13 +20,8 @@ void txt_init_txt_struct(struct_txt_style *style)
     style->strikeout = TXT_STYLE_VAR_FALSE;
     style->underline = TXT_STYLE_VAR_FALSE;
     style->statebox = 0;
-}
 
-struct_txt_style *txt_NewTxt()
-{
-    struct_txt_style *txt = NEW(struct_txt_style);
-    txt_init_txt_struct(txt);
-    return txt;
+    return style;
 }
 
 int8_t txt_parse_txt_params(struct_txt_style *style, const char *strin, int32_t len)
@@ -577,8 +576,7 @@ void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
 
 struct_action_res *txt_CreateTTYtext()
 {
-    struct_action_res *tmp;
-    tmp = ScrSys_CreateActRes(NODE_TYPE_TTYTEXT);
+    struct_action_res *tmp = ScrSys_CreateActRes(NODE_TYPE_TTYTEXT);
 
     tmp->nodes.tty_text = NEW(struct_ttytext);
     tmp->nodes.tty_text->delay = 0;

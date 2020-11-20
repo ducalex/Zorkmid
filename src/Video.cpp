@@ -91,7 +91,7 @@ SDL_Surface *SwitchFullscreen()
     return screen;
 }
 
-SDL_Surface *InitGraphicAndSound(uint16_t wi, uint16_t he, uint16_t b, bool ful, char *fontsdir)
+SDL_Surface *InitGraphicAndSound(uint16_t wi, uint16_t he, uint16_t b, bool full, char *fontsdir)
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
     {
@@ -103,7 +103,7 @@ SDL_Surface *InitGraphicAndSound(uint16_t wi, uint16_t he, uint16_t b, bool ful,
     height = he;
     bpp = b;
 
-    if (ful)
+    if (full)
         screen = SDL_SetVideoMode(wi, he, b, SFTYPE | SDL_FULLSCREEN);
     else
         screen = SDL_SetVideoMode(wi, he, b, SFTYPE);
@@ -202,35 +202,13 @@ anim_surf *LoadAnimImage(const char *file, int32_t mask)
     return atmp;
 }
 
-void DrawAnimImage(anim_surf *anim, int x, int y, int frame)
-{
-    if (!anim)
-        return;
-
-    int32_t frames = anim->info.frames;
-    if (frame >= frames)
-    {
-        //#ifdef TRACE
-        //        printf("Error, required frame(%d) of animation is out of range (%d) \n",frame,anim->info.frames);
-        //#endif
-        return;
-    }
-
-    DrawImage(anim->img[frame], x, y);
-}
-
 void DrawAnimImageToSurf(anim_surf *anim, int x, int y, int frame, SDL_Surface *surf)
 {
-    if (!anim)
+    if (!anim || !surf)
         return;
-    int32_t frames = anim->info.frames;
-    if (frame >= frames)
-    {
-        //#ifdef TRACE
-        //        printf("Error, required frame(%d) of animation is out of range (%d) \n",frame,anim->info.frames);
-        //#endif
+
+    if (frame >= anim->info.frames)
         return;
-    }
 
     DrawImageToSurf(anim->img[frame], x, y, surf);
 }
@@ -267,7 +245,7 @@ void DrawImage(SDL_Surface *surf, int16_t x, int16_t y)
 
 void DrawImageToSurf(SDL_Surface *surf, int16_t x, int16_t y, SDL_Surface *dest)
 {
-    if (!surf)
+    if (!surf || !dest)
         return;
 
     SDL_Rect tmp;

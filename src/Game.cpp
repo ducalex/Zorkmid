@@ -16,15 +16,6 @@ const char *GetGameTitle()
     }
 }
 
-const char *GetGameTag()
-{
-    switch (CUR_GAME) {
-        case GAME_ZGI: return "ZorkGrandInquisitor";
-        case GAME_NEM: return "ZorkNemesis";
-        default: "Zork";
-    }
-}
-
 void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X)
 {
     NeedToLoadScript = true;

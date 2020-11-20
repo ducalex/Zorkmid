@@ -3,17 +3,7 @@
 //Creates single linked-list object
 MList *CreateMList()
 {
-    MList *tmp;
-    tmp = NEW(MList);
-
-    tmp->CurNode = NULL;
-    tmp->Head = NULL;
-    tmp->Tail = NULL;
-    tmp->count = 0;
-    tmp->indx = 0;
-    tmp->stkpos = 0;
-    tmp->dontstp = false;
-    return tmp;
+    return NEW(MList);
 }
 
 //Adds item to linked-list
@@ -142,7 +132,7 @@ void DeleteMList(MList *lst)
         while (lst->CurNode)
         {
             nxt = lst->CurNode->next;
-            delete lst->CurNode;
+            free(lst->CurNode);
             lst->CurNode = nxt;
         }
     }
@@ -159,7 +149,7 @@ void DeleteMList(MList **plst)
         while (lst->CurNode)
         {
             nxt = lst->CurNode->next;
-            delete lst->CurNode;
+            free(lst->CurNode);
             lst->CurNode = nxt;
         }
     }
@@ -176,7 +166,7 @@ void FlushMList(MList *lst)
         while (lst->CurNode)
         {
             nxt = lst->CurNode->next;
-            delete lst->CurNode;
+            free(lst->CurNode);
             lst->CurNode = nxt;
         }
     }
@@ -220,7 +210,7 @@ void DeleteCurrent(MList *lst)
     else
         nod = lst->Head;
 
-    delete lst->CurNode;
+    free(lst->CurNode);
 
     lst->stkpos = 0; //Clean Stack!
     lst->CurNode = nod;

@@ -371,7 +371,6 @@ void ScrSys_SaveGame(char *file)
 
 void ScrSys_LoadGame(char *file)
 {
-
     FILE *f = fopen(file, "rb");
 
     if (!f)
@@ -462,8 +461,6 @@ void ScrSys_LoadGame(char *file)
 
 void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X, bool force_all) // world / room / view
 {
-    //reversed from 0x004246C7
-
     Locate temp;
     temp.World = w;
     temp.Room = r;
@@ -471,11 +468,9 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
     temp.View = v2;
     temp.X = X;
 
-    if (GetgVarInt(SLOT_WORLD) != SystemWorld ||
-        GetgVarInt(SLOT_ROOM) != SystemRoom)
+    if (GetgVarInt(SLOT_WORLD) != SystemWorld || GetgVarInt(SLOT_ROOM) != SystemRoom)
     {
-        if (temp.World == SystemWorld &&
-            temp.Room == SystemRoom)
+        if (temp.World == SystemWorld && temp.Room == SystemRoom)
         {
             SetDirectgVarInt(SLOT_MENU_LASTWORLD, GetgVarInt(SLOT_WORLD));
             SetDirectgVarInt(SLOT_MENU_LASTROOM, GetgVarInt(SLOT_ROOM));
@@ -998,13 +993,8 @@ const struct
 
 void ScrSys_LoadPreferences()
 {
-    char filename[128];
-    strcpy(filename, GetGameTag());
-    strcat(filename, ".ini");
-
-    FILE *fl = fopen(filename, "rb");
-    if (fl == NULL)
-        return;
+    FILE *fl = fopen(PREFERENCES_FILE, "rb");
+    if (!fl) return;
 
     char buffer[128];
     char *str;
@@ -1013,20 +1003,19 @@ void ScrSys_LoadPreferences()
     {
         fgets(buffer, 128, fl);
         str = TrimLeft(TrimRight(buffer));
-        if (str != NULL)
-            if (strlen(str) > 0)
-                for (int16_t i = 0; i < pref_COUNT; i++)
-                    if (strCMP(str, prefs[i].name) == 0)
+        if (str != NULL && strlen(str) > 0)
+            for (int i = 0; i < pref_COUNT; i++)
+                if (strCMP(str, prefs[i].name) == 0)
+                {
+                    str = strstr(str, "=");
+                    if (str != NULL)
                     {
-                        str = strstr(str, "=");
-                        if (str != NULL)
-                        {
-                            str++;
-                            str = TrimLeft(str);
-                            SetDirectgVarInt(prefs[i].slot, atoi(str));
-                        }
-                        break;
+                        str++;
+                        str = TrimLeft(str);
+                        SetDirectgVarInt(prefs[i].slot, atoi(str));
                     }
+                    break;
+                }
     };
 
     fclose(fl);
@@ -1034,16 +1023,12 @@ void ScrSys_LoadPreferences()
 
 void ScrSys_SavePreferences()
 {
-    char filename[128];
-    strcpy(filename, GetGameTag());
-    strcat(filename, ".ini");
+    FILE *fl = fopen(PREFERENCES_FILE, "wb");
+    if (!fl) return;
 
-    FILE *fl = fopen(filename, "wb");
-    if (fl == NULL)
-        return;
-    fprintf(fl, "[%s]\r\n", GetGameTag());
-    for (int16_t i = 0; i < pref_COUNT; i++)
+    fprintf(fl, "[%s]\r\n", "Zorkmid");
+    for (int i = 0; i < pref_COUNT; i++) {
         fprintf(fl, "%s=%d\r\n", prefs[i].name, GetgVarInt(prefs[i].slot));
-
+    }
     fclose(fl);
 }
