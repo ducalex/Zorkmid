@@ -6,9 +6,9 @@
 //node structure
 typedef struct MList_node_s
 {
-    MList_node_s *next; //pointer to next node
-    MList_node_s *prev; //pointer to next node
-    void *data;       //pointer to data
+    struct MList_node_s *next; //pointer to next node
+    struct MList_node_s *prev; //pointer to next node
+    void *data;                //pointer to data
     unsigned int idx;
 } MList_node;
 

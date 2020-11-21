@@ -5,18 +5,20 @@
 #define CUR_GAME GAME_ZGI
 // extern int CUR_GAME;
 
-#define TRACE_ACTION()  printf("[ACTION] %s(%s)\n", __func__, params);
+#define TRACE_ACTION() printf("[ACTION] %s(%s)\n", __func__, params);
 //#define TRACE_ACTION()
-#define TRACE_LOADER(x...)  printf("[LOADER] " x);
+#define TRACE_LOADER(x...) printf("[LOADER] " x);
 //#define TRACE_LOADER(x...)
 
 //if you plan to build engine with smpeg support
 //#define SMPEG_SUPPORT
 
+#define SFTYPE SDL_SWSURFACE // SDL_HWSURFACE
+
 #define SYS_STRINGS_FILE (CUR_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR")
-#define CTRL_SAVE_FILE   (CUR_GAME == GAME_ZGI ? "inquis.sav" : "nemesis.sav")
-#define CTRL_SAVE_SAVES  (CUR_GAME == GAME_ZGI ? "inqsav%d.sav" : "nemsav%d.sav")
-#define TIMER_DELAY      (CUR_GAME == GAME_ZGI ? 100 : 1000)
+#define CTRL_SAVE_FILE (CUR_GAME == GAME_ZGI ? "inquis.sav" : "nemesis.sav")
+#define CTRL_SAVE_SAVES (CUR_GAME == GAME_ZGI ? "inqsav%d.sav" : "nemsav%d.sav")
+#define TIMER_DELAY (CUR_GAME == GAME_ZGI ? 100 : 1000)
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -36,8 +38,8 @@
 #include <SDL/SDL_mixer.h>
 
 #define GAME_AUTO 0
-#define GAME_ZGI  1
-#define GAME_NEM  2
+#define GAME_ZGI 1
+#define GAME_NEM 2
 
 #define STRBUFSIZE 0x400
 #define MINIBUFSZ 32
@@ -71,18 +73,17 @@
 #define InitNode 'r'
 #define InitView 'y'
 
-#define NEW(type) (type*)calloc(1, sizeof(type))
-#define NEW_ARRAY(type, n) (type*)calloc((n), sizeof(type))
+#define NEW(type) (type *)calloc(1, sizeof(type))
+#define NEW_ARRAY(type, n) (type *)calloc((n), sizeof(type))
 
-#define Z_PANIC(x...) { \
-    printf("[PANIC] IN FUNCTION %s\n", __func__); \
-    printf(x);    \
-    exit(-1);      \
-}
+#define Z_PANIC(x...)                                           \
+    {                                                           \
+        fprintf(stderr, "[PANIC] IN FUNCTION %s:\n", __func__); \
+        fprintf(stderr, "[PANIC] " x);                          \
+        exit(-1);                                               \
+    }
 
-#ifdef WIN32
-char *strcasestr(const char *h, const char *n);
-#endif
+char *strcontains(const char *h, const char *n);
 
 #ifdef SMPEG_SUPPORT
 #include <smpeg/smpeg.h>

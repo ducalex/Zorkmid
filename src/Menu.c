@@ -130,7 +130,7 @@ void menu_UpdateMenuBar()
 
                     if (!menu_Scrolled[menu_ITEM])
                     {
-                        float scrl = (menu_zgi_inv_w / float(GetFps())) / menu_SCROLL_TIME_INV;
+                        float scrl = (menu_zgi_inv_w / (float)(GetFps())) / menu_SCROLL_TIME_INV;
 
                         if (scrl == 0)
                             scrl = 1.0;
@@ -178,7 +178,7 @@ void menu_UpdateMenuBar()
 
                     if (!menu_Scrolled[menu_MAGIC])
                     {
-                        float scrl = (menu_zgi_inv_w / float(GetFps())) / menu_SCROLL_TIME_INV;
+                        float scrl = (menu_zgi_inv_w / (float)(GetFps())) / menu_SCROLL_TIME_INV;
 
                         if (scrl == 0)
                             scrl = 1.0;
@@ -219,7 +219,7 @@ void menu_UpdateMenuBar()
 
                 if (!menu_Scrolled[menu_MAIN])
                 {
-                    float scrl = (menu_MAIN_EL_H / float(GetFps())) / menu_SCROLL_TIME;
+                    float scrl = (menu_MAIN_EL_H / (float)(GetFps())) / menu_SCROLL_TIME;
 
                     if (scrl == 0)
                         scrl = 1.0;
@@ -236,9 +236,9 @@ void menu_UpdateMenuBar()
                 //EXIT
                 if (menu_bar_flag & menu_BAR_EXIT)
                     if (Mouse_InRect(menu_MAIN_CENTER + menu_MAIN_EL_W,
-                                    menu_ScrollPos[menu_MAIN],
-                                    menu_MAIN_EL_W,
-                                    menu_MAIN_EL_H))
+                                     menu_ScrollPos[menu_MAIN],
+                                     menu_MAIN_EL_W,
+                                     menu_MAIN_EL_H))
                     {
                         mouse_on_item = menu_MAIN_IMAGE_EXIT;
                         if (MouseUp(SDL_BUTTON_LEFT))
@@ -248,9 +248,9 @@ void menu_UpdateMenuBar()
                 //SETTINGS
                 if (menu_bar_flag & menu_BAR_SETTINGS)
                     if (Mouse_InRect(menu_MAIN_CENTER,
-                                    menu_ScrollPos[menu_MAIN],
-                                    menu_MAIN_EL_W,
-                                    menu_MAIN_EL_H))
+                                     menu_ScrollPos[menu_MAIN],
+                                     menu_MAIN_EL_W,
+                                     menu_MAIN_EL_H))
                     {
                         mouse_on_item = menu_MAIN_IMAGE_PREF;
                         if (MouseUp(SDL_BUTTON_LEFT))
@@ -260,9 +260,9 @@ void menu_UpdateMenuBar()
                 //LOAD
                 if (menu_bar_flag & menu_BAR_RESTORE)
                     if (Mouse_InRect(menu_MAIN_CENTER - menu_MAIN_EL_W,
-                                    menu_ScrollPos[menu_MAIN],
-                                    menu_MAIN_EL_W,
-                                    menu_MAIN_EL_H))
+                                     menu_ScrollPos[menu_MAIN],
+                                     menu_MAIN_EL_W,
+                                     menu_MAIN_EL_H))
                     {
                         mouse_on_item = menu_MAIN_IMAGE_REST;
                         if (MouseUp(SDL_BUTTON_LEFT))
@@ -272,9 +272,9 @@ void menu_UpdateMenuBar()
                 //SAVE
                 if (menu_bar_flag & menu_BAR_SAVE)
                     if (Mouse_InRect(menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
-                                    menu_ScrollPos[menu_MAIN],
-                                    menu_MAIN_EL_W,
-                                    menu_MAIN_EL_H))
+                                     menu_ScrollPos[menu_MAIN],
+                                     menu_MAIN_EL_W,
+                                     menu_MAIN_EL_H))
                     {
                         mouse_on_item = menu_MAIN_IMAGE_SAVE;
                         if (MouseUp(SDL_BUTTON_LEFT))
@@ -286,8 +286,8 @@ void menu_UpdateMenuBar()
             default:
 
                 if (Mouse_InRect(menu_MAIN_X, 0,
-                                menuback[menu_MAIN][1]->w,
-                                8))
+                                 menuback[menu_MAIN][1]->w,
+                                 8))
                 {
                     menu_mousefocus = menu_MAIN;
                     menu_Scrolled[menu_MAIN] = false;
@@ -331,7 +331,7 @@ void menu_UpdateMenuBar()
 
             if (!scrolled_znem)
             {
-                float scrl = (menubar_znem->h / float(GetFps())) / menu_SCROLL_TIME;
+                float scrl = (menubar_znem->h / (float)(GetFps())) / menu_SCROLL_TIME;
 
                 if (scrl == 0)
                     scrl = 1.0;
@@ -348,9 +348,9 @@ void menu_UpdateMenuBar()
             //EXIT
             if (menu_bar_flag & menu_BAR_EXIT)
                 if (Mouse_InRect(menu_MAIN_X + znem_but4_x,
-                                menu_ScrollPos[menu_MAIN],
-                                znem_but4_w,
-                                menu_MAIN_EL_H))
+                                 menu_ScrollPos[menu_MAIN],
+                                 znem_but4_w,
+                                 menu_MAIN_EL_H))
                 {
                     mouse_on_item = menu_MAIN_IMAGE_EXIT;
                     if (MouseUp(SDL_BUTTON_LEFT))
@@ -363,9 +363,9 @@ void menu_UpdateMenuBar()
             //SETTINGS
             if (menu_bar_flag & menu_BAR_SETTINGS)
                 if (Mouse_InRect(menu_MAIN_X + znem_but3_x,
-                                menu_ScrollPos[menu_MAIN],
-                                znem_but3_w,
-                                menu_MAIN_EL_H))
+                                 menu_ScrollPos[menu_MAIN],
+                                 znem_but3_w,
+                                 menu_MAIN_EL_H))
                 {
                     mouse_on_item = menu_MAIN_IMAGE_PREF;
                     if (MouseUp(SDL_BUTTON_LEFT))
@@ -378,9 +378,9 @@ void menu_UpdateMenuBar()
             //LOAD
             if (menu_bar_flag & menu_BAR_RESTORE)
                 if (Mouse_InRect(menu_MAIN_X + znem_but2_x,
-                                menu_ScrollPos[menu_MAIN],
-                                znem_but2_w,
-                                menu_MAIN_EL_H))
+                                 menu_ScrollPos[menu_MAIN],
+                                 znem_but2_w,
+                                 menu_MAIN_EL_H))
                 {
                     mouse_on_item = menu_MAIN_IMAGE_REST;
                     if (MouseUp(SDL_BUTTON_LEFT))
@@ -393,9 +393,9 @@ void menu_UpdateMenuBar()
             //SAVE
             if (menu_bar_flag & menu_BAR_SAVE)
                 if (Mouse_InRect(menu_MAIN_X + znem_but1_x,
-                                menu_ScrollPos[menu_MAIN],
-                                znem_but1_w,
-                                menu_MAIN_EL_H))
+                                 menu_ScrollPos[menu_MAIN],
+                                 znem_but1_w,
+                                 menu_MAIN_EL_H))
                 {
                     mouse_on_item = menu_MAIN_IMAGE_SAVE;
                     if (MouseUp(SDL_BUTTON_LEFT))
@@ -437,7 +437,7 @@ void menu_UpdateMenuBar()
 
             if (scrollpos_znem > -menubar_znem->h)
             {
-                float scrl = (menubar_znem->h / float(GetFps())) / menu_SCROLL_TIME;
+                float scrl = (menubar_znem->h / (float)(GetFps())) / menu_SCROLL_TIME;
 
                 if (scrl == 0)
                     scrl = 1.0;
@@ -552,10 +552,10 @@ void menu_DrawMenuBar()
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_EXIT)
                         DrawImage(menubar[menu_MAIN_IMAGE_EXIT][1], menu_MAIN_CENTER + menu_MAIN_EL_W,
-                                menu_ScrollPos[menu_MAIN]);
+                                  menu_ScrollPos[menu_MAIN]);
                     else
                         DrawImage(menubar[menu_MAIN_IMAGE_EXIT][0], menu_MAIN_CENTER + menu_MAIN_EL_W,
-                                menu_ScrollPos[menu_MAIN]);
+                                  menu_ScrollPos[menu_MAIN]);
                 }
 
                 //SETTINGS
@@ -563,10 +563,10 @@ void menu_DrawMenuBar()
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_PREF)
                         DrawImage(menubar[menu_MAIN_IMAGE_PREF][1], menu_MAIN_CENTER,
-                                menu_ScrollPos[menu_MAIN]);
+                                  menu_ScrollPos[menu_MAIN]);
                     else
                         DrawImage(menubar[menu_MAIN_IMAGE_PREF][0], menu_MAIN_CENTER,
-                                menu_ScrollPos[menu_MAIN]);
+                                  menu_ScrollPos[menu_MAIN]);
                 }
 
                 //LOAD
@@ -574,10 +574,10 @@ void menu_DrawMenuBar()
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_REST)
                         DrawImage(menubar[menu_MAIN_IMAGE_REST][1], menu_MAIN_CENTER - menu_MAIN_EL_W,
-                                menu_ScrollPos[menu_MAIN]);
+                                  menu_ScrollPos[menu_MAIN]);
                     else
                         DrawImage(menubar[menu_MAIN_IMAGE_REST][0], menu_MAIN_CENTER - menu_MAIN_EL_W,
-                                menu_ScrollPos[menu_MAIN]);
+                                  menu_ScrollPos[menu_MAIN]);
                 }
 
                 //SAVE
@@ -585,10 +585,10 @@ void menu_DrawMenuBar()
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_SAVE)
                         DrawImage(menubar[menu_MAIN_IMAGE_SAVE][1], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
-                                menu_ScrollPos[menu_MAIN]);
+                                  menu_ScrollPos[menu_MAIN]);
                     else
                         DrawImage(menubar[menu_MAIN_IMAGE_SAVE][0], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
-                                menu_ScrollPos[menu_MAIN]);
+                                  menu_ScrollPos[menu_MAIN]);
                 }
 
                 break;
@@ -616,7 +616,7 @@ void menu_DrawMenuBar()
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_EXIT)
                     DrawImage(menubut_znem[menu_MAIN_IMAGE_EXIT][butframe_znem[menu_MAIN_IMAGE_EXIT]], menu_MAIN_X + znem_but4_x,
-                            scrollpos_znem);
+                              scrollpos_znem);
             }
 
             //SETTINGS
@@ -624,7 +624,7 @@ void menu_DrawMenuBar()
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_PREF)
                     DrawImage(menubut_znem[menu_MAIN_IMAGE_PREF][butframe_znem[menu_MAIN_IMAGE_PREF]], menu_MAIN_X + znem_but3_x,
-                            scrollpos_znem);
+                              scrollpos_znem);
             }
 
             //LOAD
@@ -632,7 +632,7 @@ void menu_DrawMenuBar()
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_REST)
                     DrawImage(menubut_znem[menu_MAIN_IMAGE_REST][butframe_znem[menu_MAIN_IMAGE_REST]], menu_MAIN_X + znem_but2_x,
-                            scrollpos_znem);
+                              scrollpos_znem);
             }
 
             //SAVE
@@ -640,7 +640,7 @@ void menu_DrawMenuBar()
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_SAVE)
                     DrawImage(menubut_znem[menu_MAIN_IMAGE_SAVE][butframe_znem[menu_MAIN_IMAGE_SAVE]], menu_MAIN_X + znem_but1_x,
-                            scrollpos_znem);
+                              scrollpos_znem);
             }
         }
         else if (scrollpos_znem > -menubar_znem->h)

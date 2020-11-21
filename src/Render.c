@@ -11,24 +11,27 @@ int GAMESCREEN_X = 0;
 int GAMESCREEN_Y = 68;
 int GAMESCREEN_FLAT_X = 0;
 
+static float tilt_angle = 60.0;
+static float tilt_linscale = 1.0;
+static bool tilt_Reverse = false;
+static int32_t tilt_gap = 0;
+
 static float mgamma = 1.0;
-
-
-#define SFTYPE SDL_SWSURFACE // SDL_HWSURFACE
 
 static uint8_t Renderer = RENDER_FLAT;
 
 static MList *sublist = NULL;
 static int32_t subid = 0;
 
-static SDL_Surface *screen;     // Game window surface
-static SDL_Surface *scrbuf;     // Surface loaded by setscreen, all changes by setpartialscreen and other similar modify this surface.
-static SDL_Surface *tempbuf;    // This surface used for effects(region action) and control draws.
-static SDL_Surface *viewportbuf;//This surface used for rendered viewport image with renderer processing.
+static SDL_Surface *screen;      // Game window surface
+static SDL_Surface *scrbuf;      // Surface loaded by setscreen, all changes by setpartialscreen and other similar modify this surface.
+static SDL_Surface *tempbuf;     // This surface used for effects(region action) and control draws.
+static SDL_Surface *viewportbuf; //This surface used for rendered viewport image with renderer processing.
 
 static int32_t RenderDelay = 0;
 
-static struct {
+static struct
+{
     int32_t x;
     int32_t y;
 } render_table[1024][1024];
@@ -42,10 +45,9 @@ static bool pana_ReversePana = false;
 static float pana_angle = 60.0, pana_linscale = 1.00;
 static int32_t pana_Zero = 0;
 
-
 const int FiveBitToEightBitLookupTable[32] = {
-        0, 8, 16, 24, 32, 41, 49, 57, 65, 74, 82, 90, 98, 106, 115, 123,
-        131, 139, 148, 156, 164, 172, 180, 189, 197, 205, 213, 222, 230, 238, 246, 255};
+    0, 8, 16, 24, 32, 41, 49, 57, 65, 74, 82, 90, 98, 106, 115, 123,
+    131, 139, 148, 156, 164, 172, 180, 189, 197, 205, 213, 222, 230, 238, 246, 255};
 
 static const float sin_tab[] = {
     0.000000, 0.012272, 0.024541, 0.036807,
@@ -124,30 +126,30 @@ static inline float fastSqrt(float x)
 #define EFFECT_LIGH 2
 #define EFFECT_9 4
 
-struct effect0 //water
+typedef struct //water
 {
     int32_t frame;
     int32_t frame_cnt;
     int8_t **ampls;
     SDL_Surface *surface;
-};
+} effect0_t;
 
-struct effect1 //lightning
+typedef struct //lightning
 {
     int8_t *map; // 0 - no; !0 - draw
     int8_t sign;
     int32_t stp;
     int32_t maxstp;
     SDL_Surface *surface;
-};
+} effect1_t;
 
-struct effect9
+typedef struct
 {
     int8_t *cloud_mod;
     SDL_Surface *cloud;
     SDL_Surface *mask;
     SDL_Surface *mapping;
-};
+} effect9_t;
 
 typedef struct
 {
@@ -160,9 +162,9 @@ typedef struct
     int32_t y;
     union effect
     {
-        effect0 ef0;
-        effect1 ef1;
-        effect9 ef9;
+        effect0_t ef0;
+        effect1_t ef1;
+        effect9_t ef9;
     } effect;
 } struct_effect_t;
 
@@ -284,7 +286,8 @@ void Rend_InitGraphics(bool fullscreen, bool widescreen)
         GAMESCREEN_X = 0;
         GAMESCREEN_Y = 68;
         GAMESCREEN_FLAT_X = 0;
-        if (widescreen) {
+        if (widescreen)
+        {
             GAME_W = 854;
             GAMESCREEN_W = 854;
             GAMESCREEN_FLAT_X = 107;
@@ -325,6 +328,7 @@ void Rend_InitGraphics(bool fullscreen, bool widescreen)
     SDL_ShowCursor(SDL_DISABLE);
 
     view_X = GetDirectgVarInt(SLOT_VIEW_POS);
+    tilt_gap = GAMESCREEN_H_2;
 
     memset(Effects, 0, sizeof(Effects));
 }
@@ -346,7 +350,7 @@ void Rend_DrawImageToGamescr(SDL_Surface *scr, int x, int y)
         DrawImageToSurf(scr, x, y, scrbuf);
 }
 
-void Rend_DrawAnimImageToGamescr(anim_surf *scr, int x, int y, int frame)
+void Rend_DrawAnimImageToGamescr(anim_surf_t *scr, int x, int y, int frame)
 {
     if (scrbuf)
         DrawAnimImageToSurf(scr, x, y, frame, scrbuf);
@@ -365,7 +369,7 @@ void Rend_DrawImageUpGamescr(SDL_Surface *scr, int x, int y)
     }
 }
 
-void Rend_DrawAnimImageUpGamescr(anim_surf *scr, int x, int y, int frame)
+void Rend_DrawAnimImageUpGamescr(anim_surf_t *scr, int x, int y, int frame)
 {
     DrawAnimImageToSurf(scr, x, y, frame, tempbuf);
 }
@@ -712,7 +716,8 @@ void Rend_RenderFunc()
     Ctrl_DrawControls();
 
     //effect-processor
-    for (int32_t i = 0; i < EFFECTS_MAX_CNT; i++) {
+    for (int32_t i = 0; i < EFFECTS_MAX_CNT; i++)
+    {
         if (Effects[i].type == EFFECT_WAVE)
             Rend_EF_Wave_Draw(&Effects[i]);
         else if (Effects[i].type == EFFECT_LIGH)
@@ -823,11 +828,6 @@ void Rend_Delay(uint32_t delay_ms)
     SDL_Delay(delay_ms);
 }
 
-float tilt_angle = 60.0;
-float tilt_linscale = 1.0;
-bool tilt_Reverse = false;
-int32_t tilt_gap = GAMESCREEN_H_2;
-
 void Rend_tilt_SetAngle(float angle)
 {
     tilt_angle = angle;
@@ -838,7 +838,7 @@ void Rend_tilt_SetLinscale(float linscale)
     tilt_linscale = fabs(linscale);
     if (tilt_linscale > 1.0 || tilt_linscale == 0)
         tilt_linscale = 1.0;
-    tilt_gap = (float(GAMESCREEN_H_2) * tilt_linscale);
+    tilt_gap = ((float)(GAMESCREEN_H_2)*tilt_linscale);
 }
 
 void Rend_tilt_SetTable()
@@ -1100,7 +1100,7 @@ int32_t Rend_DeleteDistortNode(action_res_t *nod)
     return NODE_RET_DELETE;
 }
 
-void Rend_DrawScalerToGamescr(scaler *scl, int16_t x, int16_t y)
+void Rend_DrawScalerToGamescr(scaler_t *scl, int16_t x, int16_t y)
 {
     if (scrbuf)
         DrawScaler(scl, x, y, scrbuf);
@@ -1568,8 +1568,10 @@ static int32_t Effects_AddEffect(int32_t type)
     struct_effect_t *effect = NULL;
     int s = 0;
 
-    for (; s < EFFECTS_MAX_CNT; s++) {
-        if (Effects[s].type == 0) {
+    for (; s < EFFECTS_MAX_CNT; s++)
+    {
+        if (Effects[s].type == 0)
+        {
             effect = &Effects[s];
             break;
         }
@@ -1613,7 +1615,8 @@ static int32_t Effects_AddEffect(int32_t type)
 
 static void Effects_Delete(uint32_t index)
 {
-    if (index < EFFECTS_MAX_CNT) {
+    if (index < EFFECTS_MAX_CNT)
+    {
 
         struct_effect_t *effect = &Effects[index];
 
@@ -1857,10 +1860,6 @@ static void Rend_EF_9_Draw(struct_effect_t *ef)
     }
 }
 
-
-
-
-
 void setGamma(float val)
 {
     if (val > 0.4 && val < 2.1)
@@ -1887,7 +1886,7 @@ SDL_Surface *CreateSurface(uint16_t w, uint16_t h)
     return SDL_CreateRGBSurface(SFTYPE, w, h, GAME_BPP, 0, 0, 0, 0);
 }
 
-anim_surf *LoadAnimImage(const char *file, int32_t mask)
+anim_surf_t *LoadAnimImage(const char *file, int32_t mask)
 {
 #ifdef LOADTRACE
     printf("fallback-mechanism\n");
@@ -1912,7 +1911,7 @@ anim_surf *LoadAnimImage(const char *file, int32_t mask)
     if (bufp == NULL)
         return NULL;
 
-    anim_surf *atmp = NEW(anim_surf);
+    anim_surf_t *atmp = NEW(anim_surf_t);
 
     FILE *ff = fopen(bufp, "rb");
     fread(&atmp->info, 1, sizeof(atmp->info), ff);
@@ -1943,7 +1942,7 @@ anim_surf *LoadAnimImage(const char *file, int32_t mask)
     return atmp;
 }
 
-void DrawAnimImageToSurf(anim_surf *anim, int x, int y, int frame, SDL_Surface *surf)
+void DrawAnimImageToSurf(anim_surf_t *anim, int x, int y, int frame, SDL_Surface *surf)
 {
     if (!anim || !surf)
         return;
@@ -1954,7 +1953,7 @@ void DrawAnimImageToSurf(anim_surf *anim, int x, int y, int frame, SDL_Surface *
     DrawImageToSurf(anim->img[frame], x, y, surf);
 }
 
-void FreeAnimImage(anim_surf *anim)
+void FreeAnimImage(anim_surf_t *anim)
 {
     if (!anim)
         return;
@@ -2003,9 +2002,9 @@ void SetColorKey(SDL_Surface *surf, int8_t r, int8_t g, int8_t b)
     SDL_SetColorKey(surf, SDL_SRCCOLORKEY, Rend_MapScreenRGB(r, g, b));
 }
 
-scaler *CreateScaler(SDL_Surface *src, uint16_t w, uint16_t h)
+scaler_t *CreateScaler(SDL_Surface *src, uint16_t w, uint16_t h)
 {
-    scaler *tmp = NEW(scaler);
+    scaler_t *tmp = NEW(scaler_t);
     tmp->surf = src;
 
     tmp->w = w;
@@ -2041,7 +2040,7 @@ scaler *CreateScaler(SDL_Surface *src, uint16_t w, uint16_t h)
     return tmp;
 }
 
-void DeleteScaler(scaler *scal)
+void DeleteScaler(scaler_t *scal)
 {
     if (scal->offsets != NULL)
         free(scal->offsets);
@@ -2049,7 +2048,7 @@ void DeleteScaler(scaler *scal)
     free(scal);
 }
 
-void DrawScaler(scaler *scal, int16_t x, int16_t y, SDL_Surface *dst)
+void DrawScaler(scaler_t *scal, int16_t x, int16_t y, SDL_Surface *dst)
 {
     if (!scal)
         return;
@@ -2116,7 +2115,7 @@ void DrawScaler(scaler *scal, int16_t x, int16_t y, SDL_Surface *dst)
             }
             else
             {
-                printf("Produce your scaler code there \"%s\":%d\n", __FILE__, __LINE__);
+                printf("Produce your scaler_t code there \"%s\":%d\n", __FILE__, __LINE__);
             }
             SDL_UnlockSurface(scal->surf);
             SDL_UnlockSurface(dst);
@@ -2200,7 +2199,7 @@ void DrawScaler(scaler *scal, int16_t x, int16_t y, SDL_Surface *dst)
             }
             else
             {
-                printf("Produce your scaler code there \"%s\":%d\n", __FILE__, __LINE__);
+                printf("Produce your scaler_t code there \"%s\":%d\n", __FILE__, __LINE__);
             }
             SDL_UnlockSurface(scal->surf);
             SDL_UnlockSurface(dst);
@@ -2208,7 +2207,7 @@ void DrawScaler(scaler *scal, int16_t x, int16_t y, SDL_Surface *dst)
     }
 }
 
-void DrawScalerToScreen(scaler *scal, int16_t x, int16_t y)
+void DrawScalerToScreen(scaler_t *scal, int16_t x, int16_t y)
 {
     DrawScaler(scal, x, y, screen);
 }

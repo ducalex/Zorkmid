@@ -87,7 +87,7 @@ typedef struct
     char text[SAVE_NAME_MAX_LEN + 1];
     int16_t textwidth;
     bool textchanged;
-    anim_surf *cursor;
+    anim_surf_t *cursor;
     int32_t frame;
     int32_t period;
     bool readonly;

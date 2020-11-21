@@ -139,24 +139,6 @@ void DeleteMList(MList *lst)
     free(lst);
 }
 
-void DeleteMList(MList **plst)
-{
-    MList *lst = *plst;
-    if (lst->count > 0)
-    {
-        MList_node *nxt = lst->Head->next;
-        lst->CurNode = lst->Head;
-        while (lst->CurNode)
-        {
-            nxt = lst->CurNode->next;
-            free(lst->CurNode);
-            lst->CurNode = nxt;
-        }
-    }
-    free(lst);
-    *plst = NULL;
-}
-
 void FlushMList(MList *lst)
 {
     if (lst->count > 0)

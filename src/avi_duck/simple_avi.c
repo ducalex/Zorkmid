@@ -470,7 +470,7 @@ void avi_update(avi_file_t *av)
     if (av->status == AVI_PLAY)
     {
         float ss = SDL_GetTicks() - av->stime;
-        uint32_t nwf = (ss / (float(av->header.mcrSecPframe) / 1000.0)); //(1500.0 / av->vtrk->hdr.rate);
+        uint32_t nwf = (ss / ((float)(av->header.mcrSecPframe) / 1000.0));
 
         if (nwf >= av->header.frames)
         {

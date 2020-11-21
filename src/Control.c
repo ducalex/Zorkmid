@@ -182,7 +182,7 @@ bool Ctrl_Eligeblity_Slots(int obj, int32_t *slots, int32_t count)
 {
     for (int i = 0; i < count; i++)
         if (obj == slots[i])
-        return true;
+            return true;
     return false;
 }
 

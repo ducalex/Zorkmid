@@ -3,7 +3,7 @@
 int main(int argc, char **argv)
 {
     bool fullscreen = false;
-    bool widescreen = true;
+    bool widescreen = false;
     const char *path = "./";
 
     for (int i = 1; i < argc; i++)
@@ -12,9 +12,9 @@ int main(int argc, char **argv)
         {
             fullscreen = true;
         }
-        else if (strcasecmp(argv[i], "-nocrop") == 0)
+        else if (strcasecmp(argv[i], "-w") == 0)
         {
-            widescreen = false;
+            widescreen = true;
         }
         else if (strcasecmp(argv[i], "-zgi") == 0)
         {

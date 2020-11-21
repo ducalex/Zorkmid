@@ -117,11 +117,14 @@ void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_
         else if (i > 88)
             i = 88;
 
-        if (ctx) {
+        if (ctx)
+        {
             ctx->t[ctx->j] = b;
             ctx->t[ctx->j + 2] = i;
             ctx->j = (ctx->j + 1) & stereo;
-        } else {
+        }
+        else
+        {
             t[j] = b;
             t[j + 2] = i;
             j = (j + 1) & stereo;
@@ -688,16 +691,16 @@ SDL_Surface *loader_LoadFile_key(const char *file, int8_t transpose, uint32_t ke
 
 /*********************************** RLF ***************************************/
 
-struct Header
+typedef struct
 {
     uint32_t magic; //FELR 0x524C4546
     uint32_t size;  // from begin
     uint32_t unk1;
     uint32_t unk2;
     uint32_t frames; //number of frames
-};
+} Header;
 
-struct Cinf
+typedef struct
 {
     uint32_t magic; //FNIC
     uint32_t size;
@@ -712,9 +715,9 @@ struct Cinf
     uint32_t unk5;
     char HKEY[0x18];
     uint32_t ELRH;
-};
+} Cinf;
 
-struct MinF
+typedef struct
 {
     uint32_t magic; //FNIM
     uint32_t size;
@@ -724,17 +727,17 @@ struct MinF
     uint32_t unk3;
     uint32_t width;
     uint32_t height;
-};
+} MinF;
 
-struct mTime
+typedef struct
 {
     uint32_t magic; //EMIT
     uint32_t size;
     uint32_t unk1;
     uint32_t microsecs;
-};
+} mTime;
 
-struct Frame
+typedef struct
 {
     uint32_t magic; //MARF
     uint32_t size;
@@ -743,7 +746,7 @@ struct Frame
     uint32_t TYPE;   // ELRH or  ELHD
     uint32_t offset; //from begin of frame to data
     uint32_t unk3;
-};
+} Frame;
 
 static void DHLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
 {
@@ -833,7 +836,7 @@ static void HRLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
     }
 }
 
-anim_surf *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask)
+anim_surf_t *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask)
 {
     TRACE_LOADER("Load RLF file '%s'\n", file);
 
@@ -866,7 +869,7 @@ anim_surf *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask)
         mn.height ^= mn.width;
     }
 
-    anim_surf *atmp = NEW(anim_surf);
+    anim_surf_t *atmp = NEW(anim_surf_t);
 
     typedef SDL_Surface *PSDL_Surface;
 
@@ -952,7 +955,8 @@ void loader_LoadZcr(const char *file, Cursor_t *cur)
     }
 
     mfile_t *f = mfopen(fl);
-    if (!f) return;
+    if (!f)
+        return;
 
     uint32_t magic = 0;
     mfread(&magic, 4, f);
@@ -986,7 +990,7 @@ void loader_LoadZcr(const char *file, Cursor_t *cur)
 
 /******************** ZFS Routines************************/
 
-struct header_zfs
+typedef struct
 {
     uint32_t magic;
     uint32_t unk1;
@@ -995,9 +999,9 @@ struct header_zfs
     uint32_t files_cnt;
     uint32_t xor_key;
     uint32_t Offset_files;
-};
+} header_zfs;
 
-struct file_header_zfs
+typedef struct
 {
     char name[0x10];
     uint32_t offset;
@@ -1005,7 +1009,7 @@ struct file_header_zfs
     uint32_t size;
     uint32_t time;
     uint32_t unk2;
-};
+} file_header_zfs;
 
 static MList *zfs_arch_list = NULL;
 
@@ -1014,7 +1018,8 @@ void loader_openzfs(const char *file, MList *list)
     TRACE_LOADER("Loading ZFS : %s\n", file);
 
     FILE *fl = fopen(file, "rb");
-    if (!fl) return;
+    if (!fl)
+        return;
 
     header_zfs hdr;
     fread(&hdr, sizeof(hdr), 1, fl);
@@ -1097,17 +1102,18 @@ mfile_t *mfopen(FManNode_t *nod)
 {
     if (nod->zfs)
     {
-        mfile_t *tmp =  NEW(mfile_t);
+        mfile_t *tmp = NEW(mfile_t);
         zfs_file_t *file = nod->zfs;
 
-        tmp->buf = (char*)calloc(file->size + 4, 1);
+        tmp->buf = (char *)calloc(file->size + 4, 1);
         tmp->pos = 0;
         tmp->size = nod->zfs->size;
 
         fseek(file->archive->fl, file->offset, SEEK_SET);
         fread(tmp->buf, file->size, 1, file->archive->fl);
 
-        if (file->archive->xor_key) {
+        if (file->archive->xor_key)
+        {
             uint32_t cnt = file->size >> 2;
             uint32_t *px = (uint32_t *)tmp->buf;
             for (uint32_t i = 0; i < cnt; i++)

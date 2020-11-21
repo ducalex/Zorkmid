@@ -9,19 +9,16 @@ static const char *CurNames[] = {
     "active", "arrow", "backward", "downarrow", "forward", "handpt",
     "handpu", "hdown", "hleft", "hright", "hup", "idle", "leftarrow",
     "rightarrow", "suggest_surround", "suggest_tilt", "turnaround",
-    "zuparrow"
-};
+    "zuparrow"};
 
 static const char *CurFiles_zgi[] = {
     "g0gbc011.zcr", "g0gac001.zcr", "g0gac021.zcr", "g0gac031.zcr", "g0gac041.zcr", "g0gac051.zcr",
     "g0gac061.zcr", "g0gac071.zcr", "g0gac081.zcr", "g0gac091.zcr", "g0gac101.zcr", "g0gac011.zcr",
-    "g0gac111.zcr", "g0gac121.zcr", "g0gac131.zcr", "g0gac141.zcr", "g0gac151.zcr", "g0gac161.zcr"
-};
+    "g0gac111.zcr", "g0gac121.zcr", "g0gac131.zcr", "g0gac141.zcr", "g0gac151.zcr", "g0gac161.zcr"};
 
 static const char *CurFiles_znemesis[] = {
     "00act", "arrow", "back", "down", "forw", "handpt", "handpu", "hdown", "hleft",
-    "hright", "hup", "00idle", "left", "right", "ssurr", "stilt", "turn", "up"
-};
+    "hright", "hup", "00idle", "left", "right", "ssurr", "stilt", "turn", "up"};
 
 static Cursor_t DefCursors[NUM_CURSORS][CURSOR_STATES];
 static Cursor_t ObjCursors[2][CURSOR_STATES];
@@ -33,7 +30,8 @@ static bool DrawCursor = true;
 
 static void Free_Cursor(Cursor_t *cur)
 {
-    if (cur && cur->img) {
+    if (cur && cur->img)
+    {
         SDL_FreeSurface(cur->img);
         cur->img = NULL;
     }

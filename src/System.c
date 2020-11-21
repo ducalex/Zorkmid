@@ -4,10 +4,10 @@
 #define DBL_CLK_TIME 250
 #define KEYBUFLEN 14
 
-static uint8_t VkKeys[512];     // windows map vk keys
-static uint8_t KeyHits[512];    // Array with hitted keys (once per press)
-static bool AnyHit = false;     // it's indicate what any key was pressed
-static uint8_t *Keys;           // Array with pressed keys (while pressed)
+static uint8_t VkKeys[512];  // windows map vk keys
+static uint8_t KeyHits[512]; // Array with hitted keys (once per press)
+static bool AnyHit = false;  // it's indicate what any key was pressed
+static uint8_t *Keys;        // Array with pressed keys (while pressed)
 static SDLKey lastkey;
 static int16_t keybbuf[KEYBUFLEN];
 static int32_t Mx, My, LMx, LMy;
@@ -23,9 +23,9 @@ static char *SystemStrings[0xFF];
 static uint32_t CurrentTime = 0;
 static uint32_t DeltaTime = 0;
 
-static uint64_t mtime = 0;      // Game timer ticks [after ~23 milliards years will came overflow of this var, don't play so long]
-static bool btime = false;      // Indicates new Tick
-static uint64_t reltime = 0;    // Realtime ticks for calculate game ticks
+static uint64_t mtime = 0;   // Game timer ticks [after ~23 milliards years will came overflow of this var, don't play so long]
+static bool btime = false;   // Indicates new Tick
+static uint64_t reltime = 0; // Realtime ticks for calculate game ticks
 static int tofps = 0;
 
 static uint32_t time = 0;
@@ -40,8 +40,8 @@ static int32_t fps = 1;
 
 typedef struct BinTreeNd
 {
-    BinTreeNd *zero;
-    BinTreeNd *one;
+    struct BinTreeNd *zero;
+    struct BinTreeNd *one;
     FManNode_t *nod;
 } BinTreeNd_t;
 
@@ -409,7 +409,7 @@ void FindAssets(const char *dir)
     TRACE_LOADER("Listing dir: %s\n", buf);
 
     DIR *dr = opendir(buf);
-    dirent *de;
+    struct dirent *de;
 
     if (!dr)
         return;
@@ -425,11 +425,11 @@ void FindAssets(const char *dir)
         {
             FindAssets(buf2);
         }
-        else if (strcasestr(buf2, ".ZFS"))
+        else if (strcontains(buf2, ".ZFS"))
         {
             loader_openzfs(buf2, FMan);
         }
-        else if (strcasestr(buf2, ".TTF"))
+        else if (strcontains(buf2, ".TTF"))
         {
             TRACE_LOADER("Adding font : %s\n", buf2);
             TTF_Font *fnt = TTF_OpenFont(buf2, 10);
@@ -665,7 +665,7 @@ const char *GetFilePath(const char *chr)
 {
     char *path = strdup(chr);
 
-    // if (tmp = strcasestr(path, ".AVI")) strcpy(tmp, ".MPG");
+    // if (strcontains(path, ".AVI")) strcpy(tmp, ".MPG");
 
     FManNode_t *nod = FindInBinTree(path);
 
@@ -695,27 +695,32 @@ const char *GetExactFilePath(const char *chr)
 void SetGamePath(const char *path)
 {
     GamePath = strdup(path);
-    while (GamePath[strlen(GamePath-1)] == '/' || GamePath[strlen(GamePath-1)] == '\\')
-        GamePath[strlen(GamePath-1)] = 0;
+    while (GamePath[strlen(GamePath - 1)] == '/' || GamePath[strlen(GamePath - 1)] == '\\')
+        GamePath[strlen(GamePath - 1)] = 0;
 }
 
 const char *GetGamePath()
 {
-    if (!GamePath) return "";
-    else return GamePath;
+    if (!GamePath)
+        return "";
+    else
+        return GamePath;
 }
 
 const char *GetGameTitle()
 {
-    switch (CUR_GAME) {
-        case GAME_ZGI: return "Zork: Grand Inquisitor";
-        case GAME_NEM: return "Zork: Nemesis";
-        default: return "Unknown";
+    switch (CUR_GAME)
+    {
+    case GAME_ZGI:
+        return "Zork: Grand Inquisitor";
+    case GAME_NEM:
+        return "Zork: Nemesis";
+    default:
+        return "Unknown";
     }
 }
 
-#ifdef WIN32
-char *strcasestr(const char *h, const char *n)
+char *strcontains(const char *h, const char *n)
 { /* h="haystack", n="needle" */
     const char *a = h, *e = n;
 
@@ -739,4 +744,3 @@ char *strcasestr(const char *h, const char *n)
     }
     return (char *)(*e ? 0 : h);
 }
-#endif

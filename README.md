@@ -4,12 +4,20 @@ Zorkmid is a Z-Vision engine written in portable C99. It allows you to play Zork
 
 It is based on [ZEngine by Marisa-Chan](https://github.com/Marisa-Chan/Zengine).
 
-# Requirements
-- SDL
-- SDL_image
-- SDL_mixer
-- SDL_ttf
-- gcc or mingw
+# Screenshots
+![menu](https://raw.githubusercontent.com/ducalex/Zorkmid/master/res/screenshot1.png)
+### Widescreen
+![village](https://raw.githubusercontent.com/ducalex/Zorkmid/master/res/screenshot2.png)
+
+# Compilation
+
+### Prerequisites
+- GCC or MinGW
+- SDL, SDL_image, SDL_mixer, SDL_ttf
+
+### Build
+- `make win32` or `make linux`
+
 
 # TODO
 ````

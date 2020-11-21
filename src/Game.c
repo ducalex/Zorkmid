@@ -169,9 +169,9 @@ void EasterEggsAndDebug()
         if (CheckKeyboardMessage("GO????", 6))
         {
             SetNeedLocate(GetKeyBuffered(3),
-                            GetKeyBuffered(2),
-                            GetKeyBuffered(1),
-                            GetKeyBuffered(0), 0);
+                          GetKeyBuffered(2),
+                          GetKeyBuffered(1),
+                          GetKeyBuffered(0), 0);
         }
 
     if (KeyDown(SDLK_v) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))

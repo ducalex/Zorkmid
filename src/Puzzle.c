@@ -59,7 +59,8 @@ pzllst_t *CreatePuzzleList(const char *name)
     tmp->_list = CreateMList();
     tmp->stksize = 0;
     tmp->exec_times = 0;
-    if (name) {
+    if (name)
+    {
         strcpy(tmp->name, name);
     }
     return tmp;

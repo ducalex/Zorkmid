@@ -47,7 +47,7 @@ void m_wide_to_utf8(mfile_t *file);
 Mix_Chunk *loader_LoadChunk(const char *file);
 SDL_Surface *loader_LoadFile(const char *file, int8_t transpose);
 SDL_Surface *loader_LoadFile_key(const char *file, int8_t transpose, uint32_t key);
-anim_surf *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask);
+anim_surf_t *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask);
 void loader_LoadZcr(const char *file, Cursor_t *cur);
 void loader_openzfs(const char *file, MList *list);
 void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_t *ctx);

@@ -15,7 +15,7 @@ static pzllst_t *world = NULL; //world script
 static pzllst_t *room = NULL;  //room script
 static pzllst_t *view = NULL;  //view script
 
-static MList *ctrl = NULL; //contorls
+static MList *ctrl = NULL;   //contorls
 static MList *actres = NULL; //sounds, animations, ttytexts and other.
 
 static uint8_t *SaveBuffer = NULL;
@@ -162,10 +162,13 @@ void InitScriptsEngine()
 {
     SaveBuffer = (uint8_t *)malloc(512 * 1024);
 
-    if (CUR_GAME == GAME_ZGI) {
+    if (CUR_GAME == GAME_ZGI)
+    {
         VAR_SLOTS_MAX = 20000;
         strcpy(PreferencesFile, "prefs_zgi.ini");
-    } else {
+    }
+    else
+    {
         VAR_SLOTS_MAX = 30000;
         strcpy(PreferencesFile, "prefs_znem.ini");
     }
@@ -373,7 +376,8 @@ void ScrSys_LoadGame(char *file)
     char buf[32];
 
     FILE *f = fopen(file, "rb");
-    if (!f) return;
+    if (!f)
+        return;
 
     ScrSys_FlushActResList();
 
@@ -387,7 +391,6 @@ void ScrSys_LoadGame(char *file)
     fread(&tmp, 4, 1, f);
     fread(&tmp, 4, 1, f);
     fread(&tmp, 4, 1, f);
-
 
     fread(&w, 1, 1, f);
     fread(&r, 1, 1, f);
@@ -905,7 +908,8 @@ static const struct
 void ScrSys_LoadPreferences()
 {
     FILE *fl = fopen(PreferencesFile, "rb");
-    if (!fl) return;
+    if (!fl)
+        return;
 
     char buffer[128];
     char *str;
@@ -935,7 +939,8 @@ void ScrSys_LoadPreferences()
 void ScrSys_SavePreferences()
 {
     FILE *fl = fopen(PreferencesFile, "wb");
-    if (!fl) return;
+    if (!fl)
+        return;
 
     fprintf(fl, "[%s]\r\n", GetGameTitle());
 

@@ -35,7 +35,8 @@ static uint16_t ReadUtf8Char(char *chr)
 
 txt_style_t *txt_init_txt_struct(txt_style_t *style)
 {
-    if (style == NULL) {
+    if (style == NULL)
+    {
         style = NEW(txt_style_t);
     }
 
@@ -70,7 +71,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
     const char *find = " ";
 
     //font with "item what i want"
-    char *fontitem = strcasestr(buf, "font");
+    char *fontitem = strstr(buf, "font") ?: strstr(buf, "FONT");
     if (fontitem != NULL)
     {
         fontitem += 5; //to next item

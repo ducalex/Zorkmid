@@ -129,7 +129,7 @@ typedef struct
     uint8_t translate;
 } avi_file_t;
 
-avi_file_t *avi_openfile(const char *fle, uint8_t transl = 0);
+avi_file_t *avi_openfile(const char *fle, uint8_t transl);
 void avi_set_dem(avi_file_t *av, int32_t w, int32_t h);
 int8_t avi_renderframe(avi_file_t *av, int32_t frm);
 void avi_play(avi_file_t *av);

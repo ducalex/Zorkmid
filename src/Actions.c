@@ -268,7 +268,7 @@ int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
         anm->mpg = SMPEG_new(fil, &anm->inf, 0);
 
         anm->img = CreateSurface(anm->inf.width, anm->inf.height);
-        scaler *scl = CreateScaler(anm->img, ww, hh);
+        scaler_t *scl = CreateScaler(anm->img, ww, hh);
 
         //        tmp=strlen(file);
         file[tmp - 1] = 'v';
@@ -356,7 +356,7 @@ int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
     else
 #endif
     {
-        anim_avi *anm = NEW(anim_avi);
+        anim_avi_t *anm = NEW(anim_avi_t);
         Mix_Chunk *aud = NULL;
 
         fil = GetFilePath(file);
@@ -364,10 +364,10 @@ int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
         if (fil == NULL)
             return ACTION_NORMAL;
 
-        anm->av = avi_openfile(fil);
+        anm->av = avi_openfile(fil, 0);
 
         anm->img = CreateSurface(anm->av->w, anm->av->h);
-        scaler *scl = CreateScaler(anm->img, ww, hh);
+        scaler_t *scl = CreateScaler(anm->img, ww, hh);
 
         file[tmp - 1] = 'b';
         file[tmp - 2] = 'u';

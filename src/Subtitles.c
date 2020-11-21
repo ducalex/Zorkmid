@@ -3,7 +3,8 @@
 static sub_textfile_t *sub_LoadTextFile(FManNode_t *file)
 {
     mfile_t *f = mfopen(file);
-    if (!f) return NULL;
+    if (!f)
+        return NULL;
 
     m_wide_to_utf8(f);
 
@@ -81,7 +82,8 @@ subtitles_t *sub_LoadSubtitles(char *filename)
     subtitles_t *tmp;
 
     FManNode_t *fil = FindInBinTree(filename);
-    if (!fil) return NULL;
+    if (!fil)
+        return NULL;
 
     tmp = NEW(subtitles_t);
 
@@ -166,7 +168,7 @@ void sub_ProcessSub(subtitles_t *sub, int subtime)
 {
     int j = -1;
     for (int i = 0; i < sub->subscount; i++)
-        if (subtime >= sub->subs[i].start &&subtime <= sub->subs[i].stop)
+        if (subtime >= sub->subs[i].start && subtime <= sub->subs[i].stop)
         {
             j = i;
             break;

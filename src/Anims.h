@@ -23,13 +23,13 @@ typedef struct animnode
     int32_t loops;
     union anim
     {
-        anim_surf *rlf;
-        anim_avi *avi;
+        anim_surf_t *rlf;
+        anim_avi_t *avi;
 #ifdef SMPEG_SUPPORT
         anim_mpg *mpg;
 #endif
     } anim;
-    scaler *scal;
+    scaler_t *scal;
     int8_t vid;
     int32_t playID;
     bool playing;
@@ -53,7 +53,7 @@ action_res_t *anim_CreateAnimPlayNode();
 action_res_t *anim_CreateAnimPreNode();
 action_res_t *anim_CreateAnimPlayPreNode();
 
-int anim_ProcessAnim(action_res_t *nod);
+void anim_ProcessAnim(animnode_t *nod);
 void anim_LoadAnim(animnode_t *nod, char *filename, int u1, int u2, int32_t mask, int framerate);
 void anim_DeleteAnim(animnode_t *nod);
 int anim_PlayAnim(animnode_t *nod, int x, int y, int w, int h, int start, int end, int loop);
