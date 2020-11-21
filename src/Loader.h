@@ -50,7 +50,6 @@ SDL_Surface *loader_LoadFile_key(const char *file, int8_t transpose, uint32_t ke
 anim_surf *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask);
 void loader_LoadZcr(const char *file, Cursor_t *cur);
 void loader_openzfs(const char *file, MList *list);
-void *loader_zload(zfs_file_t *fil);
 void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_t *ctx);
 
 #endif // LOADER_H_INCLUDED

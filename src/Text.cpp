@@ -1,70 +1,36 @@
 #include "System.h"
 
-static MList *FontList;
-
-void txt_LoadFonts(void)
+static int8_t GetUtf8CharSize(char chr)
 {
-    char fontsdir[512];
-    sprintf(fontsdir, "%s/%s", GetAppPath(), "FONTS");
+    if ((chr & 0x80) == 0)
+        return 1;
+    else if ((chr & 0xE0) == 0xC0)
+        return 2;
+    else if ((chr & 0xF0) == 0xE0)
+        return 3;
+    else if ((chr & 0xF8) == 0xF0)
+        return 4;
+    else if ((chr & 0xFC) == 0xF8)
+        return 5;
+    else if ((chr & 0xFE) == 0xFC)
+        return 6;
 
-    FontList = CreateMList();
-
-    DIR *dr = opendir(fontsdir);
-
-    if (dr == NULL)
-    {
-        printf("Unable to open folder %s\n", fontsdir);
-        exit(1);
-    }
-
-    TTF_Init();
-
-    printf("Loading fonts from %s\n", fontsdir);
-
-    char buf[255];
-
-    dirent *de = readdir(dr);
-    while (de)
-    {
-        if (strcmp(de->d_name, "..") != 0 && strcmp(de->d_name, ".") != 0)
-        {
-            sprintf(buf, "%s/%s", fontsdir, de->d_name);
-
-            printf("Adding font '%s'\n", buf);
-
-            TTF_Font *fnt = TTF_OpenFont(buf, 10);
-            if (fnt != NULL)
-            {
-                graph_font_t *tmpfnt = NEW(graph_font_t);
-                strncpy(tmpfnt->Name, TTF_FontFaceFamilyName(fnt), 63);
-                strncpy(tmpfnt->path, buf, 255);
-                AddToMList(FontList, tmpfnt);
-                TTF_CloseFont(fnt);
-            }
-        }
-        de = readdir(dr);
-    }
-    closedir(dr);
+    return 1;
 }
 
-TTF_Font *txt_get_font_by_name(char *name, int size)
+static uint16_t ReadUtf8Char(char *chr)
 {
-    graph_font_t *fnt = NULL;
+    uint16_t result = 0;
+    if ((chr[0] & 0x80) == 0)
+        result = chr[0];
+    else if ((chr[0] & 0xE0) == 0xC0)
+        result = ((chr[0] & 0x1F) << 6) | (chr[1] & 0x3F);
+    else if ((chr[0] & 0xF0) == 0xE0)
+        result = ((chr[0] & 0x0F) << 12) | ((chr[1] & 0x3F) << 6) | (chr[2] & 0x3F);
+    else
+        result = chr[0];
 
-    StartMList(FontList);
-    while (!eofMList(FontList))
-    {
-        fnt = (graph_font_t *)DataMList(FontList);
-        if (strCMP(fnt->Name, name) == 0)
-            break;
-
-        NextMList(FontList);
-    }
-
-    if (fnt == NULL)
-        return NULL;
-
-    return TTF_OpenFont(fnt->path, size);
+    return result;
 }
 
 txt_style_t *txt_init_txt_struct(txt_style_t *style)
@@ -441,7 +407,7 @@ void txt_set_font_style(TTF_Font *font, txt_style_t *fnt_stl)
 
 int32_t txt_DrawTxt(char *txt, txt_style_t *fnt_stl, SDL_Surface *dst)
 {
-    TTF_Font *temp_font = txt_get_font_by_name(fnt_stl->fontname, fnt_stl->size);
+    TTF_Font *temp_font = GetFontByName(fnt_stl->fontname, fnt_stl->size);
     if (!temp_font)
     {
         printf("TTF_OpenFont: %s\n", TTF_GetError());
@@ -499,7 +465,7 @@ void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
 
     TTF_Font *font = NULL;
 
-    font = txt_get_font_by_name(style.fontname, style.size);
+    font = GetFontByName(style.fontname, style.size);
     txt_set_font_style(font, &style);
 
     int32_t prevbufspace = 0, prevtxtspace = 0;
@@ -542,7 +508,7 @@ void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
                 if (ret & TXT_RET_FNTCHG)
                 {
                     TTF_CloseFont(font);
-                    font = txt_get_font_by_name(style.fontname, style.size);
+                    font = GetFontByName(style.fontname, style.size);
                     txt_set_font_style(font, &style);
                 }
                 if (ret & TXT_RET_FNTSTL)
@@ -761,7 +727,7 @@ int txt_ProcessTTYtext(struct_action_res *nod)
                     if (ret & TXT_RET_FNTCHG)
                     {
                         TTF_CloseFont(tty->fnt);
-                        tty->fnt = txt_get_font_by_name(tty->style.fontname, tty->style.size);
+                        tty->fnt = GetFontByName(tty->style.fontname, tty->style.size);
                         txt_set_font_style(tty->fnt, &tty->style);
                     }
                     if (ret & TXT_RET_FNTSTL)

@@ -152,7 +152,7 @@ void menu_UpdateMenuBar()
                     {
                         int itemspace = (menu_zgi_inv_w - menu_ITEM_SPACE) / item_count;
 
-                        if (MouseInRect(menu_ScrollPos[menu_ITEM] + itemspace * i, 0, menu_zgi_inv_hot_w, menu_zgi_inv_h))
+                        if (Mouse_InRect(menu_ScrollPos[menu_ITEM] + itemspace * i, 0, menu_zgi_inv_hot_w, menu_zgi_inv_h))
                         {
                             mouse_on_item = i;
 
@@ -201,7 +201,7 @@ void menu_UpdateMenuBar()
                         else
                             itemnum = 0xE0 + i;
 
-                        if (MouseInRect(GAME_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0, menu_zgi_inv_hot_w, menu_zgi_inv_h))
+                        if (Mouse_InRect(GAME_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0, menu_zgi_inv_hot_w, menu_zgi_inv_h))
                         {
                             mouse_on_item = i;
                             if (MouseUp(SDL_BUTTON_LEFT))
@@ -235,19 +235,19 @@ void menu_UpdateMenuBar()
 
                 //EXIT
                 if (menu_bar_flag & menu_BAR_EXIT)
-                    if (MouseInRect(menu_MAIN_CENTER + menu_MAIN_EL_W,
+                    if (Mouse_InRect(menu_MAIN_CENTER + menu_MAIN_EL_W,
                                     menu_ScrollPos[menu_MAIN],
                                     menu_MAIN_EL_W,
                                     menu_MAIN_EL_H))
                     {
                         mouse_on_item = menu_MAIN_IMAGE_EXIT;
                         if (MouseUp(SDL_BUTTON_LEFT))
-                            ifquit();
+                            game_try_quit();
                     }
 
                 //SETTINGS
                 if (menu_bar_flag & menu_BAR_SETTINGS)
-                    if (MouseInRect(menu_MAIN_CENTER,
+                    if (Mouse_InRect(menu_MAIN_CENTER,
                                     menu_ScrollPos[menu_MAIN],
                                     menu_MAIN_EL_W,
                                     menu_MAIN_EL_H))
@@ -259,7 +259,7 @@ void menu_UpdateMenuBar()
 
                 //LOAD
                 if (menu_bar_flag & menu_BAR_RESTORE)
-                    if (MouseInRect(menu_MAIN_CENTER - menu_MAIN_EL_W,
+                    if (Mouse_InRect(menu_MAIN_CENTER - menu_MAIN_EL_W,
                                     menu_ScrollPos[menu_MAIN],
                                     menu_MAIN_EL_W,
                                     menu_MAIN_EL_H))
@@ -271,7 +271,7 @@ void menu_UpdateMenuBar()
 
                 //SAVE
                 if (menu_bar_flag & menu_BAR_SAVE)
-                    if (MouseInRect(menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
+                    if (Mouse_InRect(menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
                                     menu_ScrollPos[menu_MAIN],
                                     menu_MAIN_EL_W,
                                     menu_MAIN_EL_H))
@@ -285,7 +285,7 @@ void menu_UpdateMenuBar()
 
             default:
 
-                if (MouseInRect(menu_MAIN_X, 0,
+                if (Mouse_InRect(menu_MAIN_X, 0,
                                 menuback[menu_MAIN][1]->w,
                                 8))
                 {
@@ -295,7 +295,7 @@ void menu_UpdateMenuBar()
                 }
 
                 if (menu_bar_flag & menu_BAR_MAGIC)
-                    if (MouseInRect(GAME_W - menu_zgi_inv_hot_w, 0, menu_zgi_inv_hot_w, menu_zgi_inv_h))
+                    if (Mouse_InRect(GAME_W - menu_zgi_inv_hot_w, 0, menu_zgi_inv_hot_w, menu_zgi_inv_h))
                     {
                         menu_mousefocus = menu_MAGIC;
                         menu_Scrolled[menu_MAGIC] = false;
@@ -303,7 +303,7 @@ void menu_UpdateMenuBar()
                     }
 
                 if (menu_bar_flag & menu_BAR_ITEM)
-                    if (MouseInRect(0, 0, menu_zgi_inv_hot_w, menu_zgi_inv_h))
+                    if (Mouse_InRect(0, 0, menu_zgi_inv_hot_w, menu_zgi_inv_h))
                     {
                         menu_mousefocus = menu_ITEM;
                         menu_Scrolled[menu_ITEM] = false;
@@ -347,7 +347,7 @@ void menu_UpdateMenuBar()
 
             //EXIT
             if (menu_bar_flag & menu_BAR_EXIT)
-                if (MouseInRect(menu_MAIN_X + znem_but4_x,
+                if (Mouse_InRect(menu_MAIN_X + znem_but4_x,
                                 menu_ScrollPos[menu_MAIN],
                                 znem_but4_w,
                                 menu_MAIN_EL_H))
@@ -356,13 +356,13 @@ void menu_UpdateMenuBar()
                     if (MouseUp(SDL_BUTTON_LEFT))
                     {
                         butframe_znem[menu_MAIN_IMAGE_EXIT] = menu_znemesis_but_clk_frm;
-                        ifquit();
+                        game_try_quit();
                     }
                 }
 
             //SETTINGS
             if (menu_bar_flag & menu_BAR_SETTINGS)
-                if (MouseInRect(menu_MAIN_X + znem_but3_x,
+                if (Mouse_InRect(menu_MAIN_X + znem_but3_x,
                                 menu_ScrollPos[menu_MAIN],
                                 znem_but3_w,
                                 menu_MAIN_EL_H))
@@ -377,7 +377,7 @@ void menu_UpdateMenuBar()
 
             //LOAD
             if (menu_bar_flag & menu_BAR_RESTORE)
-                if (MouseInRect(menu_MAIN_X + znem_but2_x,
+                if (Mouse_InRect(menu_MAIN_X + znem_but2_x,
                                 menu_ScrollPos[menu_MAIN],
                                 znem_but2_w,
                                 menu_MAIN_EL_H))
@@ -392,7 +392,7 @@ void menu_UpdateMenuBar()
 
             //SAVE
             if (menu_bar_flag & menu_BAR_SAVE)
-                if (MouseInRect(menu_MAIN_X + znem_but1_x,
+                if (Mouse_InRect(menu_MAIN_X + znem_but1_x,
                                 menu_ScrollPos[menu_MAIN],
                                 znem_but1_w,
                                 menu_MAIN_EL_H))

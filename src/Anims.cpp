@@ -1,43 +1,16 @@
 #include "Anims.h"
 
-animnode *anim_CreateAnim()
-{
-    animnode *tmp = NEW(animnode);
-    tmp->scal = NULL;
-    tmp->anim.avi = NULL;
-    tmp->CurFr = 0;
-    tmp->end = 0;
-    tmp->h = 0;
-    tmp->loopcnt = 0;
-    tmp->loops = 0;
-    tmp->start = 0;
-    tmp->unk1 = 0;
-    tmp->unk2 = 0;
-    tmp->mask = 0;
-    tmp->framerate = 0;
-    tmp->vid = 0;
-    tmp->w = 0;
-    tmp->x = 0;
-    tmp->y = 0;
-    tmp->rel_h = 0;
-    tmp->rel_w = 0;
-    tmp->nexttick = 0;
-    tmp->playID = 0;
-    tmp->playing = false;
-    return tmp;
-}
-
 struct_action_res *anim_CreateAnimPlayNode()
 {
     struct_action_res *tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPLAY);
-    tmp->nodes.node_anim = anim_CreateAnim();
+    tmp->nodes.node_anim = NEW(animnode);
     return tmp;
 }
 
 struct_action_res *anim_CreateAnimPreNode()
 {
     struct_action_res *tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPRE);
-    tmp->nodes.node_animpre = anim_CreateAnim();
+    tmp->nodes.node_animpre = NEW(animnode);
     return tmp;
 }
 
@@ -139,59 +112,51 @@ void anim_ProcessAnim(animnode *mnod)
     if (!mnod->playing)
         return;
 
-    if (mnod)
+    if (!mnod)
+        return;
+
+    mnod->nexttick -= GetDTime();
+
+    if (mnod->nexttick <= 0)
     {
-        mnod->nexttick -= GetDTime();
+        mnod->nexttick = mnod->framerate;
 
-        if (mnod->nexttick <= 0)
+        if (mnod->vid == 1)
         {
-            mnod->nexttick = mnod->framerate;
-
-            if (mnod->vid == 1)
-            {
-                avi_renderframe(mnod->anim.avi->av, mnod->CurFr);
-                avi_to_surf(mnod->anim.avi->av, mnod->anim.avi->img);
-                Rend_DrawScalerToGamescr(mnod->scal,
-                                         mnod->x,
-                                         mnod->y);
-            }
+            avi_renderframe(mnod->anim.avi->av, mnod->CurFr);
+            avi_to_surf(mnod->anim.avi->av, mnod->anim.avi->img);
+            Rend_DrawScalerToGamescr(mnod->scal,
+                                        mnod->x,
+                                        mnod->y);
+        }
 #ifdef SMPEG_SUPPORT
-            else if (mnod->vid == 2)
-            {
-                SMPEG_renderFrame(mnod->anim.mpg->mpg,
-                                  mnod->CurFr + 1);
+        else if (mnod->vid == 2)
+        {
+            SMPEG_renderFrame(mnod->anim.mpg->mpg,
+                                mnod->CurFr + 1);
 
-                Rend_DrawScalerToGamescr(mnod->scal,
-                                         mnod->x,
-                                         mnod->y);
-                mnod->CurFr++;
-            }
-#endif
-            else
-                Rend_DrawAnimImageToGamescr(mnod->anim.rlf, mnod->x, mnod->y, mnod->CurFr);
-
+            Rend_DrawScalerToGamescr(mnod->scal,
+                                        mnod->x,
+                                        mnod->y);
             mnod->CurFr++;
+        }
+#endif
+        else
+            Rend_DrawAnimImageToGamescr(mnod->anim.rlf, mnod->x, mnod->y, mnod->CurFr);
 
-            if (mnod->CurFr > mnod->end)
+        mnod->CurFr++;
+
+        if (mnod->CurFr > mnod->end)
+        {
+            mnod->loops++;
+
+            if (mnod->loops < mnod->loopcnt || mnod->loopcnt == 0)
             {
-                mnod->loops++;
-
-                if (mnod->loops < mnod->loopcnt || mnod->loopcnt == 0)
-                {
-                    mnod->CurFr = mnod->start;
-                    /*                            if (nod->vid)
-                                                {
-                                                    //nod->nexttick=millisec() + 1.0/(((anim_avi *)nod->anim)->inf.current_fps) * 1000.0;
-                                                    nod->nexttick=millisec() + (1.0/30.0) * 1000.0;
-                                                }
-                                                else
-                                                    nod->nexttick=millisec()+((anim_surf *)nod->anim)->info.time;*/
-                }
-
-                else
-                {
-                    mnod->playing = false;
-                }
+                mnod->CurFr = mnod->start;
+            }
+            else
+            {
+                mnod->playing = false;
             }
         }
     }
@@ -310,67 +275,67 @@ int anim_PlayAnim(animnode *nod, int x, int y, int w, int h, int start, int end,
 
 void anim_RenderAnimFrame(animnode *mnod, int16_t x, int16_t y, int16_t w, int16_t h, int16_t frame)
 {
-    if (mnod)
+    if (!mnod)
+        return;
+
+    if (mnod->vid == 1)
     {
-        if (mnod->vid == 1)
+        if (mnod->anim.avi != NULL)
         {
-            if (mnod->anim.avi != NULL)
+            if (mnod->anim.avi->lastfrm != frame)
             {
-                if (mnod->anim.avi->lastfrm != frame)
+                avi_renderframe(mnod->anim.avi->av, frame);
+                avi_to_surf(mnod->anim.avi->av, mnod->anim.avi->img);
+            }
+
+            mnod->anim.avi->lastfrm = frame;
+
+            if (mnod->scal)
+                if (mnod->scal->w != w || mnod->scal->h != h)
                 {
-                    avi_renderframe(mnod->anim.avi->av, frame);
-                    avi_to_surf(mnod->anim.avi->av, mnod->anim.avi->img);
+                    DeleteScaler(mnod->scal);
+                    mnod->scal = NULL;
                 }
 
-                mnod->anim.avi->lastfrm = frame;
+            if (!mnod->scal)
+                mnod->scal = CreateScaler(mnod->anim.avi->img, w, h);
 
-                if (mnod->scal)
-                    if (mnod->scal->w != w || mnod->scal->h != h)
-                    {
-                        DeleteScaler(mnod->scal);
-                        mnod->scal = NULL;
-                    }
-
-                if (!mnod->scal)
-                    mnod->scal = CreateScaler(mnod->anim.avi->img, w, h);
-
-                Rend_DrawScalerToGamescr(mnod->scal, x, y);
-            }
+            Rend_DrawScalerToGamescr(mnod->scal, x, y);
         }
-#ifdef SMPEG_SUPPORT
-        else if (mnod->vid == 2)
-        {
-            if (mnod->anim.mpg != NULL)
-            {
-                if (mnod->anim.mpg->lastfrm != frame)
-                {
-                    SMPEG_renderFrame(mnod->anim.mpg->mpg, frame * 2);
-                    SMPEG_renderFrame(mnod->anim.mpg->mpg, frame * 2 + 1);
-                    if (mnod->anim.mpg->lastfrm > frame)
-                        SMPEG_renderFinal(mnod->anim.mpg->mpg, mnod->anim.mpg->img, 0, 0);
-                }
-
-                mnod->anim.mpg->lastfrm = frame;
-
-                if (mnod->scal)
-                    if (mnod->scal->w != w || mnod->scal->h != h)
-                    {
-                        DeleteScaler(mnod->scal);
-                        mnod->scal = NULL;
-                    }
-
-                if (!mnod->scal)
-                    mnod->scal = CreateScaler(mnod->anim.mpg->img, w, h);
-
-                Rend_DrawScalerToGamescr(mnod->scal, x, y);
-
-                //Rend_DrawImageToGamescr(mnod->anim.mpg->img, x, y);
-            }
-        }
-#endif
-        else if (mnod->anim.rlf != NULL)
-            Rend_DrawAnimImageToGamescr(mnod->anim.rlf, x, y, frame);
     }
+#ifdef SMPEG_SUPPORT
+    else if (mnod->vid == 2)
+    {
+        if (mnod->anim.mpg != NULL)
+        {
+            if (mnod->anim.mpg->lastfrm != frame)
+            {
+                SMPEG_renderFrame(mnod->anim.mpg->mpg, frame * 2);
+                SMPEG_renderFrame(mnod->anim.mpg->mpg, frame * 2 + 1);
+                if (mnod->anim.mpg->lastfrm > frame)
+                    SMPEG_renderFinal(mnod->anim.mpg->mpg, mnod->anim.mpg->img, 0, 0);
+            }
+
+            mnod->anim.mpg->lastfrm = frame;
+
+            if (mnod->scal)
+                if (mnod->scal->w != w || mnod->scal->h != h)
+                {
+                    DeleteScaler(mnod->scal);
+                    mnod->scal = NULL;
+                }
+
+            if (!mnod->scal)
+                mnod->scal = CreateScaler(mnod->anim.mpg->img, w, h);
+
+            Rend_DrawScalerToGamescr(mnod->scal, x, y);
+
+            //Rend_DrawImageToGamescr(mnod->anim.mpg->img, x, y);
+        }
+    }
+#endif
+    else if (mnod->anim.rlf != NULL)
+        Rend_DrawAnimImageToGamescr(mnod->anim.rlf, x, y, frame);
 }
 
 void anim_DeleteAnim(animnode *nod)

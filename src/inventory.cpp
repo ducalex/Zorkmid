@@ -32,32 +32,31 @@ void inv_drop(int item)
 {
     int items_cnt = get_count();
 
-    //if items in inventory > 0
-    if (items_cnt != 0)
+    if (!items_cnt)
+        return;
+
+    int index = 0;
+
+    //finding needed item
+    while (index < items_cnt)
     {
-        int index = 0;
+        if (get_item(index) == item)
+            break;
 
-        //finding needed item
-        while (index < items_cnt)
-        {
-            if (get_item(index) == item)
-                break;
+        index++;
+    }
 
-            index++;
-        }
+    // if item in the inventory
+    if (items_cnt != index)
+    {
+        //shift all items left with rewrite founded item
+        for (int v = index; v < items_cnt - 1; v++)
+            set_item(v, get_item(v + 1));
 
-        // if item in the inventory
-        if (items_cnt != index)
-        {
-            //shift all items left with rewrite founded item
-            for (int v = index; v < items_cnt - 1; v++)
-                set_item(v, get_item(v + 1));
-
-            //del last item
-            set_item(items_cnt - 1, 0);
-            set_count(get_count() - 1);
-            equip_item(0);
-        }
+        //del last item
+        set_item(items_cnt - 1, 0);
+        set_count(get_count() - 1);
+        equip_item(0);
     }
 }
 

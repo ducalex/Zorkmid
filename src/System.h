@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <dirent.h>
+#include <sys/stat.h>
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
@@ -84,7 +85,7 @@
                   "DATA3/ZASSETS/ASYLUM", "DATA3/ZASSETS/CASTLE", "DATA3/ZASSETS/ENDGAME" }
 
 #define NEW(type) (type*)calloc(1, sizeof(type))
-#define NEW_ARRAY(type, n) (type*)calloc(n, sizeof(type))
+#define NEW_ARRAY(type, n) (type*)calloc((n), sizeof(type))
 
 //System time functions
 #define millisec SDL_GetTicks
@@ -124,21 +125,19 @@ struct anim_preplay_node;
 struct animnode;
 struct struct_action_res;
 struct struct_SubRect;
-struct struct_subtitles;
 struct FManNode;
 struct ctrlnode;
 
 #include "mylist.h"
-#include "Sound.h"
 #include "Render.h"
 #include "Text.h"
 #include "Subtitles.h"
+#include "Sound.h"
 #include "Mouse.h"
 #include "Loader.h"
 #include "Puzzle.h"
-#include "Timers.h"
 #include "Control.h"
-#include "ScriptSystem.h"
+#include "Scripting.h"
 #include "Inventory.h"
 #include "Actions.h"
 #include "Anims.h"
@@ -167,22 +166,23 @@ void FlushMouseBtn(int btn);
 void SetHit(SDLKey key);
 bool KeyHit(SDLKey key);
 
-bool MouseInRect(int x, int y, int w, int h);
+void LoadFiles(const char *dir);
 
 void InitVkKeys();
 uint8_t GetWinKey(SDLKey key);
 SDLKey GetLastKey();
 
-void InitFileManager();
-void ListDir(char *dir);
+void InitFileManager(const char *dir);
 const char *GetFilePath(const char *chr);
 const char *GetExactFilePath(const char *chr);
+TTF_Font *GetFontByName(char *name, int size);
 
 int GetKeyBuffered(int indx);
 bool CheckKeyboardMessage(const char *msg, int len);
 
-bool FileExist(char *fil);
-int32_t FileSize(const char *fil);
+bool isDirectory(const char *);
+bool FileExist(const char *);
+int32_t FileSize(const char *);
 
 void UpdateDTime();
 uint32_t GetDTime();
@@ -193,9 +193,6 @@ char *TrimRight(char *buf);
 char *GetParams(char *str);
 int GetIntVal(char *chr);
 
-int8_t GetUtf8CharSize(char chr);
-uint16_t ReadUtf8Char(char *chr);
-
 #define strCMP(X, Y) strncasecmp(X, Y, strlen(Y))
 
 void AddToBinTree(FManNode *nod);
@@ -203,7 +200,7 @@ FManNode *FindInBinTree(const char *chr);
 
 double round(double r);
 
-void SetAppPath(const char *pth);
-char *GetAppPath();
+void SetGamePath(const char *pth);
+const char *GetGamePath();
 
 #endif // SYSTEM_H_INCLUDED

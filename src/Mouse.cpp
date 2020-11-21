@@ -133,6 +133,11 @@ void Mouse_HideCursor()
     DrawCursor = false;
 }
 
+bool Mouse_InRect(int x, int y, int w, int h)
+{
+    return (MouseX() >= x) && (MouseX() <= x + w) && (MouseY() >= y) && (MouseY() <= y + h);
+}
+
 int16_t Mouse_GetAngle(int16_t x, int16_t y, int16_t x2, int16_t y2) //not exact but near and fast
 {
     if (x == x2 && y == y2)

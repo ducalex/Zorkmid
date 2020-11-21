@@ -1,13 +1,12 @@
-#ifndef SCRIPTSYSTEM_H_INCLUDED
-#define SCRIPTSYSTEM_H_INCLUDED
+#ifndef SCRIPTING_H_INCLUDED
+#define SCRIPTING_H_INCLUDED
 
 //Maximal number of same puzzles in the statebox stack
 //For increasing speed of engine
 //May cause errors, but should not
 #define MaxPuzzlesInStack 2
 
-#define MaxStateBoxEnts 0x800 //0xFF is very small
-#define PuzzleStack 0x800
+#define PuzzleStack 2048
 
 #include "Puzzle.h"
 
@@ -115,12 +114,13 @@
 
 typedef struct
 {
-    puzzlenode *nod[MaxStateBoxEnts];
+    puzzlenode *nod[PuzzleStack];
     int32_t cnt;
 } StateBoxEnt_t;
 
 struct pzllst
 {
+    char name[32];
     MList *_list;
     puzzlenode *stack[PuzzleStack];
     int16_t stksize;
@@ -157,18 +157,27 @@ pzllst *Getroom();
 pzllst *Getview();
 MList *Getctrl();
 MList *GetAction_res_List();
+
 struct_action_res *getGNode(int32_t indx);
 void setGNode(int32_t indx, struct_action_res *data);
 
+void InitScriptsEngine();
+void LoadScriptFile(pzllst *lst, FManNode *filename, bool control, MList *controlst);
+
+void SetgVarInt(int32_t indx, int var);
+int GetgVarInt(int32_t indx);
+void SetDirectgVarInt(uint32_t indx, int var);
+int *GetDirectgVarInt(uint32_t indx);
+
+struct_action_res *ScrSys_CreateActRes(int type);
 void ScrSys_AddToActResList(void *);
-const char *ScrSys_ReturnListName(pzllst *lst);
-void ScrSys_ProcessAllRes();
-void ScrSys_DeleteAllRes();
+void ScrSys_ProcessActResList();
+void ScrSys_FlushActResList();
+int ScrSys_DeleteNode(struct_action_res *nod);
 uint8_t ScrSys_GetFlag(uint32_t indx);
 void ScrSys_SetFlag(uint32_t indx, uint8_t newval);
 void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X, bool force_all);
-void ScrSys_exec_puzzle_list(pzllst *lst);
-int ScrSys_DeleteNode(struct_action_res *nod);
+void ScrSys_ExecPuzzleList(pzllst *lst);
 void ScrSys_FlushResourcesByOwner(pzllst *owner);
 void ScrSys_FlushResourcesByType(int type);
 bool ScrSys_BreakExec();
@@ -178,17 +187,5 @@ void ScrSys_LoadGame(char *file);
 void ScrSys_PrepareSaveBuffer();
 void ScrSys_LoadPreferences();
 void ScrSys_SavePreferences();
-struct_action_res *ScrSys_CreateActRes(int type);
 
-void SetgVarInt(int32_t indx, int var);
-int GetgVarInt(int32_t indx);
-void SetDirectgVarInt(uint32_t indx, int var);
-int *GetDirectgVarInt(uint32_t indx);
-
-void LoadScriptFile(pzllst *lst, FManNode *filename, bool control, MList *controlst);
-void InitScriptsEngine();
-
-void FillStateBoxFromList(pzllst *lst);
-void ShakeStateBox(uint32_t indx);
-
-#endif // SCRIPTSYSTEM_H_INCLUDED
+#endif // SCRIPTING_H_INCLUDED

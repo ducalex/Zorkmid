@@ -1451,7 +1451,7 @@ int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
             int16_t ln = strlen(minbuf);
             if (minbuf[ln - 1] == '~')
                 minbuf[ln - 1] = 0;
-            lev->anm = anim_CreateAnim();
+            lev->anm = NEW(animnode);
             anim_LoadAnim(lev->anm, minbuf, 0, 0, 0, 0);
         }
         else if (strCMP(str, "skipcolor") == 0)
@@ -1603,7 +1603,7 @@ int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
             str = GetParams(str);
             char file[MINIBUFSZ];
             sscanf(str, "%s", file);
-            hotm->anm = anim_CreateAnim();
+            hotm->anm = NEW(animnode);
             anim_LoadAnim(hotm->anm, file, 0, 0, 0, 0);
         }
         else if (strCMP(str, "rectangle") == 0)
@@ -1905,11 +1905,9 @@ int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
                 {
                     mfgets(bf, STRBUFSIZE, fl2);
                     char *str2 = PrepareString(bf);
-                    int32_t bflen = strlen(str2);
                     if (bf > 0)
                     {
-                        titler->strings[titler->num_strings] = (char *)calloc(bflen + 1, 1);
-                        strcpy(titler->strings[titler->num_strings], str2);
+                        titler->strings[titler->num_strings] = strdup(str2);
                     }
 
                     titler->num_strings++;
@@ -2059,7 +2057,7 @@ int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
             SDL_Surface *tmp = loader_LoadFile(str, 0);
             if (tmp)
             {
-                paint->brush = (uint8_t *)malloc(tmp->w * tmp->h * sizeof(uint8_t));
+                paint->brush = NEW_ARRAY(uint8_t, tmp->w * tmp->h);
                 paint->b_w = tmp->w;
                 paint->b_h = tmp->h;
                 SDL_LockSurface(tmp);
@@ -2109,7 +2107,7 @@ int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
             tmpobj++;
 
             paint->eligable_cnt = tmpobj;
-            paint->eligible_objects = (int32_t *)malloc(tmpobj * sizeof(int32_t));
+            paint->eligible_objects = NEW_ARRAY(int32_t, tmpobj);
             int i = 0;
             tmpobj = 0;
 
@@ -2219,7 +2217,7 @@ int Parse_Control_Slot(MList *controlst, mfile_t *fl, uint32_t slot)
             tmpobj++;
 
             slut->eligable_cnt = tmpobj;
-            slut->eligible_objects = (int32_t *)malloc(tmpobj * sizeof(int32_t));
+            slut->eligible_objects = NEW_ARRAY(int32_t, tmpobj);
             int i = 0;
             tmpobj = 0;
 
@@ -2394,7 +2392,7 @@ int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
             {
                 char minbuf[MINIBUFSZ];
                 sscanf(str, "animation:%s", minbuf);
-                fist->anm = anim_CreateAnim();
+                fist->anm = NEW(animnode);
                 anim_LoadAnim(fist->anm, minbuf, 0, 0, 0, 0);
             }
             else if (strCMP(str, "anim_rect") == 0)
@@ -2533,7 +2531,7 @@ int Parse_Control_Safe(MList *controlst, mfile_t *fl, uint32_t slot)
         {
             str = GetParams(str);
 
-            safe->anm = anim_CreateAnim();
+            safe->anm = NEW(animnode);
             anim_LoadAnim(safe->anm, str, 0, 0, 0, 0);
         }
         else if (strCMP(str, "rectangle") == 0)

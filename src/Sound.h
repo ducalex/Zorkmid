@@ -35,7 +35,7 @@ typedef struct
 
     bool universe; //universe_music or music
 
-    struct_subtitles *sub;
+    subtitles_t *sub;
 } musicnode_t;
 
 typedef struct
@@ -43,7 +43,7 @@ typedef struct
     int syncto;
     Mix_Chunk *chunk;
     int chn;
-    struct_subtitles *sub;
+    subtitles_t *sub;
 } syncnode_t;
 
 void snd_DeleteLoopedWavsByOwner(pzllst *owner);

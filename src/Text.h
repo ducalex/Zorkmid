@@ -61,13 +61,11 @@ typedef struct
     char path[255];
 } graph_font_t;
 
-void txt_LoadFonts(void);
 txt_style_t *txt_init_txt_struct(txt_style_t *style);
 int8_t txt_parse_txt_params(txt_style_t *style, const char *string, int32_t len);
 void txt_DrawTxtWithJustify(char *txt, TTF_Font *fnt, SDL_Color clr, SDL_Surface *dst, int dy, int justify);
 void txt_get_font_style(txt_style_t *style, char *strin);
 void txt_set_font_style(TTF_Font *font, txt_style_t *fnt_stl);
-TTF_Font *txt_get_font_by_name(char *name, int size);
 int32_t txt_DrawTxt(char *txt, txt_style_t *fnt_stl, SDL_Surface *dst);
 void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst);
 

@@ -17,8 +17,7 @@ OBJS =  \
 	mylist.cpp\
 	Puzzle.cpp\
 	Render.cpp\
-	ScriptSystem.cpp\
-	Timers.cpp\
+	Scripting.cpp\
 	Anims.cpp\
 	Menu.cpp\
 	Subtitles.cpp\

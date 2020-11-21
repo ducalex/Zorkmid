@@ -1,7 +1,7 @@
 #ifndef PUZZLE_H_INCLUDED
 #define PUZZLE_H_INCLUDED
 
-#include "ScriptSystem.h"
+#include "Scripting.h"
 
 struct puzzlenode
 {
@@ -27,7 +27,7 @@ typedef struct
     bool var2; //if true: slot2 is slot; false: slot2 - number
 } crit_node_t;
 
-pzllst *CreatePzlLst();
+pzllst *CreatePzlLst(const char *name);
 int Parse_Puzzle(pzllst *lst, mfile_t *fl, char *ctstr);
 int Puzzle_try_exec(puzzlenode *pzlnod);
 

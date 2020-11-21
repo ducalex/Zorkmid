@@ -52,16 +52,19 @@ static const action_t actions[] = {
     {NULL, NULL},
 };
 
-pzllst *CreatePzlLst()
+pzllst *CreatePzlLst(const char *name)
 {
     pzllst *tmp = NEW(pzllst);
     tmp->_list = CreateMList();
     tmp->stksize = 0;
     tmp->exec_times = 0;
+    if (name) {
+        strcpy(tmp->name, name);
+    }
     return tmp;
 }
 
-void Parse_Puzzle_Results_Action(char *str, MList *lst)
+static void Parse_Puzzle_Results_Action(char *str, MList *lst)
 {
     char buf[255];
     const char *params = " ";
@@ -102,7 +105,6 @@ void Parse_Puzzle_Results_Action(char *str, MList *lst)
 
 int Parse_Puzzle_Flags(puzzlenode *pzl, mfile_t *fl)
 {
-    int good = 0;
     char buf[STRBUFSIZE];
     char *str;
 
@@ -113,8 +115,7 @@ int Parse_Puzzle_Flags(puzzlenode *pzl, mfile_t *fl)
 
         if (str[0] == '}')
         {
-            good = 1;
-            break;
+            return 1;
         }
         else if (strCMP(str, "once_per_inst") == 0)
         {
@@ -130,12 +131,11 @@ int Parse_Puzzle_Flags(puzzlenode *pzl, mfile_t *fl)
         }
     }
 
-    return good;
+    return 0;
 }
 
 int Parse_Puzzle_Criteria(puzzlenode *pzl, mfile_t *fl)
 {
-    int good = 0;
     char buf[STRBUFSIZE];
     char *str;
 
@@ -150,8 +150,7 @@ int Parse_Puzzle_Criteria(puzzlenode *pzl, mfile_t *fl)
 
         if (str[0] == '}')
         {
-            good = 1;
-            break;
+            return 1;
         }
         else if (str[0] == '[')
         {
@@ -205,16 +204,14 @@ int Parse_Puzzle_Criteria(puzzlenode *pzl, mfile_t *fl)
         else
         {
             printf("Warning!!! %s\n", str);
-            good = 0;
         }
     }
 
-    return good;
+    return 0;
 }
 
-int Parse_Puzzle_Results(puzzlenode *pzl, mfile_t *fl)
+static int Parse_Puzzle_Results(puzzlenode *pzl, mfile_t *fl)
 {
-    int good = 0;
     char buf[STRBUFSIZE];
     char *str;
 
@@ -225,8 +222,7 @@ int Parse_Puzzle_Results(puzzlenode *pzl, mfile_t *fl)
 
         if (str[0] == '}')
         {
-            good = 1;
-            break;
+            return 1;
         }
         else if (strlen(str) > 0)
         {
@@ -239,7 +235,8 @@ int Parse_Puzzle_Results(puzzlenode *pzl, mfile_t *fl)
 #endif
         }
     }
-    return good;
+
+    return 0;
 }
 
 int Parse_Puzzle(pzllst *lst, mfile_t *fl, char *ctstr)
@@ -416,30 +413,29 @@ int Puzzle_try_exec(puzzlenode *pzlnod) //, pzllst *owner)
     if (ScrSys_GetFlag(pzlnod->slot) & FLAG_DISABLED)
         return ACTION_NORMAL;
 
-    if (GetgVarInt(pzlnod->slot) != 1)
+    if (GetgVarInt(pzlnod->slot) == 1)
+        return ACTION_NORMAL;
+
+    if (pzlnod->owner->exec_times == 0)
+        if (!(ScrSys_GetFlag(pzlnod->slot) & FLAG_DO_ME_NOW))
+            return ACTION_NORMAL;
+
+    if (!examine_criterias(pzlnod))
+        return ACTION_NORMAL;
+
+    TRACE_PUZZLE("Puzzle: %d (%s) \n", pzlnod->slot, pzlnod->owner->name);
+
+    SetgVarInt(pzlnod->slot, 1);
+
+    StartMList(pzlnod->ResList);
+    while (!eofMList(pzlnod->ResList))
     {
-        if (pzlnod->owner->exec_times == 0)
-            if (!(ScrSys_GetFlag(pzlnod->slot) & FLAG_DO_ME_NOW))
-                return ACTION_NORMAL;
-
-        if (examine_criterias(pzlnod))
+        func_node_t *fun = (func_node_t *)DataMList(pzlnod->ResList);
+        if (fun->func(fun->param, fun->slot, pzlnod->owner) == ACTION_BREAK)
         {
-            TRACE_PUZZLE("Puzzle: %d (%s) \n", pzlnod->slot, ScrSys_ReturnListName(pzlnod->owner));
-
-            SetgVarInt(pzlnod->slot, 1);
-
-            StartMList(pzlnod->ResList);
-            while (!eofMList(pzlnod->ResList))
-            {
-                func_node_t *fun = (func_node_t *)DataMList(pzlnod->ResList);
-                if (fun->func(fun->param, fun->slot, pzlnod->owner) == ACTION_BREAK)
-                {
-                    return ACTION_BREAK;
-                }
-                NextMList(pzlnod->ResList);
-            }
+            return ACTION_BREAK;
         }
+        NextMList(pzlnod->ResList);
     }
-
     return ACTION_NORMAL;
 }

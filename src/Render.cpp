@@ -326,9 +326,7 @@ void Rend_InitGraphics(bool fullscreen)
     tempbuf = CreateSurface(GAMESCREEN_W, GAMESCREEN_H);
     viewportbuf = CreateSurface(GAMESCREEN_W, GAMESCREEN_H);
 
-    txt_LoadFonts();
-
-    Mouse_LoadCursors();
+    TTF_Init();
 
     SDL_ShowCursor(SDL_DISABLE);
 
@@ -448,7 +446,7 @@ void Rend_ProcessCursor()
 
 bool Rend_MouseInGamescr()
 {
-    return MouseInRect(GAMESCREEN_X, GAMESCREEN_Y, GAMESCREEN_W, GAMESCREEN_H);
+    return Mouse_InRect(GAMESCREEN_X, GAMESCREEN_Y, GAMESCREEN_W, GAMESCREEN_H);
 }
 
 int Rend_GetMouseGameX()
@@ -1110,7 +1108,7 @@ void Rend_DrawScalerToGamescr(scaler *scl, int16_t x, int16_t y)
         DrawScaler(scl, x, y, scrbuf);
 }
 
-int Rend_deleteRegion(struct_action_res *nod)
+int Rend_DeleteRegion(struct_action_res *nod)
 {
     if (nod->node_type != NODE_TYPE_REGION)
         return NODE_RET_NO;
@@ -1237,8 +1235,7 @@ static int32_t Effects_GetColor(uint32_t x, uint32_t y)
 
 static int8_t *Effects_Map_Useart(int32_t color, int32_t color_dlta, int32_t x, int32_t y, int32_t w, int32_t h)
 {
-    int8_t *tmp = (int8_t *)malloc(w * h);
-    memset(tmp, 0, w * h);
+    int8_t *tmp = NEW_ARRAY(int8_t, w * h);
 
     SDL_LockSurface(scrbuf);
     if (GAME_BPP == 32)
@@ -1449,7 +1446,7 @@ int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s
     ef->delay = delay;
     ef->time = 0;
 
-    ef->effect.ef0.ampls = (int8_t **)malloc(frames * sizeof(int8_t *));
+    ef->effect.ef0.ampls = (int8_t **)calloc(frames, sizeof(int8_t *));
 
     int32_t frmsize = GAMESCREEN_H_2 * GAMESCREEN_W_2;
 
@@ -1460,7 +1457,7 @@ int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s
 
     for (int32_t i = 0; i < ef->effect.ef0.frame_cnt; i++)
     {
-        ef->effect.ef0.ampls[i] = (int8_t *)malloc(frmsize * sizeof(int8_t));
+        ef->effect.ef0.ampls[i] = (int8_t *)calloc(frmsize, sizeof(int8_t));
 
         for (int y = 0; y < GAMESCREEN_H_2; y++)
             for (int x = 0; x < GAMESCREEN_W_2; x++)
@@ -1469,7 +1466,6 @@ int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s
                 int32_t dy = (y - h_4);
 
                 ef->effect.ef0.ampls[i][x + y * GAMESCREEN_W_2] = apml * fastSin(fastSqrt(dx * dx / (float)s_x + dy * dy / (float)s_y) / (-waveln * 3.1415926) + phase);
-                ;
             }
         phase += spd;
     }
@@ -2021,7 +2017,7 @@ scaler *CreateScaler(SDL_Surface *src, uint16_t w, uint16_t h)
     if (w == src->w && h == src->h)
         return tmp;
 
-    tmp->offsets = (int32_t *)malloc(tmp->w * tmp->h * sizeof(int32_t));
+    tmp->offsets = NEW_ARRAY(int32_t, tmp->w * tmp->h);
 
     float xfac = tmp->surf->w / (float)tmp->w;
     float yfac = tmp->surf->h / (float)tmp->h;

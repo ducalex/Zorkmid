@@ -14,10 +14,10 @@ static int32_t Mx, My, LMx, LMy;
 static uint8_t LMstate, Mstate;
 static int32_t M_dbl_time;
 static bool M_dbl_clk = false;
-static char apppath[STRBUFSIZE];
+static char *GamePath;
 
 static MList *FMan;
-static MList *FManRepl;
+static MList *FontList;
 
 static uint32_t CurrentTime = 0;
 static uint32_t DeltaTime = 0;
@@ -33,7 +33,6 @@ static int tofps = 0;
 #define DELAY 10
 #endif
 
-struct BinTreeNd;
 struct BinTreeNd
 {
     BinTreeNd *zero;
@@ -101,10 +100,7 @@ SDLKey GetLastKey()
 //Returns hit state of the key
 bool KeyHit(SDLKey key)
 {
-    if (KeyHits[key])
-        return true;
-    else
-        return false;
+    return KeyHits[key] ? true : false;
 }
 
 //return true if any key was hitted(by key hit)
@@ -141,10 +137,7 @@ void UpdateKeyboard()
 //return true if key was pressed(continously)
 bool KeyDown(SDLKey key)
 {
-    if (Keys[key])
-        return true;
-    else
-        return false;
+    return Keys[key] ? true : false;
 }
 
 void InitVkKeys()
@@ -230,11 +223,6 @@ int MouseY()
     return My;
 }
 
-bool MouseInRect(int x, int y, int w, int h)
-{
-    return (MouseX() >= x) && (MouseX() <= x + w) && (MouseY() >= y) && (MouseY() <= y + h);
-}
-
 bool MouseDown(int btn)
 {
     if (Mstate & SDL_BUTTON(btn))
@@ -310,35 +298,29 @@ bool GetBeat()
     return btime;
 }
 
-typedef struct
+bool isDirectory(const char *path)
 {
-    char ext[8];
-    char ext2[8];
-} FManRepNode_t;
-
-void AddReplacer(const char *ext, const char *ext2)
-{
-    FManRepNode_t *RepNode = NEW(FManRepNode_t);
-    strcpy(RepNode->ext, ext);
-    strcpy(RepNode->ext2, ext2);
-    AddToMList(FManRepl, RepNode);
+    struct stat statbuf;
+    if (stat(path, &statbuf) != 0)
+        return 0;
+    return S_ISDIR(statbuf.st_mode);
 }
 
-void InitFileManager()
+bool FileExist(const char *path)
 {
-    FMan = CreateMList();
-    FManRepl = CreateMList();
-
-    AddReplacer("TGA", "PNG");
-    AddReplacer("RAW", "WAV");
-    AddReplacer("SRC", "WAV");
-    AddReplacer("IFP", "WAV");
-    //AddReplacer("AVI","MPG");
-    AddReplacer("RLF", "PNG");
-    AddReplacer("ZCR", "PNG");
+    struct stat statbuf;
+    return stat(path, &statbuf) == 0;
 }
 
-void ListDir(char *dir)
+int32_t FileSize(const char *path)
+{
+    struct stat statbuf;
+    if (stat(path, &statbuf) != 0)
+        return -1;
+    return statbuf.st_size;
+}
+
+void LoadFiles(const char *dir)
 {
     char buf[1024];
     char buf2[1024];
@@ -346,67 +328,88 @@ void ListDir(char *dir)
 
     int len = strlen(buf);
 
-    if (buf[len - 1] == '/' || buf[len - 1] == '\\')
+    while (buf[len - 1] == '/' || buf[len - 1] == '\\')
     {
         buf[len - 1] = 0;
         len--;
     }
 
-#ifdef DEBUG_LOADER
-    printf("Listing dir: %s\n", dir);
-#endif // DEBUG_LOADER
+    printf("Listing dir: %s\n", buf);
 
     DIR *dr = opendir(buf);
+    dirent *de;
 
-    if (dr == NULL)
-    {
-        loader_openzfs(dir, FMan);
+    if (!dr)
         return;
-    }
 
-    dirent *de = readdir(dr);
-    while (de)
+    while (de = readdir(dr))
     {
-        if (strcmp(de->d_name, "..") != 0 && strcmp(de->d_name, ".") != 0)
-        {
-            sprintf(buf2, "%s/%s", buf, de->d_name);
+        if (strlen(de->d_name) < 3)
+            continue;
 
+        sprintf(buf2, "%s/%s", buf, de->d_name);
+
+        if (isDirectory(buf2))
+        {
+            LoadFiles(buf2);
+        }
+        else if (strcasestr(buf2, ".ZFS"))
+        {
+            loader_openzfs(buf2, FMan);
+        }
+        else if (strcasestr(buf2, ".TTF"))
+        {
+            printf("Adding font : %s\n", buf2);
+            TTF_Font *fnt = TTF_OpenFont(buf2, 10);
+            if (fnt != NULL)
+            {
+                graph_font_t *tmpfnt = NEW(graph_font_t);
+                strncpy(tmpfnt->Name, TTF_FontFaceFamilyName(fnt), 63);
+                strncpy(tmpfnt->path, buf2, 255);
+                AddToMList(FontList, tmpfnt);
+                TTF_CloseFont(fnt);
+            }
+        }
+        else
+        {
+            printf("Adding game file : %s\n", buf2);
             FManNode *nod = NEW(FManNode);
-            nod->Path = (char *)malloc(strlen(buf2) + 1);
-            strcpy(nod->Path, buf2);
+            nod->Path = strdup(buf2);
             nod->File = nod->Path + len + 1;
             nod->zfs = NULL;
-
-            printf("Adding file : %s\n", nod->Path);
-
             AddToMList(FMan, nod);
             AddToBinTree(nod);
         }
-        de = readdir(dr);
     }
     closedir(dr);
 }
 
-bool FileExist(char *fil)
+void InitFileManager(const char *dir)
 {
-    if (FILE *file = fopen(fil, "r"))
-    {
-        fclose(file);
-        return true;
-    }
-    return false;
+    FMan = CreateMList();
+    FontList = CreateMList();
+    SetGamePath(dir);
+    LoadFiles(GetGamePath());
 }
 
-int32_t FileSize(const char *fil)
+TTF_Font *GetFontByName(char *name, int size)
 {
-    if (FILE *file = fopen(fil, "r"))
+    graph_font_t *fnt = NULL;
+
+    StartMList(FontList);
+    while (!eofMList(FontList))
     {
-        fseek(file, 0, SEEK_END);
-        int32_t tmp = ftell(file);
-        fclose(file);
-        return tmp;
+        fnt = (graph_font_t *)DataMList(FontList);
+        if (strCMP(fnt->Name, name) == 0)
+            break;
+
+        NextMList(FontList);
     }
-    return -1;
+
+    if (fnt == NULL)
+        return NULL;
+
+    return TTF_OpenFont(fnt->path, size);
 }
 
 char *TrimLeft(char *buf)
@@ -589,27 +592,23 @@ void DeleteBinTree()
 
 const char *GetFilePath(const char *chr)
 {
-    char buf[255];
-    strcpy(buf, chr);
+    char *path = strdup(chr);
+    char *tmp;
 
-    StartMList(FManRepl);
-    while (!eofMList(FManRepl))
-    {
-        FManRepNode_t *repnod = (FManRepNode_t *)DataMList(FManRepl);
-        char *tmp = strcasestr(buf, repnod->ext);
-        if (tmp != NULL)
-        {
-            strcpy(tmp, repnod->ext2);
-            break;
-        }
-        NextMList(FManRepl);
-    }
+    if (tmp = strcasestr(path, ".TGA")) strcpy(tmp, ".PNG");
+    if (tmp = strcasestr(path, ".RAW")) strcpy(tmp, ".WAV");
+    if (tmp = strcasestr(path, ".SRC")) strcpy(tmp, ".WAV");
+    if (tmp = strcasestr(path, ".IFP")) strcpy(tmp, ".WAV");
+    if (tmp = strcasestr(path, ".RLF")) strcpy(tmp, ".PNG");
+    if (tmp = strcasestr(path, ".ZCR")) strcpy(tmp, ".PNG");
+    // if (tmp = strcasestr(buf, ".AVI")) strcpy(tmp, ".MPG");
 
-    FManNode *nod = FindInBinTree(buf);
+    FManNode *nod = FindInBinTree(path);
 
-    if (nod != NULL)
-        if (nod->zfs == NULL)
-            return nod->Path;
+    free(path);
+
+    if (nod && nod->zfs == NULL)
+        return nod->Path;
 
 #ifdef TRACE
     printf("Can't find %s\n", chr);
@@ -620,47 +619,13 @@ const char *GetFilePath(const char *chr)
 const char *GetExactFilePath(const char *chr)
 {
     FManNode *nod = FindInBinTree(chr);
-    if (nod != NULL)
-        if (nod->zfs == NULL)
-            return nod->Path;
+    if (nod && nod->zfs == NULL)
+        return nod->Path;
 
 #ifdef TRACE
     printf("Can't find %s\n", chr);
 #endif
     return NULL;
-}
-
-int8_t GetUtf8CharSize(char chr)
-{
-    if ((chr & 0x80) == 0)
-        return 1;
-    else if ((chr & 0xE0) == 0xC0)
-        return 2;
-    else if ((chr & 0xF0) == 0xE0)
-        return 3;
-    else if ((chr & 0xF8) == 0xF0)
-        return 4;
-    else if ((chr & 0xFC) == 0xF8)
-        return 5;
-    else if ((chr & 0xFE) == 0xFC)
-        return 6;
-
-    return 1;
-}
-
-uint16_t ReadUtf8Char(char *chr)
-{
-    uint16_t result = 0;
-    if ((chr[0] & 0x80) == 0)
-        result = chr[0];
-    else if ((chr[0] & 0xE0) == 0xC0)
-        result = ((chr[0] & 0x1F) << 6) | (chr[1] & 0x3F);
-    else if ((chr[0] & 0xF0) == 0xE0)
-        result = ((chr[0] & 0x0F) << 12) | ((chr[1] & 0x3F) << 6) | (chr[2] & 0x3F);
-    else
-        result = chr[0];
-
-    return result;
 }
 
 void UpdateDTime()
@@ -683,12 +648,15 @@ double round(double r)
     return (r > 0.0) ? floor(r + 0.5) : ceil(r - 0.5);
 }
 
-void SetAppPath(const char *pth)
+void SetGamePath(const char *path)
 {
-    strcpy(apppath, pth);
+    GamePath = strdup(path);
+    while (GamePath[strlen(GamePath-1)] == '/' || GamePath[strlen(GamePath-1)] == '\\')
+        GamePath[strlen(GamePath-1)] = 0;
 }
 
-char *GetAppPath()
+const char *GetGamePath()
 {
-    return apppath;
+    if (!GamePath) return "";
+    else return GamePath;
 }

@@ -1,11 +1,9 @@
 #include "System.h"
 
-sub_textfile_t *sub_LoadTextFile(FManNode *file)
+static sub_textfile_t *sub_LoadTextFile(FManNode *file)
 {
     mfile_t *f = mfopen(file);
-
-    if (f == NULL)
-        return NULL;
+    if (!f) return NULL;
 
     m_wide_to_utf8(f);
 
@@ -26,7 +24,7 @@ sub_textfile_t *sub_LoadTextFile(FManNode *file)
 
     tmp->count = linescount;
 
-    tmp->subs = (char **)calloc(linescount, sizeof(char *));
+    tmp->subs = NEW_ARRAY(char *, linescount);
 
     linescount = 0;
     int i = 0;
@@ -72,29 +70,20 @@ sub_textfile_t *sub_LoadTextFile(FManNode *file)
     return tmp;
 }
 
-void sub_DeleteTextFile(sub_textfile_t *txt)
+subtitles_t *sub_LoadSubtitles(char *filename)
 {
-    free(txt->buffer);
-    free(txt->subs);
-    free(txt);
-}
-
-struct_subtitles *sub_LoadSubtitles(char *filename)
-{
-
     char buf[STRBUFSIZE];
     char *str1;        // without left spaces, paramname
     char *str2 = NULL; // params
 
     int subscount = 0;
 
-    struct_subtitles *tmp;
+    subtitles_t *tmp;
 
     FManNode *fil = FindInBinTree(filename);
-    if (fil == NULL)
-        return NULL;
+    if (!fil) return NULL;
 
-    tmp = NEW(struct_subtitles);
+    tmp = NEW(subtitles_t);
 
     tmp->currentsub = -1;
     tmp->SubRect = NULL;
@@ -147,7 +136,7 @@ struct_subtitles *sub_LoadSubtitles(char *filename)
                 }
 
                 tmp->txt = sub_LoadTextFile(fil2);
-                tmp->subs = (one_subtitle_t *)calloc(tmp->txt->count, sizeof(one_subtitle_t));
+                tmp->subs = NEW_ARRAY(one_subtitle_t, tmp->txt->count);
                 subscount = tmp->txt->count;
             }
             else //it's must be sub info
@@ -174,12 +163,11 @@ struct_subtitles *sub_LoadSubtitles(char *filename)
     return tmp;
 }
 
-void sub_ProcessSub(struct_subtitles *sub, int subtime)
+void sub_ProcessSub(subtitles_t *sub, int subtime)
 {
     int j = -1;
     for (int i = 0; i < sub->subscount; i++)
-        if (subtime >= sub->subs[i].start &&
-            subtime <= sub->subs[i].stop)
+        if (subtime >= sub->subs[i].start &&subtime <= sub->subs[i].stop)
         {
             j = i;
             break;
@@ -193,24 +181,22 @@ void sub_ProcessSub(struct_subtitles *sub, int subtime)
 
     if (j != -1 && j != sub->currentsub)
     {
-        char *sss;
-        sss = sub->txt->subs[sub->subs[j].sub];
-        if (sss != NULL)
-            if (strlen(sss) > 0)
-            {
-                SDL_FillRect(sub->SubRect->img, NULL, SDL_MapRGBA(sub->SubRect->img->format, 0, 0, 0, 255));
-                txt_DrawTxtInOneLine(sss, sub->SubRect->img);
-            }
-
+        char *sss = sub->txt->subs[sub->subs[j].sub];
+        if (sss != NULL && strlen(sss) > 0)
+        {
+            SDL_FillRect(sub->SubRect->img, NULL, SDL_MapRGBA(sub->SubRect->img->format, 0, 0, 0, 255));
+            txt_DrawTxtInOneLine(sss, sub->SubRect->img);
+        }
         sub->currentsub = j;
     }
 }
 
-void sub_DeleteSub(struct_subtitles *sub)
+void sub_DeleteSub(subtitles_t *sub)
 {
     Rend_DeleteSubRect(sub->SubRect);
-
-    sub_DeleteTextFile(sub->txt);
+    free(sub->txt->buffer);
+    free(sub->txt->subs);
+    free(sub->txt);
     free(sub->subs);
     free(sub);
 }

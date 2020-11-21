@@ -69,7 +69,7 @@ static int znem_freq[16] = {0x1F40, 0x1F40, 0x1F40, 0x1F40, 0x2B11, 0x2B11,
 static int znem_bits[4] = {8, 8, 0x10, 0x10};
 static int znem_stereo[2] = {0, 1};
 
-void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n)
+void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_t *ctx)
 {
     uint8_t *m1;
     uint16_t *m2;
@@ -81,7 +81,7 @@ void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n)
     while (n)
     {
         a = *m1;
-        i = t[j + 2];
+        i = ctx ? ctx->t[ctx->j + 2] : t[j + 2];
         x = t2[i];
         b = 0;
 
@@ -103,7 +103,7 @@ void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n)
         if (a & 0x80)
             b = -b;
 
-        b += t[j];
+        b += ctx ? ctx->t[ctx->j] : t[j];
 
         if (b > 32767)
             b = 32767;
@@ -117,68 +117,15 @@ void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n)
         else if (i > 88)
             i = 88;
 
-        t[j] = b;
-        t[j + 2] = i;
-        j = (j + 1) & stereo;
-        *m2 = b;
-
-        m1++;
-        m2++;
-        n--;
-    }
-}
-
-void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_t *ctx)
-{
-    uint8_t *m1;
-    uint16_t *m2;
-    m1 = (uint8_t *)in;
-    m2 = (uint16_t *)out;
-    uint32_t a, x;
-    int32_t b, i;
-
-    while (n)
-    {
-        a = *m1;
-        i = ctx->t[ctx->j + 2];
-        x = t2[i];
-        b = 0;
-
-        if (a & 0x40)
-            b += x;
-        if (a & 0x20)
-            b += x >> 1;
-        if (a & 0x10)
-            b += x >> 2;
-        if (a & 8)
-            b += x >> 3;
-        if (a & 4)
-            b += x >> 4;
-        if (a & 2)
-            b += x >> 5;
-        if (a & 1)
-            b += x >> 6;
-
-        if (a & 0x80)
-            b = -b;
-
-        b += ctx->t[ctx->j];
-
-        if (b > 32767)
-            b = 32767;
-        else if (b < -32768)
-            b = -32768;
-
-        i += t1[(a >> 4) & 7];
-
-        if (i < 0)
-            i = 0;
-        else if (i > 88)
-            i = 88;
-
-        ctx->t[ctx->j] = b;
-        ctx->t[ctx->j + 2] = i;
-        ctx->j = (ctx->j + 1) & stereo;
+        if (ctx) {
+            ctx->t[ctx->j] = b;
+            ctx->t[ctx->j + 2] = i;
+            ctx->j = (ctx->j + 1) & stereo;
+        } else {
+            t[j] = b;
+            t[j + 2] = i;
+            j = (j + 1) & stereo;
+        }
         *m2 = b;
 
         m1++;
@@ -246,7 +193,7 @@ Mix_Chunk *Load_ZGI(FManNode *file, char type)
     raw_i[10] = size2 - 0x2C;
 
     if (pkd == 1)
-        adpcm8_decode(fil, &raw_i[11], stereo, size);
+        adpcm8_decode(fil, &raw_i[11], stereo, size, NULL);
     else
         memcpy(&raw_i[11], fil, size);
 
@@ -327,7 +274,7 @@ Mix_Chunk *Load_ZNEM(FManNode *file, char type)
     raw_i[10] = size2 - 0x2C;
 
     if (pkd == 1)
-        adpcm8_decode(fil, &raw_i[11], stereo, size);
+        adpcm8_decode(fil, &raw_i[11], stereo, size, NULL);
     else
         memcpy(&raw_i[11], fil, size);
 
@@ -385,7 +332,7 @@ Mix_Chunk *loader_LoadChunk(const char *file)
 
 /***********************************TGZ_Support *******************************/
 
-void de_lz(SDL_Surface *srf, uint8_t *src, uint32_t size, int32_t transpose)
+static void de_lz(SDL_Surface *srf, uint8_t *src, uint32_t size, int32_t transpose)
 {
     uint8_t lz[0x1000];
     uint32_t lz_pos = 0x0fee;
@@ -492,12 +439,12 @@ void de_lz(SDL_Surface *srf, uint8_t *src, uint32_t size, int32_t transpose)
         }
 
         cur++;
-    };
+    }
 
     SDL_UnlockSurface(srf);
 }
 
-void flip_vertical(SDL_Surface *srf)
+static void flip_vertical(SDL_Surface *srf)
 {
     SDL_LockSurface(srf);
 
@@ -515,7 +462,7 @@ void flip_vertical(SDL_Surface *srf)
     SDL_UnlockSurface(srf);
 }
 
-void flip_horizont(SDL_Surface *srf)
+static void flip_horizont(SDL_Surface *srf)
 {
     SDL_LockSurface(srf);
 
@@ -565,7 +512,7 @@ void flip_horizont(SDL_Surface *srf)
     SDL_UnlockSurface(srf);
 }
 
-SDL_Surface *buf_to_surf(void *buf, int32_t w, int32_t h, int8_t transpose)
+static SDL_Surface *buf_to_surf(void *buf, int32_t w, int32_t h, int8_t transpose)
 {
     SDL_Surface *srf = SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 16, 0x7C00, 0x3E0, 0x1F, 0);
 
@@ -798,7 +745,7 @@ struct Frame
     uint32_t unk3;
 };
 
-void DHLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
+static void DHLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
 {
     int8_t tmp;
     int32_t off1, off2;
@@ -834,7 +781,7 @@ void DHLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
     }
 }
 
-void HRLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
+static void HRLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
 {
     int8_t tmp;
     int32_t off1, off2;
@@ -937,19 +884,16 @@ anim_surf *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask)
 
     Frame frm;
     int32_t sz_frame = mn.height * mn.width * 2;
-    void *buf2 = malloc(sz_frame);
-    memset(buf2, 0, sz_frame);
+    void *buf2 = calloc(sz_frame, 1);
 
     for (uint16_t i = 0; i < hd.frames; i++)
     {
         if (mfread(&frm, sizeof(Frame), f))
             if (frm.size > 0 && frm.size < 0x40000000)
             {
-
                 void *buf = malloc(frm.size - frm.offset);
                 if (mfread(buf, frm.size - frm.offset, f))
                 {
-
                     if (frm.TYPE == 0x44484C45)
                         DHLE((int8_t *)buf2, (int8_t *)buf, frm.size - frm.offset, sz_frame);
                     else if (frm.TYPE == 0x48524C45)
@@ -1020,8 +964,7 @@ void loader_LoadZcr(const char *file, Cursor_t *cur)
 #endif
 
     mfile_t *f = mfopen(fl);
-    if (!f)
-        return;
+    if (!f) return;
 
     uint32_t magic = 0;
     mfread(&magic, 4, f);
@@ -1080,26 +1023,17 @@ static MList *zfs_arch_list = NULL;
 
 void loader_openzfs(const char *file, MList *list)
 {
-#ifdef DEBUG_LOADER
     printf("Loading ZFS : %s\n", file);
-#endif // DEBUG_LOADER
+
     FILE *fl = fopen(file, "rb");
-    if (!fl)
-    {
-#ifdef DEBUG_LOADER
-        printf("Can't open ZFS\n");
-#endif // DEBUG_LOADER
-        return;
-    }
+    if (!fl) return;
 
     header_zfs hdr;
     fread(&hdr, sizeof(hdr), 1, fl);
 
     if (hdr.magic != 0x4653465A)
     {
-#ifdef DEBUG_LOADER
-        printf("Not ZFS\n");
-#endif // DEBUG_LOADER
+        printf("Error: File is not ZFS!\n");
         fclose(fl);
         return;
     }
@@ -1128,57 +1062,23 @@ void loader_openzfs(const char *file, MList *list)
 
             if (strlen(fil.name) > 0)
             {
+                printf("Adding zfs file : %s\n", fil.name);
+
                 FManNode *nod = NEW(FManNode);
-                AddToMList(list, nod);
-
-                nod->Path = (char *)malloc(strlen(fil.name) + 1);
-                strcpy(nod->Path, fil.name);
+                nod->Path = strdup(fil.name);
                 nod->File = nod->Path;
-
-#ifdef DEBUG_LOADER
-                printf("Adding zfs file : %s\n", nod->File);
-#endif // DEBUG_LOADER
-
                 nod->zfs = NEW(zfs_file_t);
                 nod->zfs->archive = tmp;
                 nod->zfs->offset = fil.offset;
                 nod->zfs->size = fil.size;
-
+                AddToMList(list, nod);
                 AddToBinTree(nod);
             }
         }
     }
-#ifdef DEBUG_LOADER
-    printf("End of ZFS : %s\n", file);
-#endif // DEBUG_LOADER
-}
-
-void unxor(void *buf, uint32_t size, uint32_t xork)
-{
-    uint32_t cnt = size >> 2;
-    uint32_t *px = (uint32_t *)buf;
-
-    for (uint32_t i = 0; i < cnt; i++)
-        px[i] ^= xork;
-}
-
-void *loader_zload(zfs_file_t *fil)
-{
-    fseek(fil->archive->fl, fil->offset, SEEK_SET);
-
-    void *buf = malloc(fil->size);
-
-    fread(buf, fil->size, 1, fil->archive->fl);
-
-    if (fil->archive->xor_key != 0)
-        unxor(buf, fil->size, fil->archive->xor_key);
-
-    return buf;
 }
 
 /******************** ZFS END************************/
-
-
 
 mfile_t *mfopen_path(const char *file)
 {
@@ -1207,39 +1107,31 @@ mfile_t *mfopen_path(const char *file)
 
 mfile_t *mfopen(FManNode *nod)
 {
-    mfile_t *tmp = NULL;
-
     if (nod->zfs)
     {
-        tmp = NEW(mfile_t);
-        tmp->buf = (char *)loader_zload(nod->zfs);
+        mfile_t *tmp =  NEW(mfile_t);
+        zfs_file_t *file = nod->zfs;
+
+        tmp->buf = (char*)calloc(file->size + 4, 1);
         tmp->pos = 0;
         tmp->size = nod->zfs->size;
+
+        fseek(file->archive->fl, file->offset, SEEK_SET);
+        fread(tmp->buf, file->size, 1, file->archive->fl);
+
+        if (file->archive->xor_key) {
+            uint32_t cnt = file->size >> 2;
+            uint32_t *px = (uint32_t *)tmp->buf;
+            for (uint32_t i = 0; i < cnt; i++)
+                px[i] ^= file->archive->xor_key;
+        }
+
+        return tmp;
     }
     else
     {
-        FILE *fl = fopen(nod->Path, "rb");
-        if (!fl)
-            return NULL;
-
-        tmp = NEW(mfile_t);
-
-        fseek(fl, 0, SEEK_END);
-
-        tmp->size = ftell(fl);
-
-        fseek(fl, 0, SEEK_SET);
-
-        tmp->pos = 0;
-
-        tmp->buf = (char *)malloc(tmp->size);
-
-        fread(tmp->buf, tmp->size, 1, fl);
-
-        fclose(fl);
+        return mfopen_path(nod->Path);
     }
-
-    return tmp;
 }
 
 int32_t mfsize(FManNode *nod)
@@ -1313,7 +1205,7 @@ char *mfgets(char *str, int32_t num, mfile_t *stream)
     return str;
 }
 
-bool m_is_wide_char(mfile_t *file)
+static bool m_is_wide_char(mfile_t *file)
 {
     for (int32_t i = 0; i < file->size - 2; i++)
         if (file->buf[i] == 0 && file->buf[i + 2] == 0)
@@ -1324,89 +1216,87 @@ bool m_is_wide_char(mfile_t *file)
 
 void m_wide_to_utf8(mfile_t *file)
 {
-    if (m_is_wide_char(file))
+    if (!m_is_wide_char(file))
+        return;
+
+    char *buf = (char *)malloc(file->size * 2);
+    int32_t pos = 0, size = file->size * 2;
+    file->pos = 0;
+    while (file->pos < file->size && pos < size)
     {
-        char *buf = (char *)malloc(file->size * 2);
-        int32_t pos = 0, size = file->size * 2;
-        file->pos = 0;
-        while (file->pos < file->size && pos < size)
+        if (file->buf[file->pos] == 0xD)
         {
-            if (file->buf[file->pos] == 0xD)
-            {
-                buf[pos] = 0xD;
-                pos++;
-                file->pos++;
-                if (file->pos < file->size)
-                    if (file->buf[file->pos] == 0xA)
-                    {
-                        if (pos < size)
-                        {
-                            buf[pos] = 0xA;
-                            pos++;
-                        }
-                        file->pos++;
-                        if (file->pos < file->size)
-                            if (file->buf[file->pos] == 0x0)
-                                file->pos++;
-                    }
-            }
-            else
-            {
-                if (file->pos + 1 < file->size)
+            buf[pos] = 0xD;
+            pos++;
+            file->pos++;
+            if (file->pos < file->size)
+                if (file->buf[file->pos] == 0xA)
                 {
-                    uint16_t ch = (file->buf[file->pos] & 0xFF) | ((file->buf[file->pos + 1] << 8) & 0xFF00);
-                    if (ch < 0x80)
+                    if (pos < size)
                     {
-                        buf[pos] = ch & 0x7F;
+                        buf[pos] = 0xA;
                         pos++;
                     }
-                    else if (ch >= 0x80 && ch < 0x800)
-                    {
-                        if (pos + 1 < size)
-                        {
-                            buf[pos] = 0xC0 | ((ch >> 6) & 0x1F);
-                            pos++;
-                            buf[pos] = 0x80 | ((ch)&0x3F);
-                            pos++;
-                        }
-                    }
-                    else if (ch >= 0x800 && ch < 0x10000)
-                    {
-                        if (pos + 2 < size)
-                        {
-                            buf[pos] = 0xE0 | ((ch >> 12) & 0xF);
-                            pos++;
-                            buf[pos] = 0x80 | ((ch >> 6) & 0x3F);
-                            pos++;
-                            buf[pos] = 0x80 | ((ch)&0x3F);
-                            pos++;
-                        }
-                    }
-                    else if (ch >= 0x10000 && ch < 0x200000)
-                    {
-                        if (pos + 3 < size)
-                        {
-                            buf[pos] = 0xF0;
-                            pos++;
-                            buf[pos] = 0x80 | ((ch >> 12) & 0x3F);
-                            pos++;
-                            buf[pos] = 0x80 | ((ch >> 6) & 0x3F);
-                            pos++;
-                            buf[pos] = 0x80 | ((ch)&0x3F);
-                            pos++;
-                        }
-                    }
-
-                    file->pos += 2;
+                    file->pos++;
+                    if (file->pos < file->size)
+                        if (file->buf[file->pos] == 0x0)
+                            file->pos++;
                 }
+        }
+        else
+        {
+            if (file->pos + 1 < file->size)
+            {
+                uint16_t ch = (file->buf[file->pos] & 0xFF) | ((file->buf[file->pos + 1] << 8) & 0xFF00);
+                if (ch < 0x80)
+                {
+                    buf[pos] = ch & 0x7F;
+                    pos++;
+                }
+                else if (ch >= 0x80 && ch < 0x800)
+                {
+                    if (pos + 1 < size)
+                    {
+                        buf[pos] = 0xC0 | ((ch >> 6) & 0x1F);
+                        pos++;
+                        buf[pos] = 0x80 | ((ch)&0x3F);
+                        pos++;
+                    }
+                }
+                else if (ch >= 0x800 && ch < 0x10000)
+                {
+                    if (pos + 2 < size)
+                    {
+                        buf[pos] = 0xE0 | ((ch >> 12) & 0xF);
+                        pos++;
+                        buf[pos] = 0x80 | ((ch >> 6) & 0x3F);
+                        pos++;
+                        buf[pos] = 0x80 | ((ch)&0x3F);
+                        pos++;
+                    }
+                }
+                else if (ch >= 0x10000 && ch < 0x200000)
+                {
+                    if (pos + 3 < size)
+                    {
+                        buf[pos] = 0xF0;
+                        pos++;
+                        buf[pos] = 0x80 | ((ch >> 12) & 0x3F);
+                        pos++;
+                        buf[pos] = 0x80 | ((ch >> 6) & 0x3F);
+                        pos++;
+                        buf[pos] = 0x80 | ((ch)&0x3F);
+                        pos++;
+                    }
+                }
+
+                file->pos += 2;
             }
         }
-
-        free(file->buf);
-        file->pos = 0;
-        file->size = pos;
-        file->buf = (char *)malloc(file->size);
-        memcpy(file->buf, buf, file->size);
-        free(buf);
     }
+
+    free(file->buf);
+    file->pos = 0;
+    file->size = pos;
+    file->buf = buf;
 }

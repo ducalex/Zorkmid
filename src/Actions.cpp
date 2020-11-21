@@ -3,6 +3,62 @@
 // #define TRACE_ACTION()  printf("      > %s(%s)\n", __func__, params);
 #define TRACE_ACTION() {}
 
+static const char *get_addition(const char *str)
+{
+    const char *s = str;
+    int32_t len = strlen(str);
+
+    int32_t pos = 0;
+    int32_t num = 0;
+    bool whitespace = true;
+
+    while (pos < len)
+    {
+        if (whitespace)
+        {
+            if (str[pos] != ' ')
+            {
+                whitespace = false;
+                num++;
+            }
+        }
+        else
+        {
+            if (str[pos] == ' ')
+            {
+                whitespace = true;
+                if (num >= 9)
+                {
+                    s = str + pos;
+                    break;
+                }
+            }
+        }
+        pos++;
+    }
+    return s;
+}
+
+static void useart_recovery(char *str)
+{
+    int32_t len = strlen(str);
+
+    int32_t pos = 0;
+
+    bool bracket = false;
+
+    while (pos < len)
+    {
+        if (str[pos] == '[')
+            bracket = true;
+        else if (str[pos] == ']')
+            bracket = false;
+        else if (str[pos] == ' ' && bracket)
+            str[pos] = ',';
+        pos++;
+    }
+}
+
 int action_set_screen(char *params, int aSlot, pzllst *owner)
 {
     TRACE_ACTION();
@@ -24,15 +80,9 @@ int action_set_partial_screen(char *params, int aSlot, pzllst *owner)
 
     x = GetIntVal(xx);
     y = GetIntVal(yy);
-    /*tmp1=GetIntVal(tmp11);*/
     tmp2 = GetIntVal(tmp22);
 
     SDL_Surface *tmp = NULL;
-
-    //  const char * path = GetFilePath(file);
-
-    // if (!path)
-    //    return ACTION_NORMAL;
 
     if (tmp2 > 0)
     {
@@ -52,9 +102,7 @@ int action_set_partial_screen(char *params, int aSlot, pzllst *owner)
         printf("ERROR:  IMG_Load(%s): %s\n\n", params, IMG_GetError());
     else
     {
-
         Rend_DrawImageToGamescr(tmp, x, y);
-
         SDL_FreeSurface(tmp);
     }
     return ACTION_NORMAL;
@@ -243,7 +291,7 @@ int action_streamvideo(char *params, int aSlot, pzllst *owner)
         file[tmp - 2] = 'u';
         file[tmp - 3] = 's';
 
-        struct_subtitles *subs = NULL;
+        subtitles_t *subs = NULL;
         if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
             subs = sub_LoadSubtitles(file);
 
@@ -330,7 +378,7 @@ int action_streamvideo(char *params, int aSlot, pzllst *owner)
         file[tmp - 2] = 'u';
         file[tmp - 3] = 's';
 
-        struct_subtitles *subs = NULL;
+        subtitles_t *subs = NULL;
         if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
             subs = sub_LoadSubtitles(file);
 
@@ -493,7 +541,7 @@ int music_music(char *params, int aSlot, pzllst *owner, bool universe)
         char fil[STRBUFSIZE];
         int32_t instr = atoi(file);
         int32_t pitch = atoi(loop);
-        sprintf(fil, "%s/MIDI/%d/%d.wav", GetAppPath(), instr, pitch);
+        sprintf(fil, "%s/MIDI/%d/%d.wav", GetGamePath(), instr, pitch);
         if (FileExist(fil))
         {
             nod->nodes.node_music->universe = universe;
@@ -537,8 +585,6 @@ int music_music(char *params, int aSlot, pzllst *owner, bool universe)
     }
     else
     {
-        //        const char *filp=GetFilePath(file);
-
         nod->nodes.node_music->universe = universe;
 
         int st = strlen(file);
@@ -677,8 +723,6 @@ int action_syncsound(char *params, int aSlot, pzllst *owner)
     {
         getGNode(syncto)->nodes.node_animpre->framerate = FPS_DELAY; //~15fps hack
     }
-
-    //const char *filp=GetFilePath(a3);
 
     tmp->nodes.node_sync->chunk = loader_LoadChunk(a3);
 
@@ -852,7 +896,7 @@ int action_ttytext(char *params, int aSlot, pzllst *owner)
     free(tmp);
 
     txt_get_font_style(&nod->nodes.tty_text->style, nod->nodes.tty_text->txtbuf);
-    nod->nodes.tty_text->fnt = txt_get_font_by_name(nod->nodes.tty_text->style.fontname, nod->nodes.tty_text->style.size);
+    nod->nodes.tty_text->fnt = GetFontByName(nod->nodes.tty_text->style.fontname, nod->nodes.tty_text->style.size);
     nod->nodes.tty_text->w = w;
     nod->nodes.tty_text->h = h;
     nod->nodes.tty_text->x = x;
@@ -880,7 +924,7 @@ int stopkiller(char *params, int aSlot, pzllst *owner, bool iskillfunc)
     {
         if (strcasecmp(chars, "\"all\"") == 0)
         {
-            ScrSys_DeleteAllRes();
+            ScrSys_FlushActResList();
             return ACTION_NORMAL;
         }
 
@@ -1293,7 +1337,7 @@ int action_quit(char *params, int aSlot, pzllst *owner)
     if (atoi(params) == 1)
         GameQuit();
     else
-        ifquit();
+        game_try_quit();
 
     return ACTION_NORMAL;
 }
@@ -1410,62 +1454,6 @@ int action_preferences(char *params, int aSlot, pzllst *owner)
         ScrSys_LoadPreferences();
 
     return ACTION_NORMAL;
-}
-
-const char *get_addition(const char *str)
-{
-    const char *s = str;
-    int32_t len = strlen(str);
-
-    int32_t pos = 0;
-    int32_t num = 0;
-    bool whitespace = true;
-
-    while (pos < len)
-    {
-        if (whitespace)
-        {
-            if (str[pos] != ' ')
-            {
-                whitespace = false;
-                num++;
-            }
-        }
-        else
-        {
-            if (str[pos] == ' ')
-            {
-                whitespace = true;
-                if (num >= 9)
-                {
-                    s = str + pos;
-                    break;
-                }
-            }
-        }
-        pos++;
-    }
-    return s;
-}
-
-void useart_recovery(char *str)
-{
-    int32_t len = strlen(str);
-
-    int32_t pos = 0;
-
-    bool bracket = false;
-
-    while (pos < len)
-    {
-        if (str[pos] == '[')
-            bracket = true;
-        else if (str[pos] == ']')
-            bracket = false;
-        else if (str[pos] == ' ' && bracket)
-            str[pos] = ',';
-        pos++;
-    }
 }
 
 //Graphic effects

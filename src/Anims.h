@@ -49,7 +49,6 @@ struct anim_preplay_node
     animnode *point; //pointer for direct access
 };
 
-animnode *anim_CreateAnim();
 struct_action_res *anim_CreateAnimPlayNode();
 struct_action_res *anim_CreateAnimPreNode();
 struct_action_res *anim_CreateAnimPlayPreNode();

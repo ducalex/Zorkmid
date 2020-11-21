@@ -152,7 +152,6 @@ void Rend_RenderFunc();
 void Rend_InitGraphics(bool fullscreen);
 void Rend_SwitchFullscreen();
 void Rend_SetDelay(int32_t delay);
-TTF_Font *txt_get_font_by_name(char *name, int size);
 SDL_Surface *Rend_GetLocationScreenImage();
 struct_SubRect *Rend_CreateSubRect(int x, int y, int w, int h);
 void Rend_DeleteSubRect(struct_SubRect *erect);
@@ -164,7 +163,7 @@ void Rend_ScreenFlip();
 struct_action_res *Rend_CreateDistortNode();
 int32_t Rend_ProcessDistortNode(struct_action_res *nod);
 int32_t Rend_DeleteDistortNode(struct_action_res *nod);
-int Rend_deleteRegion(struct_action_res *nod);
+int Rend_DeleteRegion(struct_action_res *nod);
 int8_t Rend_GetScreenPart(int32_t *x, int32_t *y, int32_t w, int32_t h, SDL_Surface *dst);
 
 int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s_y, float apml, float waveln, float spd);
