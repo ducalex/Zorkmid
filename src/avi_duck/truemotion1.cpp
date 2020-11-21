@@ -55,7 +55,7 @@
 #define FF_BUFFER_HINTS_PRESERVE 0x04 // User must not alter buffer content.
 #define FF_BUFFER_HINTS_REUSABLE 0x08 // Codec will reuse the buffer (update).
 
-typedef struct TrueMotion1Context
+typedef struct
 {
     //AVCodecContext *avctx;
     struct frame
@@ -65,7 +65,7 @@ typedef struct TrueMotion1Context
         int reference;
         int buffer_hints;
     } frame;
-    avi_file *av;
+    avi_file_t *av;
 
     const uint8_t *buf;
     int size;
@@ -135,7 +135,7 @@ struct frame_header
 #define BLOCK_4x2 2
 #define BLOCK_4x4 3
 
-typedef struct comp_types
+typedef struct
 {
     int algorithm;
     int block_width;  // vres
@@ -501,7 +501,7 @@ int truemotion1_decode_header(TrueMotion1Context *s)
     return header.header_size;
 }
 
-int truemotion1_decode_init(avi_file *fil)
+int truemotion1_decode_init(avi_file_t *fil)
 {
     fil->priv_data = calloc(sizeof(TrueMotion1Context), 1);
     TrueMotion1Context *s = (TrueMotion1Context *)fil->priv_data;
@@ -941,8 +941,7 @@ void truemotion1_decode_24bit(TrueMotion1Context *s)
     }
 }
 
-int truemotion1_decode_frame(avi_file *avctx,
-                             void *pkt, int pkt_sz)
+int truemotion1_decode_frame(avi_file_t *avctx, void *pkt, int pkt_sz)
 {
     const uint8_t *buf = (uint8_t *)pkt;
     int buf_size = pkt_sz;
@@ -980,7 +979,7 @@ int truemotion1_decode_frame(avi_file *avctx,
     return buf_size;
 }
 
-int truemotion1_decode_end(avi_file *avctx)
+int truemotion1_decode_end(avi_file_t *avctx)
 {
     TrueMotion1Context *s = (TrueMotion1Context *)avctx->priv_data;
 

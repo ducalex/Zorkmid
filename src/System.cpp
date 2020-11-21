@@ -18,6 +18,7 @@ static char *GamePath;
 
 static MList *FMan;
 static MList *FontList;
+static char *SystemStrings[0xFF];
 
 static uint32_t CurrentTime = 0;
 static uint32_t DeltaTime = 0;
@@ -27,20 +28,24 @@ static bool btime = false;      // Indicates new Tick
 static uint64_t reltime = 0;    // Realtime ticks for calculate game ticks
 static int tofps = 0;
 
+static uint32_t time = 0;
+static int32_t frames = 0;
+static int32_t fps = 1;
+
 #ifdef DINGOO
 #define DELAY 2
 #else
 #define DELAY 10
 #endif
 
-struct BinTreeNd
+typedef struct BinTreeNd
 {
     BinTreeNd *zero;
     BinTreeNd *one;
-    FManNode *nod;
-};
+    FManNode_t *nod;
+} BinTreeNd_t;
 
-static struct BinTreeNd *root = NULL;
+static BinTreeNd_t *root = NULL;
 static MList *BinNodesList = NULL;
 
 //Reset state of key hits states
@@ -122,9 +127,9 @@ void UpdateKeyboard()
 
     if (MouseHit(SDL_BUTTON_LEFT))
     {
-        if ((uint32_t)M_dbl_time < millisec())
+        if ((uint32_t)M_dbl_time < SDL_GetTicks())
         {
-            M_dbl_time = millisec() + DBL_CLK_TIME;
+            M_dbl_time = SDL_GetTicks() + DBL_CLK_TIME;
         }
         else
         {
@@ -267,35 +272,102 @@ bool MouseMove()
     return false;
 }
 
+int32_t GetFps()
+{
+    return fps;
+}
+
 //Resets game timer and set next realtime point to incriment game timer
-void InitMTime(float fps)
+void TimerInit(float throttle)
 {
     mtime = 0;
     btime = false;
-    tofps = ceil((1000.0 - (float)(DELAY << 1)) / (fps));
-    reltime = millisec() + tofps;
+    frames = 0;
+    fps = 1;
+    tofps = ceil((1000.0 - (float)(DELAY << 1)) / (throttle));
+    reltime = SDL_GetTicks() + tofps;
 }
 
 //Process game timer.
-void ProcMTime()
+void TimerTick()
 {
-    if (reltime < millisec()) //New tick
+    if (reltime < SDL_GetTicks()) //New tick
     {
         mtime++;
         btime = true;
-        reltime = millisec() + tofps;
+        reltime = SDL_GetTicks() + tofps;
     }
     else //No new tick
     {
         btime = false;
     }
-    SDL_Delay(DELAY);
+
+    Rend_Delay(DELAY);
+
+    //
+    uint32_t tmptime = SDL_GetTicks();
+    if (CurrentTime != 0)
+        DeltaTime = tmptime - CurrentTime;
+    CurrentTime = tmptime;
+
+    // FPS
+    if (SDL_GetTicks() > time)
+    {
+        fps = frames;
+        if (fps == 0)
+            fps = 1;
+        frames = 0;
+        time = SDL_GetTicks() + 1000;
+    }
+    frames++;
 }
 
 //Resturn true if new tick appeared
 bool GetBeat()
 {
     return btime;
+}
+
+uint32_t GetDTime()
+{
+    if (DeltaTime == 0)
+        DeltaTime = 1;
+    return DeltaTime;
+}
+
+void LoadSystemStrings(void)
+{
+    char filename[PATHBUFSIZ];
+    sprintf(filename, "%s/%s", GetGamePath(), SYS_STRINGS_FILE);
+
+    memset(SystemStrings, 0, sizeof(SystemStrings));
+
+    mfile_t *fl = mfopen_path(filename);
+
+    if (fl == NULL)
+    {
+        Z_PANIC("File %s not found\n", filename);
+    }
+
+    m_wide_to_utf8(fl);
+
+    int32_t ii = 0;
+
+    char buf[STRBUFSIZE];
+
+    while (!mfeof(fl) && ii < 128)
+    {
+        mfgets(buf, STRBUFSIZE, fl);
+        SystemStrings[ii & 0xFF] = strdup(TrimRight(buf));
+        ii++;
+    }
+
+    mfclose(fl);
+}
+
+const char *GetSystemString(int32_t indx)
+{
+    return SystemStrings[indx & 0xFF];
 }
 
 bool isDirectory(const char *path)
@@ -320,7 +392,7 @@ int32_t FileSize(const char *path)
     return statbuf.st_size;
 }
 
-void LoadFiles(const char *dir)
+void FindAssets(const char *dir)
 {
     char buf[1024];
     char buf2[1024];
@@ -334,7 +406,7 @@ void LoadFiles(const char *dir)
         len--;
     }
 
-    printf("Listing dir: %s\n", buf);
+    TRACE_LOADER("Listing dir: %s\n", buf);
 
     DIR *dr = opendir(buf);
     dirent *de;
@@ -342,7 +414,7 @@ void LoadFiles(const char *dir)
     if (!dr)
         return;
 
-    while (de = readdir(dr))
+    while ((de = readdir(dr)))
     {
         if (strlen(de->d_name) < 3)
             continue;
@@ -351,7 +423,7 @@ void LoadFiles(const char *dir)
 
         if (isDirectory(buf2))
         {
-            LoadFiles(buf2);
+            FindAssets(buf2);
         }
         else if (strcasestr(buf2, ".ZFS"))
         {
@@ -359,7 +431,7 @@ void LoadFiles(const char *dir)
         }
         else if (strcasestr(buf2, ".TTF"))
         {
-            printf("Adding font : %s\n", buf2);
+            TRACE_LOADER("Adding font : %s\n", buf2);
             TTF_Font *fnt = TTF_OpenFont(buf2, 10);
             if (fnt != NULL)
             {
@@ -372,8 +444,8 @@ void LoadFiles(const char *dir)
         }
         else
         {
-            printf("Adding game file : %s\n", buf2);
-            FManNode *nod = NEW(FManNode);
+            TRACE_LOADER("Adding game file : %s\n", buf2);
+            FManNode_t *nod = NEW(FManNode_t);
             nod->Path = strdup(buf2);
             nod->File = nod->Path + len + 1;
             nod->zfs = NULL;
@@ -389,7 +461,8 @@ void InitFileManager(const char *dir)
     FMan = CreateMList();
     FontList = CreateMList();
     SetGamePath(dir);
-    LoadFiles(GetGamePath());
+    FindAssets(GetGamePath());
+    LoadSystemStrings();
 }
 
 TTF_Font *GetFontByName(char *name, int size)
@@ -497,9 +570,9 @@ int GetIntVal(char *chr)
         return atoi(chr);
 }
 
-BinTreeNd *CreateBinTreeNd()
+BinTreeNd_t *CreateBinTreeNd()
 {
-    BinTreeNd *tmp = NEW(BinTreeNd);
+    BinTreeNd_t *tmp = NEW(BinTreeNd_t);
     tmp->one = NULL;
     tmp->zero = NULL;
     tmp->nod = NULL;
@@ -512,7 +585,7 @@ BinTreeNd *CreateBinTreeNd()
     return tmp;
 }
 
-void AddToBinTree(FManNode *nod)
+void AddToBinTree(FManNode_t *nod)
 {
     char buffer[255];
     int32_t t_len = strlen(nod->File);
@@ -525,7 +598,7 @@ void AddToBinTree(FManNode *nod)
     if (root == NULL)
         root = CreateBinTreeNd();
 
-    BinTreeNd **treenod = &root;
+    BinTreeNd_t **treenod = &root;
     t_len = strlen(buffer);
     for (int j = 0; j < t_len; j++)
         for (int i = 0; i < 8; i++)
@@ -546,7 +619,7 @@ void AddToBinTree(FManNode *nod)
             (*treenod)->nod = nod;
 }
 
-FManNode *FindInBinTree(const char *chr)
+FManNode_t *FindInBinTree(const char *chr)
 {
     char buffer[255];
     int32_t t_len = strlen(chr);
@@ -555,7 +628,7 @@ FManNode *FindInBinTree(const char *chr)
 
     buffer[t_len] = 0x0;
 
-    BinTreeNd *treenod = root;
+    BinTreeNd_t *treenod = root;
 
     t_len = strlen(buffer);
     for (int j = 0; j < t_len; j++)
@@ -579,9 +652,7 @@ void DeleteBinTree()
     StartMList(BinNodesList);
     while (!eofMList(BinNodesList))
     {
-        BinTreeNd *nd = (BinTreeNd *)DataMList(BinNodesList);
-        free(nd);
-
+        free(DataMList(BinNodesList));
         NextMList(BinNodesList);
     }
     DeleteMList(BinNodesList);
@@ -593,17 +664,10 @@ void DeleteBinTree()
 const char *GetFilePath(const char *chr)
 {
     char *path = strdup(chr);
-    char *tmp;
 
-    if (tmp = strcasestr(path, ".TGA")) strcpy(tmp, ".PNG");
-    if (tmp = strcasestr(path, ".RAW")) strcpy(tmp, ".WAV");
-    if (tmp = strcasestr(path, ".SRC")) strcpy(tmp, ".WAV");
-    if (tmp = strcasestr(path, ".IFP")) strcpy(tmp, ".WAV");
-    if (tmp = strcasestr(path, ".RLF")) strcpy(tmp, ".PNG");
-    if (tmp = strcasestr(path, ".ZCR")) strcpy(tmp, ".PNG");
-    // if (tmp = strcasestr(buf, ".AVI")) strcpy(tmp, ".MPG");
+    // if (tmp = strcasestr(path, ".AVI")) strcpy(tmp, ".MPG");
 
-    FManNode *nod = FindInBinTree(path);
+    FManNode_t *nod = FindInBinTree(path);
 
     free(path);
 
@@ -618,7 +682,7 @@ const char *GetFilePath(const char *chr)
 
 const char *GetExactFilePath(const char *chr)
 {
-    FManNode *nod = FindInBinTree(chr);
+    FManNode_t *nod = FindInBinTree(chr);
     if (nod && nod->zfs == NULL)
         return nod->Path;
 
@@ -626,26 +690,6 @@ const char *GetExactFilePath(const char *chr)
     printf("Can't find %s\n", chr);
 #endif
     return NULL;
-}
-
-void UpdateDTime()
-{
-    uint32_t tmptime = SDL_GetTicks();
-    if (CurrentTime != 0)
-        DeltaTime = tmptime - CurrentTime;
-    CurrentTime = tmptime;
-}
-
-uint32_t GetDTime()
-{
-    if (DeltaTime == 0)
-        DeltaTime = 1;
-    return DeltaTime;
-}
-
-double round(double r)
-{
-    return (r > 0.0) ? floor(r + 0.5) : ceil(r - 0.5);
 }
 
 void SetGamePath(const char *path)
@@ -660,3 +704,39 @@ const char *GetGamePath()
     if (!GamePath) return "";
     else return GamePath;
 }
+
+const char *GetGameTitle()
+{
+    switch (CUR_GAME) {
+        case GAME_ZGI: return "Zork: Grand Inquisitor";
+        case GAME_NEM: return "Zork: Nemesis";
+        default: return "Unknown";
+    }
+}
+
+#ifdef WIN32
+char *strcasestr(const char *h, const char *n)
+{ /* h="haystack", n="needle" */
+    const char *a = h, *e = n;
+
+    if (!h || !*h || !n || !*n)
+    {
+        return 0;
+    }
+    while (*a && *e)
+    {
+        if ((toupper(((unsigned char)(*a)))) != (toupper(((unsigned char)(*e)))))
+        {
+            ++h;
+            a = h;
+            e = n;
+        }
+        else
+        {
+            ++a;
+            ++e;
+        }
+    }
+    return (char *)(*e ? 0 : h);
+}
+#endif

@@ -3,7 +3,7 @@
 
 #include "System.h"
 
-struct animnode
+typedef struct animnode
 {
     int32_t x;
     int32_t y;
@@ -33,9 +33,9 @@ struct animnode
     int8_t vid;
     int32_t playID;
     bool playing;
-};
+} animnode_t;
 
-struct anim_preplay_node
+typedef struct anim_preplay_node
 {
     int32_t pointingslot;
     int32_t playerid;
@@ -46,23 +46,23 @@ struct anim_preplay_node
     int32_t start;
     int32_t end;
     int32_t loop;
-    animnode *point; //pointer for direct access
-};
+    animnode_t *point; //pointer for direct access
+} anim_preplay_node_t;
 
-struct_action_res *anim_CreateAnimPlayNode();
-struct_action_res *anim_CreateAnimPreNode();
-struct_action_res *anim_CreateAnimPlayPreNode();
+action_res_t *anim_CreateAnimPlayNode();
+action_res_t *anim_CreateAnimPreNode();
+action_res_t *anim_CreateAnimPlayPreNode();
 
-int anim_ProcessAnim(struct_action_res *nod);
-void anim_LoadAnim(animnode *nod, char *filename, int u1, int u2, int32_t mask, int framerate);
-void anim_DeleteAnim(animnode *nod);
-int anim_PlayAnim(animnode *nod, int x, int y, int w, int h, int start, int end, int loop);
-int anim_ProcessAnimPlayNode(struct_action_res *nod);
-int anim_ProcessAnimPreNode(struct_action_res *nod);
-int anim_ProcessAnimPrePlayNode(struct_action_res *nod);
-int anim_DeleteAnimPlay(struct_action_res *nod);
-int anim_DeleteAnimPreNod(struct_action_res *nod);
-int anim_DeleteAnimPrePlayNode(struct_action_res *nod);
-void anim_RenderAnimFrame(animnode *mnod, int16_t x, int16_t y, int16_t w, int16_t h, int16_t frame);
+int anim_ProcessAnim(action_res_t *nod);
+void anim_LoadAnim(animnode_t *nod, char *filename, int u1, int u2, int32_t mask, int framerate);
+void anim_DeleteAnim(animnode_t *nod);
+int anim_PlayAnim(animnode_t *nod, int x, int y, int w, int h, int start, int end, int loop);
+int anim_ProcessAnimPlayNode(action_res_t *nod);
+int anim_ProcessAnimPreNode(action_res_t *nod);
+int anim_ProcessAnimPrePlayNode(action_res_t *nod);
+int anim_DeleteAnimPlay(action_res_t *nod);
+int anim_DeleteAnimPreNod(action_res_t *nod);
+int anim_DeleteAnimPrePlayNode(action_res_t *nod);
+void anim_RenderAnimFrame(animnode_t *mnod, int16_t x, int16_t y, int16_t w, int16_t h, int16_t frame);
 
 #endif // ANIMS_H_INCLUDED

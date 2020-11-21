@@ -7,11 +7,10 @@
 
 #include "simple_avi.h"
 
-int truemotion1_decode_init(avi_file *fil);
-int truemotion1_decode_frame(avi_file *avctx, void *pkt, int pkt_sz);
-int truemotion1_decode_end(avi_file *avctx);
-
-void avi_build_vlist(avi_file *av);
+int truemotion1_decode_init(avi_file_t *fil);
+int truemotion1_decode_frame(avi_file_t *avctx, void *pkt, int pkt_sz);
+int truemotion1_decode_end(avi_file_t *avctx);
+void avi_build_vlist(avi_file_t *av);
 
 #define MKTAG(a0, a1, a2, a3) ((uint32_t)(((a3) << 24) | ((a2) << 16) | ((a1) << 8) | ((a0) << 0)))
 
@@ -81,7 +80,7 @@ int16_t reads16(FILE *file)
     return tmp;
 }
 
-static int32_t avi_parse_handle(avi_file *av, uint32_t tag)
+static int32_t avi_parse_handle(avi_file_t *av, uint32_t tag)
 {
     switch (tag)
     {
@@ -134,7 +133,7 @@ static int32_t avi_parse_handle(avi_file *av, uint32_t tag)
         break;
     case ID_STRH:
     {
-        avi_strm_hdr hdr;
+        avi_strm_hdr_t hdr;
         hdr.size = readu32(av->file);
         hdr.streamType = readu32(av->file);
         hdr.streamHandler = readu32(av->file);
@@ -159,7 +158,7 @@ static int32_t avi_parse_handle(avi_file *av, uint32_t tag)
 
         if (hdr.streamType == ID_VIDS)
         {
-            vid_trk *inf = (vid_trk *)malloc(sizeof(vid_trk));
+            vid_trk_t *inf = NEW(vid_trk_t);
             inf->size = readu32(av->file);
             inf->width = readu32(av->file);
             inf->height = readu32(av->file);
@@ -181,7 +180,7 @@ static int32_t avi_parse_handle(avi_file *av, uint32_t tag)
         }
         else if (hdr.streamType == ID_AUDS)
         {
-            aud_trk *wv = (aud_trk *)malloc(sizeof(aud_trk));
+            aud_trk_t *wv = NEW(aud_trk_t);
             wv->tag = readu16(av->file);
             wv->channels = readu16(av->file);
             wv->samplesPerSec = readu32(av->file);
@@ -215,7 +214,7 @@ static int32_t avi_parse_handle(avi_file *av, uint32_t tag)
     {
         uint32_t cnt = readu32(av->file) / 16;
         av->idx_cnt = cnt;
-        av->idx = (vid_idx *)calloc(sizeof(vid_idx), cnt);
+        av->idx = NEW_ARRAY(vid_idx_t, cnt);
 
         for (uint32_t i = 0; i < cnt; i++)
         {
@@ -230,13 +229,13 @@ static int32_t avi_parse_handle(avi_file *av, uint32_t tag)
     return 0;
 }
 
-avi_file *avi_openfile(const char *fle, uint8_t transl)
+avi_file_t *avi_openfile(const char *fle, uint8_t transl)
 {
     FILE *file = fopen(fle, "rb");
     if (!file)
         return NULL;
 
-    avi_file *tmp = (avi_file *)calloc(sizeof(avi_file), 1);
+    avi_file_t *tmp = NEW(avi_file_t);
 
     tmp->file = file;
 
@@ -275,7 +274,7 @@ ERROR:
     return NULL;
 }
 
-void avi_set_dem(avi_file *av, int32_t w, int32_t h)
+void avi_set_dem(avi_file_t *av, int32_t w, int32_t h)
 {
     if (av->frame)
         free(av->frame);
@@ -295,7 +294,7 @@ void avi_set_dem(avi_file *av, int32_t w, int32_t h)
     }
 }
 
-int32_t avi_get_off(avi_file *av, uint32_t virt)
+int32_t avi_get_off(avi_file_t *av, uint32_t virt)
 {
     for (uint32_t i = 0; i < av->movi_cnt; i++)
     {
@@ -305,7 +304,7 @@ int32_t avi_get_off(avi_file *av, uint32_t virt)
     return 0;
 }
 
-void avi_build_vlist(avi_file *av)
+void avi_build_vlist(avi_file_t *av)
 {
     int32_t cnt = 0;
     int32_t acnt = 0;
@@ -316,9 +315,9 @@ void avi_build_vlist(avi_file *av)
         else if (getStreamType(av->idx[i].id) == MKTAG16('w', 'b'))
             acnt++;
 
-    av->vfrm = (vframes *)malloc(sizeof(vframes) * cnt);
+    av->vfrm = NEW_ARRAY(vframes_t, cnt);
     if (acnt > 0)
-        av->achunk = (vframes *)malloc(sizeof(vframes) * acnt);
+        av->achunk = NEW_ARRAY(vframes_t, acnt);
 
     av->vfrm_cnt = cnt;
     av->achunk_cnt = acnt;
@@ -340,7 +339,7 @@ void avi_build_vlist(avi_file *av)
         }
 }
 
-int8_t avi_renderframe(avi_file *av, int32_t frm)
+int8_t avi_renderframe(avi_file_t *av, int32_t frm)
 {
     if (frm >= 0 && frm < av->vfrm_cnt)
     {
@@ -390,7 +389,7 @@ static const uint8_t wavHeader[0x2C] =
         'd', 'a', 't', 'a',
         0, 0, 0, 0};
 
-Mix_Chunk *avi_get_audio(avi_file *av)
+Mix_Chunk *avi_get_audio(avi_file_t *av)
 {
     if (av->atrk)
     {
@@ -456,7 +455,7 @@ Mix_Chunk *avi_get_audio(avi_file *av)
     return NULL;
 }
 
-void avi_play(avi_file *av)
+void avi_play(avi_file_t *av)
 {
     av->status = AVI_PLAY;
     av->cframe = 0;
@@ -466,7 +465,7 @@ void avi_play(avi_file *av)
     av->stime = SDL_GetTicks();
 }
 
-void avi_update(avi_file *av)
+void avi_update(avi_file_t *av)
 {
     if (av->status == AVI_PLAY)
     {
@@ -486,12 +485,12 @@ void avi_update(avi_file *av)
     }
 }
 
-void avi_stop(avi_file *av)
+void avi_stop(avi_file_t *av)
 {
     av->status = AVI_STOP;
 }
 
-void avi_to_surf(avi_file *av, SDL_Surface *srf)
+void avi_to_surf(avi_file_t *av, SDL_Surface *srf)
 {
     if (av->w == srf->w && av->h == srf->h)
     {
@@ -572,7 +571,6 @@ void avi_to_surf(avi_file *av, SDL_Surface *srf)
     }
     else
     {
-        //printf("not match avi size %dx%d and surface:%dx%d\n",av->w,av->h,srf->w,srf->h);
         if (srf->format->BitsPerPixel != 32)
         {
             printf("Not supported bit depth\n");
@@ -648,7 +646,7 @@ void avi_to_surf(avi_file *av, SDL_Surface *srf)
     }
 }
 
-void avi_close(avi_file *av)
+void avi_close(avi_file_t *av)
 {
     if (av->file)
         fclose(av->file);

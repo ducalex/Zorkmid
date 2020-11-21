@@ -13,9 +13,6 @@ int GAMESCREEN_FLAT_X = 0;
 
 static float mgamma = 1.0;
 
-static uint32_t time = 0;
-static int32_t frames = 0;
-static int32_t fps = 1;
 
 #define SFTYPE SDL_SWSURFACE // SDL_HWSURFACE
 
@@ -305,8 +302,7 @@ void Rend_InitGraphics(bool fullscreen, bool widescreen)
 
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
     {
-        printf("Unable to init SDL: %s\n", SDL_GetError());
-        exit(1);
+        Z_PANIC("Unable to init SDL: %s\n", SDL_GetError());
     }
 
     if (fullscreen)
@@ -698,7 +694,6 @@ void Rend_RenderFunc()
 {
     if (RenderDelay > 0)
     {
-        //if (GetBeat())
         RenderDelay--;
         return;
     }
@@ -744,9 +739,9 @@ void Rend_RenderFunc()
     Rend_ProcessCursor();
 }
 
-struct_SubRect *Rend_CreateSubRect(int x, int y, int w, int h)
+subrect_t *Rend_CreateSubRect(int x, int y, int w, int h)
 {
-    struct_SubRect *tmp = NEW(struct_SubRect);
+    subrect_t *tmp = NEW(subrect_t);
 
     tmp->h = h;
     tmp->w = w;
@@ -765,7 +760,7 @@ struct_SubRect *Rend_CreateSubRect(int x, int y, int w, int h)
     return tmp;
 }
 
-void Rend_DeleteSubRect(struct_SubRect *erect)
+void Rend_DeleteSubRect(subrect_t *erect)
 {
     erect->todelete = true;
 }
@@ -775,7 +770,7 @@ void Rend_ProcessSubs()
     StartMList(sublist);
     while (!eofMList(sublist))
     {
-        struct_SubRect *subrec = (struct_SubRect *)DataMList(sublist);
+        subrect_t *subrec = (subrect_t *)DataMList(sublist);
 
         if (subrec->timer >= 0)
         {
@@ -797,7 +792,7 @@ void Rend_ProcessSubs()
     }
 }
 
-void Rend_DelaySubDelete(struct_SubRect *sub, int32_t time)
+void Rend_DelaySubDelete(subrect_t *sub, int32_t time)
 {
     if (time > 0)
         sub->timer = time;
@@ -821,6 +816,11 @@ uint32_t Rend_MapScreenRGB(int r, int g, int b)
 void Rend_ScreenFlip()
 {
     SDL_Flip(screen);
+}
+
+void Rend_Delay(uint32_t delay_ms)
+{
+    SDL_Delay(delay_ms);
 }
 
 float tilt_angle = 60.0;
@@ -1024,9 +1024,9 @@ void Rend_SetRendererTable()
         Rend_tilt_SetTable();
 }
 
-struct_action_res *Rend_CreateDistortNode()
+action_res_t *Rend_CreateDistortNode()
 {
-    struct_action_res *act = ScrSys_CreateActRes(NODE_TYPE_DISTORT);
+    action_res_t *act = ScrSys_CreateActRes(NODE_TYPE_DISTORT);
     act->nodes.distort = NEW(distort_t);
     act->nodes.distort->cur_frame = 0;
     act->nodes.distort->increase = true;
@@ -1045,7 +1045,7 @@ struct_action_res *Rend_CreateDistortNode()
     return act;
 }
 
-int32_t Rend_ProcessDistortNode(struct_action_res *nod)
+int32_t Rend_ProcessDistortNode(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_DISTORT)
         return NODE_RET_OK;
@@ -1079,7 +1079,7 @@ int32_t Rend_ProcessDistortNode(struct_action_res *nod)
     return NODE_RET_OK;
 }
 
-int32_t Rend_DeleteDistortNode(struct_action_res *nod)
+int32_t Rend_DeleteDistortNode(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_DISTORT)
         return NODE_RET_NO;
@@ -1106,7 +1106,7 @@ void Rend_DrawScalerToGamescr(scaler *scl, int16_t x, int16_t y)
         DrawScaler(scl, x, y, scrbuf);
 }
 
-int Rend_DeleteRegion(struct_action_res *nod)
+int Rend_DeleteRegion(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_REGION)
         return NODE_RET_NO;
@@ -2211,22 +2211,4 @@ void DrawScaler(scaler *scal, int16_t x, int16_t y, SDL_Surface *dst)
 void DrawScalerToScreen(scaler *scal, int16_t x, int16_t y)
 {
     DrawScaler(scal, x, y, screen);
-}
-
-int32_t GetFps()
-{
-    return fps;
-}
-
-void FpsCounter()
-{
-    if (millisec() > time)
-    {
-        fps = frames;
-        if (fps == 0)
-            fps = 1;
-        frames = 0;
-        time = millisec() + 1000;
-    }
-    frames++;
 }

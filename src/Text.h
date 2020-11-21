@@ -64,13 +64,13 @@ typedef struct
 txt_style_t *txt_init_txt_struct(txt_style_t *style);
 int8_t txt_parse_txt_params(txt_style_t *style, const char *string, int32_t len);
 void txt_DrawTxtWithJustify(char *txt, TTF_Font *fnt, SDL_Color clr, SDL_Surface *dst, int dy, int justify);
-void txt_get_font_style(txt_style_t *style, char *strin);
+void txt_get_font_style(txt_style_t *style, const char *strin);
 void txt_set_font_style(TTF_Font *font, txt_style_t *fnt_stl);
 int32_t txt_DrawTxt(char *txt, txt_style_t *fnt_stl, SDL_Surface *dst);
 void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst);
 
-struct_action_res *txt_CreateTTYtext();
-int txt_DeleteTTYtext(struct_action_res *nod);
-int txt_ProcessTTYtext(struct_action_res *nod);
+action_res_t *txt_CreateTTYtext();
+int txt_DeleteTTYtext(action_res_t *nod);
+int txt_ProcessTTYtext(action_res_t *nod);
 
 #endif // TEXT_H_INCLUDED

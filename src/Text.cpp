@@ -363,7 +363,7 @@ void txt_DrawTxtWithJustify(char *txt, TTF_Font *fnt, SDL_Color clr, SDL_Surface
     SDL_FreeSurface(aaa);
 }
 
-void txt_get_font_style(txt_style_t *style, char *strin)
+void txt_get_font_style(txt_style_t *style, const char *strin)
 {
     int32_t strt = -1;
     int32_t endt = -1;
@@ -397,7 +397,7 @@ void txt_set_font_style(TTF_Font *font, txt_style_t *fnt_stl)
     if (fnt_stl->underline == TXT_STYLE_VAR_TRUE)
         temp_stl |= TTF_STYLE_UNDERLINE;
 
-#if (SDL_TTF_NUM_VERSION >= 20010)
+#ifdef TTF_STYLE_STRIKETHROUGH
     if (fnt_stl->strikeout == TXT_STYLE_VAR_TRUE)
         temp_stl |= TTF_STYLE_STRIKETHROUGH;
 #endif
@@ -410,8 +410,7 @@ int32_t txt_DrawTxt(char *txt, txt_style_t *fnt_stl, SDL_Surface *dst)
     TTF_Font *temp_font = GetFontByName(fnt_stl->fontname, fnt_stl->size);
     if (!temp_font)
     {
-        printf("TTF_OpenFont: %s\n", TTF_GetError());
-        exit(1);
+        Z_PANIC("TTF_OpenFont: %s\n", TTF_GetError());
     }
 
     SDL_FillRect(dst, NULL, 0);
@@ -607,30 +606,15 @@ void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
                 SDL_FreeSurface(TxtSurfaces[i][j]);
 }
 
-struct_action_res *txt_CreateTTYtext()
+action_res_t *txt_CreateTTYtext()
 {
-    struct_action_res *tmp = ScrSys_CreateActRes(NODE_TYPE_TTYTEXT);
-
+    action_res_t *tmp = ScrSys_CreateActRes(NODE_TYPE_TTYTEXT);
     tmp->nodes.tty_text = NEW(ttytext_t);
-    tmp->nodes.tty_text->delay = 0;
     txt_init_txt_struct(&tmp->nodes.tty_text->style);
-    tmp->nodes.tty_text->fnt = NULL;
-    tmp->nodes.tty_text->x = 0;
-    tmp->nodes.tty_text->y = 0;
-    tmp->nodes.tty_text->w = 0;
-    tmp->nodes.tty_text->h = 0;
-    tmp->nodes.tty_text->txtbuf = NULL;
-    tmp->nodes.tty_text->txtpos = 0;
-    tmp->nodes.tty_text->img = NULL;
-    tmp->nodes.tty_text->nexttime = 0;
-    tmp->nodes.tty_text->dx = 0;
-    tmp->nodes.tty_text->dy = 0;
-    tmp->nodes.tty_text->txtsize = 0;
-
     return tmp;
 }
 
-int txt_DeleteTTYtext(struct_action_res *nod)
+int txt_DeleteTTYtext(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_TTYTEXT)
         return NODE_RET_NO;
@@ -699,7 +683,7 @@ int32_t getglyphwidth(TTF_Font *fnt, uint16_t chr)
     return advice;
 }
 
-int txt_ProcessTTYtext(struct_action_res *nod)
+int txt_ProcessTTYtext(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_TTYTEXT)
         return NODE_RET_NO;

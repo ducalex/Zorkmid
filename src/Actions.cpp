@@ -1,8 +1,5 @@
 #include "Actions.h"
 
-// #define TRACE_ACTION()  printf("      > %s(%s)\n", __func__, params);
-#define TRACE_ACTION() {}
-
 static const char *get_addition(const char *str)
 {
     const char *s = str;
@@ -59,7 +56,7 @@ static void useart_recovery(char *str)
     }
 }
 
-int action_set_screen(char *params, int aSlot, pzllst *owner)
+int action_set_screen(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -69,7 +66,7 @@ int action_set_screen(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_set_partial_screen(char *params, int aSlot, pzllst *owner)
+int action_set_partial_screen(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -108,7 +105,7 @@ int action_set_partial_screen(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_assign(char *params, int aSlot, pzllst *owner)
+int action_assign(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -119,12 +116,11 @@ int action_assign(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_timer(char *params, int aSlot, pzllst *owner)
+int action_timer(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
     char tmp2[16];
-    char *s;
     sscanf(params, "%s", tmp2);
 
     if (getGNode(aSlot) != NULL)
@@ -132,7 +128,7 @@ int action_timer(char *params, int aSlot, pzllst *owner)
         return ACTION_NORMAL;
     }
 
-    struct_action_res *nod = NEW(struct_action_res);
+    action_res_t *nod = NEW(action_res_t);
     nod->nodes.node_timer = 0;
 
     nod->slot = aSlot;
@@ -150,7 +146,7 @@ int action_timer(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_change_location(char *params, int aSlot, pzllst *owner)
+int action_change_location(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -164,16 +160,16 @@ int action_change_location(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_dissolve(char *params, int aSlot, pzllst *owner)
+int action_dissolve(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
-    SDL_Surface *surf = Rend_GetGameScreen();
-    SDL_FillRect(surf, NULL, Rend_MapScreenRGB(0, 0, 0));
+    SDL_FillRect(Rend_GetGameScreen(), NULL, Rend_MapScreenRGB(0, 0, 0));
+
     return ACTION_NORMAL;
 }
 
-int action_disable_control(char *params, int aSlot, pzllst *owner)
+int action_disable_control(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -182,7 +178,7 @@ int action_disable_control(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_enable_control(char *params, int aSlot, pzllst *owner)
+int action_enable_control(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -191,7 +187,7 @@ int action_enable_control(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_add(char *params, int aSlot, pzllst *owner)
+int action_add(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -206,7 +202,7 @@ int action_add(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_debug(char *params, int aSlot, pzllst *owner)
+int action_debug(char *params, int aSlot, pzllst_t *owner)
 {
     char txt[256], number[16];
     int tmp;
@@ -219,7 +215,7 @@ int action_debug(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_random(char *params, int aSlot, pzllst *owner)
+int action_random(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -233,7 +229,7 @@ int action_random(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_streamvideo(char *params, int aSlot, pzllst *owner)
+int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -328,17 +324,16 @@ int action_streamvideo(char *params, int aSlot, pzllst *owner)
             }
 
             Rend_ProcessSubs();
-
             Rend_ScreenFlip();
-            //SDL_Flip(screen);
 
-            int delay = 15;
+            int delay = -1;
             if (anm->inf.current_fps != 0)
                 delay = 1000 / anm->inf.current_fps;
+
             if (delay > 200 || delay < 0)
-                SDL_Delay(15);
-            else
-                SDL_Delay(delay);
+                delay = 15;
+
+            Rend_Delay(delay);
         }
 
         if (aud != NULL)
@@ -410,16 +405,14 @@ int action_streamvideo(char *params, int aSlot, pzllst *owner)
                 sub_ProcessSub(subs, anm->av->cframe);
 
             Rend_ProcessSubs();
-
             Rend_ScreenFlip();
-            //SDL_Flip(screen);
 
             int32_t delay = anm->av->header.mcrSecPframe / 2000;
 
             if (delay > 200 || delay < 0)
-                SDL_Delay(15);
-            else
-                SDL_Delay(delay);
+                delay = 15;
+
+            Rend_Delay(delay);
         }
 
         if (aud != NULL)
@@ -441,7 +434,7 @@ int action_streamvideo(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_animplay(char *params, int aSlot, pzllst *owner)
+int action_animplay(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -464,7 +457,7 @@ int action_animplay(char *params, int aSlot, pzllst *owner)
     while (!eofMList(all))
     {
 
-        struct_action_res *nd = (struct_action_res *)DataMList(all);
+        action_res_t *nd = (action_res_t *)DataMList(all);
 
         if (nd->node_type == NODE_TYPE_ANIMPLAY)
             if (nd->slot == aSlot)
@@ -476,9 +469,9 @@ int action_animplay(char *params, int aSlot, pzllst *owner)
         NextMList(all);
     }
 
-    struct_action_res *glob = anim_CreateAnimPlayNode();
+    action_res_t *glob = anim_CreateAnimPlayNode();
 
-    animnode *nod = glob->nodes.node_anim;
+    animnode_t *nod = glob->nodes.node_anim;
 
     ScrSys_AddToActResList(glob);
 
@@ -516,7 +509,7 @@ int action_animplay(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int music_music(char *params, int aSlot, pzllst *owner, bool universe)
+int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
 {
     int type;
     char file[16];
@@ -529,7 +522,7 @@ int music_music(char *params, int aSlot, pzllst *owner, bool universe)
     if (getGNode(aSlot) != NULL)
         return ACTION_NORMAL;
 
-    struct_action_res *nod = snd_CreateWavNode();
+    action_res_t *nod = snd_CreateWavNode();
 
     nod->slot = aSlot;
     nod->owner = owner;
@@ -669,21 +662,21 @@ int music_music(char *params, int aSlot, pzllst *owner, bool universe)
     return ACTION_NORMAL;
 }
 
-int action_music(char *params, int aSlot, pzllst *owner)
+int action_music(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
     return music_music(params, aSlot, owner, false);
 }
 
-int action_universe_music(char *params, int aSlot, pzllst *owner)
+int action_universe_music(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
     return music_music(params, aSlot, owner, true);
 }
 
-int action_syncsound(char *params, int aSlot, pzllst *owner)
+int action_syncsound(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -709,7 +702,7 @@ int action_syncsound(char *params, int aSlot, pzllst *owner)
     if (getGNode(syncto) == NULL)
         return ACTION_NORMAL;
 
-    struct_action_res *tmp = snd_CreateSyncNode();
+    action_res_t *tmp = snd_CreateSyncNode();
 
     tmp->owner = owner;
     tmp->slot = -1;
@@ -755,7 +748,7 @@ int action_syncsound(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_animpreload(char *params, int aSlot, pzllst *owner)
+int action_animpreload(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -768,7 +761,7 @@ int action_animpreload(char *params, int aSlot, pzllst *owner)
     char u3[16];
     char u4[16];
 
-    struct_action_res *pre = anim_CreateAnimPreNode();
+    action_res_t *pre = anim_CreateAnimPreNode();
 
     //%s %d %d %d %f
     //name     ? ? mask framerate
@@ -795,7 +788,7 @@ int action_animpreload(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_playpreload(char *params, int aSlot, pzllst *owner)
+int action_playpreload(char *params, int aSlot, pzllst_t *owner)
 {
     char sl[16];
     uint32_t slot;
@@ -806,7 +799,7 @@ int action_playpreload(char *params, int aSlot, pzllst *owner)
 
     slot = GetIntVal(sl);
 
-    struct_action_res *pre = getGNode(slot);
+    action_res_t *pre = getGNode(slot);
 
     if (pre == NULL)
     {
@@ -816,9 +809,9 @@ int action_playpreload(char *params, int aSlot, pzllst *owner)
     if (pre->node_type != NODE_TYPE_ANIMPRE)
         return ACTION_NORMAL;
 
-    struct_action_res *nod = anim_CreateAnimPlayPreNode();
+    action_res_t *nod = anim_CreateAnimPlayPreNode();
 
-    anim_preplay_node *tmp = nod->nodes.node_animpreplay;
+    anim_preplay_node_t *tmp = nod->nodes.node_animpreplay;
 
     tmp->playerid = 0;
     tmp->point = pre->nodes.node_animpre;
@@ -846,7 +839,7 @@ int action_playpreload(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_ttytext(char *params, int aSlot, pzllst *owner)
+int action_ttytext(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -858,7 +851,7 @@ int action_ttytext(char *params, int aSlot, pzllst *owner)
     w -= x;
     h -= y;
 
-    FManNode *fil = FindInBinTree(chars);
+    FManNode_t *fil = FindInBinTree(chars);
 
     if (fil == NULL)
     {
@@ -866,7 +859,7 @@ int action_ttytext(char *params, int aSlot, pzllst *owner)
         return ACTION_NORMAL;
     }
 
-    struct_action_res *nod = txt_CreateTTYtext();
+    action_res_t *nod = txt_CreateTTYtext();
 
     nod->slot = aSlot;
     nod->owner = owner;
@@ -913,7 +906,7 @@ int action_ttytext(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int stopkiller(char *params, int aSlot, pzllst *owner, bool iskillfunc)
+int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
 {
     TRACE_ACTION();
 
@@ -984,7 +977,7 @@ int stopkiller(char *params, int aSlot, pzllst *owner, bool iskillfunc)
     StartMList(all);
     while (!eofMList(all))
     {
-        struct_action_res *nod = (struct_action_res *)DataMList(all);
+        action_res_t *nod = (action_res_t *)DataMList(all);
 
         if (nod->slot == slot)
         {
@@ -1021,7 +1014,7 @@ int stopkiller(char *params, int aSlot, pzllst *owner, bool iskillfunc)
     return ACTION_NORMAL;
 }
 
-int action_kill(char *params, int aSlot, pzllst *owner)
+int action_kill(char *params, int aSlot, pzllst_t *owner)
 {
 #ifdef TRACE
     printf("        action:kill(%s)\n", params);
@@ -1041,7 +1034,7 @@ int action_kill(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_stop(char *params, int aSlot, pzllst *owner)
+int action_stop(char *params, int aSlot, pzllst_t *owner)
 {
 #ifdef TRACE
     printf("        action:stop(%s)\n", params);
@@ -1061,7 +1054,7 @@ int action_stop(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_inventory(char *params, int aSlot, pzllst *owner)
+int action_inventory(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1103,7 +1096,7 @@ int action_inventory(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_crossfade(char *params, int aSlot, pzllst *owner)
+int action_crossfade(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1123,12 +1116,12 @@ int action_crossfade(char *params, int aSlot, pzllst *owner)
 
     if (item > 0)
     {
-        struct_action_res *tmp = getGNode(item);
+        action_res_t *tmp = getGNode(item);
 
         if (tmp != NULL)
             if (tmp->node_type == NODE_TYPE_MUSIC)
             {
-                struct_action_res *tnod = tmp;
+                action_res_t *tnod = tmp;
 
                 tnod->nodes.node_music->crossfade = true;
 
@@ -1145,12 +1138,12 @@ int action_crossfade(char *params, int aSlot, pzllst *owner)
 
     if (item2 > 0)
     {
-        struct_action_res *tmp = getGNode(item2);
+        action_res_t *tmp = getGNode(item2);
 
         if (tmp != NULL)
             if (tmp->node_type == NODE_TYPE_MUSIC)
             {
-                struct_action_res *tnod = tmp;
+                action_res_t *tnod = tmp;
 
                 tnod->nodes.node_music->crossfade = true;
 
@@ -1183,7 +1176,7 @@ int action_crossfade(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_menu_bar_enable(char *params, int aSlot, pzllst *owner)
+int action_menu_bar_enable(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1192,7 +1185,7 @@ int action_menu_bar_enable(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_delay_render(char *params, int aSlot, pzllst *owner)
+int action_delay_render(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1201,7 +1194,7 @@ int action_delay_render(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_pan_track(char *params, int aSlot, pzllst *owner)
+int action_pan_track(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1215,7 +1208,7 @@ int action_pan_track(char *params, int aSlot, pzllst *owner)
 
     if (slot > 0)
     {
-        struct_action_res *nod = snd_CreatePanTrack();
+        action_res_t *nod = snd_CreatePanTrack();
         nod->nodes.node_pantracking = slot;
 
         nod->owner = owner;
@@ -1226,12 +1219,12 @@ int action_pan_track(char *params, int aSlot, pzllst *owner)
 
         ScrSys_AddToActResList(nod);
 
-        struct_action_res *tmp = getGNode(slot);
+        action_res_t *tmp = getGNode(slot);
 
         if (tmp != NULL)
             if (tmp->node_type == NODE_TYPE_MUSIC)
             {
-                struct_action_res *tnod = tmp;
+                action_res_t *tnod = tmp;
 
                 tnod->nodes.node_music->pantrack = true;
                 tnod->nodes.node_music->pantrack_X = XX;
@@ -1241,7 +1234,7 @@ int action_pan_track(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_attenuate(char *params, int aSlot, pzllst *owner)
+int action_attenuate(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1254,7 +1247,7 @@ int action_attenuate(char *params, int aSlot, pzllst *owner)
 
     if (slot > 0)
     {
-        struct_action_res *tmp = getGNode(slot);
+        action_res_t *tmp = getGNode(slot);
 
         if (tmp != NULL)
             if (tmp->node_type == NODE_TYPE_MUSIC)
@@ -1270,7 +1263,7 @@ int action_attenuate(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_cursor(char *params, int aSlot, pzllst *owner)
+int action_cursor(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1284,7 +1277,7 @@ int action_cursor(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_animunload(char *params, int aSlot, pzllst *owner)
+int action_animunload(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1292,7 +1285,7 @@ int action_animunload(char *params, int aSlot, pzllst *owner)
 
     sscanf(params, "%d", &slot);
 
-    struct_action_res *nod = getGNode(slot);
+    action_res_t *nod = getGNode(slot);
 
     if (nod != NULL)
         if (nod->node_type == NODE_TYPE_ANIMPRE)
@@ -1301,7 +1294,7 @@ int action_animunload(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_flush_mouse_events(char *params, int aSlot, pzllst *owner)
+int action_flush_mouse_events(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1311,7 +1304,7 @@ int action_flush_mouse_events(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_save_game(char *params, int aSlot, pzllst *owner)
+int action_save_game(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1321,7 +1314,7 @@ int action_save_game(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_restore_game(char *params, int aSlot, pzllst *owner)
+int action_restore_game(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1330,7 +1323,7 @@ int action_restore_game(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_quit(char *params, int aSlot, pzllst *owner)
+int action_quit(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1342,7 +1335,7 @@ int action_quit(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_rotate_to(char *params, int aSlot, pzllst *owner)
+int action_rotate_to(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1392,14 +1385,13 @@ int action_rotate_to(char *params, int aSlot, pzllst *owner)
 
         Rend_RenderFunc();
         Rend_ScreenFlip();
-
-        SDL_Delay(500 / time);
+        Rend_Delay(500 / time);
     }
 
     return ACTION_NORMAL;
 }
 
-int action_distort(char *params, int aSlot, pzllst *owner)
+int action_distort(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1414,7 +1406,7 @@ int action_distort(char *params, int aSlot, pzllst *owner)
     if (getGNode(slot) != NULL)
         return ACTION_NORMAL;
 
-    struct_action_res *act = Rend_CreateDistortNode();
+    action_res_t *act = Rend_CreateDistortNode();
     act->slot = slot;
     act->owner = owner;
 
@@ -1444,7 +1436,7 @@ int action_distort(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_preferences(char *params, int aSlot, pzllst *owner)
+int action_preferences(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1457,7 +1449,7 @@ int action_preferences(char *params, int aSlot, pzllst *owner)
 }
 
 //Graphic effects
-int action_region(char *params, int aSlot, pzllst *owner)
+int action_region(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1487,7 +1479,7 @@ int action_region(char *params, int aSlot, pzllst *owner)
         {
         case 0: //water effect
         {
-            struct_action_res *nod = NEW(struct_action_res);
+            action_res_t *nod = NEW(action_res_t);
 
             nod->slot = aSlot;
             nod->owner = owner;
@@ -1511,7 +1503,7 @@ int action_region(char *params, int aSlot, pzllst *owner)
 
         case 1: //lightning effect
         {
-            struct_action_res *nod = NEW(struct_action_res);
+            action_res_t *nod = NEW(action_res_t);
 
             nod->slot = aSlot;
             nod->owner = owner;
@@ -1533,7 +1525,7 @@ int action_region(char *params, int aSlot, pzllst *owner)
 
         case 9:
         {
-            struct_action_res *nod = NEW(struct_action_res);
+            action_res_t *nod = NEW(action_res_t);
 
             nod->slot = aSlot;
             nod->owner = owner;
@@ -1559,7 +1551,7 @@ int action_region(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_display_message(char *params, int aSlot, pzllst *owner)
+int action_display_message(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1570,7 +1562,7 @@ int action_display_message(char *params, int aSlot, pzllst *owner)
     }
     else if (sscanf(params, "%d %d", &p1, &p2) == 2)
     {
-        ctrlnode *ct = GetControlByID(p1);
+        ctrlnode_t *ct = GetControlByID(p1);
         if (ct)
             if (ct->type == CTRL_TITLER)
                 ct->node.titler->next_string = p2;
@@ -1579,7 +1571,7 @@ int action_display_message(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_set_venus(char *params, int aSlot, pzllst *owner)
+int action_set_venus(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 
@@ -1596,7 +1588,7 @@ int action_set_venus(char *params, int aSlot, pzllst *owner)
     return ACTION_NORMAL;
 }
 
-int action_disable_venus(char *params, int aSlot, pzllst *owner)
+int action_disable_venus(char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION();
 

@@ -23,7 +23,7 @@ typedef struct
 
 typedef struct
 {
-    struct_SubRect *SubRect;
+    subrect_t *SubRect;
     int subscount; //number of subs;
     one_subtitle_t *subs;
     sub_textfile_t *txt; //array

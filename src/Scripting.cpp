@@ -1,18 +1,19 @@
 #include "System.h"
 
-static int VAR_SLOTS_MAX = 20000;
-
+static int32_t VAR_SLOTS_MAX = 20000;
 static int32_t gVars[30000];
-static struct_action_res *gNodes[30000];
+static action_res_t *gNodes[30000];
 static uint8_t Flags[30000];
 static StateBoxEnt_t *StateBox[30000];
 
+static char PreferencesFile[128];
+
 static bool BreakExecute = false;
 
-static pzllst *uni = NULL;   //universe script
-static pzllst *world = NULL; //world script
-static pzllst *room = NULL;  //room script
-static pzllst *view = NULL;  //view script
+static pzllst_t *uni = NULL;   //universe script
+static pzllst_t *world = NULL; //world script
+static pzllst_t *room = NULL;  //room script
+static pzllst_t *view = NULL;  //view script
 
 static MList *ctrl = NULL; //contorls
 static MList *actres = NULL; //sounds, animations, ttytexts and other.
@@ -20,7 +21,7 @@ static MList *actres = NULL; //sounds, animations, ttytexts and other.
 static uint8_t *SaveBuffer = NULL;
 static uint32_t SaveCurrentSize = 0;
 
-void FillStateBoxFromList(pzllst *lst);
+void FillStateBoxFromList(pzllst_t *lst);
 void ShakeStateBox(uint32_t indx);
 
 static bool in_range(int indx)
@@ -29,22 +30,22 @@ static bool in_range(int indx)
     return (indx >= 0 && indx < VAR_SLOTS_MAX); // > 0
 }
 
-pzllst *GetUni()
+pzllst_t *GetUni()
 {
     return uni;
 }
 
-pzllst *Getworld()
+pzllst_t *Getworld()
 {
     return world;
 }
 
-pzllst *Getroom()
+pzllst_t *Getroom()
 {
     return room;
 }
 
-pzllst *Getview()
+pzllst_t *Getview()
 {
     return view;
 }
@@ -59,7 +60,7 @@ MList *GetAction_res_List()
     return actres;
 }
 
-int tmr_DeleteTimer(struct_action_res *nod)
+int tmr_DeleteTimer(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_TIMER)
         return NODE_RET_NO;
@@ -76,7 +77,7 @@ int tmr_DeleteTimer(struct_action_res *nod)
     return NODE_RET_DELETE;
 }
 
-int tmr_ProcessTimer(struct_action_res *nod)
+int tmr_ProcessTimer(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_TIMER)
         return NODE_RET_OK;
@@ -143,7 +144,7 @@ void ScrSys_SetFlag(uint32_t indx, uint8_t newval)
         Flags[indx] = newval;
 }
 
-struct_action_res *getGNode(int32_t indx)
+action_res_t *getGNode(int32_t indx)
 {
     if (!in_range(indx))
         return NULL;
@@ -151,7 +152,7 @@ struct_action_res *getGNode(int32_t indx)
     return gNodes[indx];
 }
 
-void setGNode(int32_t indx, struct_action_res *data)
+void setGNode(int32_t indx, action_res_t *data)
 {
     if (in_range(indx))
         gNodes[indx] = data;
@@ -161,18 +162,23 @@ void InitScriptsEngine()
 {
     SaveBuffer = (uint8_t *)malloc(512 * 1024);
 
-    // 20_000 slots for ZGI and 30_000 for Nemesis
-    VAR_SLOTS_MAX = (CUR_GAME == GAME_ZGI) ? 20000 : 30000;
+    if (CUR_GAME == GAME_ZGI) {
+        VAR_SLOTS_MAX = 20000;
+        strcpy(PreferencesFile, "prefs_zgi.ini");
+    } else {
+        VAR_SLOTS_MAX = 30000;
+        strcpy(PreferencesFile, "prefs_znem.ini");
+    }
 
     memset(StateBox, 0x0, sizeof(StateBox));
     memset(Flags, 0x0, sizeof(Flags));
     memset(gVars, 0x0, sizeof(gVars));
     memset(gNodes, 0x0, sizeof(gNodes));
 
-    view = CreatePzlLst("view");
-    room = CreatePzlLst("room");
-    world = CreatePzlLst("world");
-    uni = CreatePzlLst("universe");
+    view = CreatePuzzleList("view");
+    room = CreatePuzzleList("room");
+    world = CreatePuzzleList("world");
+    uni = CreatePuzzleList("universe");
     ctrl = CreateMList();
     actres = CreateMList();
 
@@ -184,7 +190,7 @@ void InitScriptsEngine()
     ScrSys_LoadPreferences();
 }
 
-void LoadScriptFile(pzllst *lst, FManNode *filename, bool control, MList *controlst)
+void LoadScriptFile(pzllst_t *lst, FManNode_t *filename, bool control, MList *controlst)
 {
 #ifdef TRACE
     printf("Loading script file %s\n", filename->File);
@@ -198,8 +204,7 @@ void LoadScriptFile(pzllst *lst, FManNode *filename, bool control, MList *contro
     mfile_t *fl = mfopen(filename);
     if (fl == NULL)
     {
-        printf("Error opening file %s\n", filename->File);
-        exit(1);
+        Z_PANIC("Error opening file %s\n", filename->File);
         return;
     }
 
@@ -213,7 +218,7 @@ void LoadScriptFile(pzllst *lst, FManNode *filename, bool control, MList *contro
 
         if (strCMP(str, "puzzle") == 0)
         {
-            Parse_Puzzle(lst, fl, str);
+            Puzzle_Parse(lst, fl, str);
         }
         else if (strCMP(str, "control") == 0 && control)
         {
@@ -268,7 +273,7 @@ void ScrSys_PrepareSaveBuffer()
     StartMList(lst);
     while (!eofMList(lst))
     {
-        struct_action_res *nod = (struct_action_res *)DataMList(lst);
+        action_res_t *nod = (action_res_t *)DataMList(lst);
         if (nod->node_type == NODE_TYPE_TIMER)
         {
             SaveBuffer[buffpos] = 'T';
@@ -335,7 +340,7 @@ void ScrSys_PrepareSaveBuffer()
     StartMList(lst);
     while (!eofMList(lst))
     {
-        struct_action_res *nod = (struct_action_res *)DataMList(lst);
+        action_res_t *nod = (action_res_t *)DataMList(lst);
         if (nod->node_type == NODE_TYPE_MUSIC)
             if (nod->slot > 0)
                 tmp2[nod->slot] = 2;
@@ -375,8 +380,7 @@ void ScrSys_LoadGame(char *file)
     fread(&tmp, 4, 1, f);
     if (tmp != 0x47534E5A)
     {
-        printf("Error in save file %s\n", file);
-        exit(-1);
+        Z_PANIC("Error in save file %s\n", file);
     }
 
     fread(&tmp, 4, 1, f);
@@ -413,8 +417,7 @@ void ScrSys_LoadGame(char *file)
 
     if (tmp != VAR_SLOTS_MAX * 2)
     {
-        printf("Error in save file %s (FLAGS VAR_SLOTS_MAX)\n", file);
-        exit(-1);
+        Z_PANIC("Error in save file %s (FLAGS VAR_SLOTS_MAX)\n", file);
     }
     for (int i = 0; i < VAR_SLOTS_MAX; i++)
     {
@@ -426,8 +429,7 @@ void ScrSys_LoadGame(char *file)
     fread(&tmp, 4, 1, f);
     if (tmp != VAR_SLOTS_MAX * 2)
     {
-        printf("Error in save file %s (PUZZLE VAR_SLOTS_MAX)\n", file);
-        exit(-1);
+        Z_PANIC("Error in save file %s (PUZZLE VAR_SLOTS_MAX)\n", file);
     }
     for (int i = 0; i < VAR_SLOTS_MAX; i++)
     {
@@ -503,7 +505,7 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         tm[3] = temp.View;
         tm[4] = 0;
         sprintf(buf, "%s.scr", tm);
-        FManNode *fil = FindInBinTree(buf);
+        FManNode_t *fil = FindInBinTree(buf);
         if (fil != NULL)
             LoadScriptFile(view, fil, true, ctrl);
     }
@@ -521,7 +523,7 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         tm[2] = 0;
         sprintf(buf, "%s.scr", tm);
 
-        FManNode *fil = FindInBinTree(buf);
+        FManNode_t *fil = FindInBinTree(buf);
         if (fil != NULL)
             LoadScriptFile(room, fil, false, NULL);
     }
@@ -537,7 +539,7 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         tm[1] = 0;
         sprintf(buf, "%s.scr", tm);
 
-        FManNode *fil = FindInBinTree(buf);
+        FManNode_t *fil = FindInBinTree(buf);
         if (fil != NULL)
             LoadScriptFile(world, fil, false, NULL);
 
@@ -560,7 +562,7 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
     BreakExecute = false;
 }
 
-void AddPuzzleToStateBox(int slot, puzzlenode *pzlnd)
+void AddPuzzleToStateBox(int slot, puzzlenode_t *pzlnd)
 {
     StateBoxEnt_t *ent = StateBox[slot];
 
@@ -577,12 +579,12 @@ void AddPuzzleToStateBox(int slot, puzzlenode *pzlnd)
     }
 }
 
-void FillStateBoxFromList(pzllst *lst)
+void FillStateBoxFromList(pzllst_t *lst)
 {
     StartMList(lst->_list);
     while (!eofMList(lst->_list))
     {
-        puzzlenode *pzlnod = (puzzlenode *)DataMList(lst->_list);
+        puzzlenode_t *pzlnod = (puzzlenode_t *)DataMList(lst->_list);
 
         AddPuzzleToStateBox(pzlnod->slot, pzlnod);
 
@@ -611,9 +613,9 @@ void FillStateBoxFromList(pzllst *lst)
     }
 }
 
-void AddStateBoxToStk(puzzlenode *pzl)
+void AddStateBoxToStk(puzzlenode_t *pzl)
 {
-    pzllst *owner = pzl->owner;
+    pzllst_t *owner = pzl->owner;
     if (owner->stksize < PuzzleStack)
     {
         if (owner->stksize > 0)
@@ -660,14 +662,14 @@ void ShakeStateBox(uint32_t indx)
     }
 }
 
-void ScrSys_ExecPuzzleList(pzllst *lst)
+void ScrSys_ExecPuzzleList(pzllst_t *lst)
 {
     if (lst->exec_times < 2)
     {
         StartMList(lst->_list);
         while (!eofMList(lst->_list))
         {
-            if (Puzzle_try_exec((puzzlenode *)DataMList(lst->_list)) == ACTION_BREAK)
+            if (Puzzle_TryExec((puzzlenode_t *)DataMList(lst->_list)) == ACTION_BREAK)
             {
                 BreakExecute = true;
                 break;
@@ -682,11 +684,11 @@ void ScrSys_ExecPuzzleList(pzllst *lst)
 
         while (i < j)
         {
-            puzzlenode *to_exec = lst->stack[i];
+            puzzlenode_t *to_exec = lst->stack[i];
 
             lst->stack[i] = NULL;
 
-            if (Puzzle_try_exec(to_exec) == ACTION_BREAK)
+            if (Puzzle_TryExec(to_exec) == ACTION_BREAK)
             {
                 BreakExecute = true;
                 break;
@@ -724,7 +726,7 @@ void ScrSys_ProcessActResList()
     StartMList(lst);
     while (!eofMList(lst))
     {
-        struct_action_res *nod = (struct_action_res *)DataMList(lst);
+        action_res_t *nod = (action_res_t *)DataMList(lst);
 
         nod->first_process = true;
 
@@ -780,7 +782,7 @@ void ScrSys_ProcessActResList()
     }
 }
 
-int ScrSys_DeleteNode(struct_action_res *nod)
+int ScrSys_DeleteNode(action_res_t *nod)
 {
     switch (nod->node_type)
     {
@@ -816,20 +818,20 @@ void ScrSys_FlushActResList()
     StartMList(all);
     while (!eofMList(all))
     {
-        ScrSys_DeleteNode((struct_action_res *)DataMList(all));
+        ScrSys_DeleteNode((action_res_t *)DataMList(all));
         NextMList(all);
     }
     FlushMList(all);
 }
 
-void ScrSys_FlushResourcesByOwner(pzllst *owner)
+void ScrSys_FlushResourcesByOwner(pzllst_t *owner)
 {
     MList *all = GetAction_res_List();
 
     StartMList(all);
     while (!eofMList(all))
     {
-        struct_action_res *nod = (struct_action_res *)DataMList(all);
+        action_res_t *nod = (action_res_t *)DataMList(all);
 
         if (nod->owner == owner)
         {
@@ -858,7 +860,7 @@ void ScrSys_FlushResourcesByType(int type)
     StartMList(all);
     while (!eofMList(all))
     {
-        struct_action_res *nod = (struct_action_res *)DataMList(all);
+        action_res_t *nod = (action_res_t *)DataMList(all);
 
         if (nod->node_type == type && nod->first_process == true)
             if (ScrSys_DeleteNode(nod) == NODE_RET_DELETE)
@@ -868,9 +870,9 @@ void ScrSys_FlushResourcesByType(int type)
     }
 }
 
-struct_action_res *ScrSys_CreateActRes(int type)
+action_res_t *ScrSys_CreateActRes(int type)
 {
-    struct_action_res *tmp = NEW(struct_action_res);
+    action_res_t *tmp = NEW(action_res_t);
     tmp->node_type = type;
     return tmp;
 }
@@ -902,7 +904,7 @@ static const struct
 
 void ScrSys_LoadPreferences()
 {
-    FILE *fl = fopen(PREFERENCES_FILE, "rb");
+    FILE *fl = fopen(PreferencesFile, "rb");
     if (!fl) return;
 
     char buffer[128];
@@ -932,10 +934,10 @@ void ScrSys_LoadPreferences()
 
 void ScrSys_SavePreferences()
 {
-    FILE *fl = fopen(PREFERENCES_FILE, "wb");
+    FILE *fl = fopen(PreferencesFile, "wb");
     if (!fl) return;
 
-    fprintf(fl, "[Preferences]\r\n");
+    fprintf(fl, "[%s]\r\n", GetGameTitle());
 
     for (int i = 0; prefs[i].name != NULL; i++)
         fprintf(fl, "%s=%d\r\n", prefs[i].name, GetgVarInt(prefs[i].slot));

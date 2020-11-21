@@ -182,9 +182,8 @@ void FlushMList(MList *lst)
 
 void DeleteCurrent(MList *lst)
 {
-
     if (lst->stkpos != 0)
-        exit(1);
+        Z_PANIC("???");
 
     lst->dontstp = false;
 

@@ -33,8 +33,7 @@ void InitSound()
 {
     if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
     {
-        printf("Unable to init SDL: %s\n", SDL_GetError());
-        exit(1);
+        Z_PANIC("Unable to init SDL: %s\n", SDL_GetError());
     }
 
     Mix_OpenAudio(audio_rate, audio_format, audio_channels, audio_buffers);
@@ -99,13 +98,13 @@ uint32_t GetChanTime(int i)
 
 #define pi180 0.0174
 
-void snd_DeleteNoUniverse(pzllst *owner)
+void snd_DeleteNoUniverse(pzllst_t *owner)
 {
     MList *allres = GetAction_res_List();
     StartMList(allres);
     while (!eofMList(allres))
     {
-        struct_action_res *nod = (struct_action_res *)DataMList(allres);
+        action_res_t *nod = (action_res_t *)DataMList(allres);
         if (nod->node_type == NODE_TYPE_MUSIC)
             if (nod->owner == owner && nod->nodes.node_music->universe == false)
             {
@@ -116,13 +115,13 @@ void snd_DeleteNoUniverse(pzllst *owner)
     }
 }
 
-void snd_DeleteLoopedWavsByOwner(pzllst *owner)
+void snd_DeleteLoopedWavsByOwner(pzllst_t *owner)
 {
     MList *allres = GetAction_res_List();
     StartMList(allres);
     while (!eofMList(allres))
     {
-        struct_action_res *nod = (struct_action_res *)DataMList(allres);
+        action_res_t *nod = (action_res_t *)DataMList(allres);
         if (nod->node_type == NODE_TYPE_MUSIC)
             if (nod->owner == owner && nod->nodes.node_music->looped)
             {
@@ -133,7 +132,7 @@ void snd_DeleteLoopedWavsByOwner(pzllst *owner)
     }
 }
 
-int snd_ProcessWav(struct_action_res *nod)
+int snd_ProcessWav(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_MUSIC)
         return NODE_RET_OK;
@@ -195,7 +194,7 @@ int snd_ProcessWav(struct_action_res *nod)
     return NODE_RET_OK;
 }
 
-int snd_DeleteWav(struct_action_res *nod)
+int snd_DeleteWav(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_MUSIC)
         return NODE_RET_NO;
@@ -223,9 +222,9 @@ int snd_DeleteWav(struct_action_res *nod)
     return NODE_RET_DELETE;
 }
 
-struct_action_res *snd_CreateWavNode()
+action_res_t *snd_CreateWavNode()
 {
-    struct_action_res *tmp;
+    action_res_t *tmp;
     tmp = ScrSys_CreateActRes(NODE_TYPE_MUSIC);
 
     tmp->nodes.node_music = NEW(musicnode_t);
@@ -248,9 +247,9 @@ struct_action_res *snd_CreateWavNode()
 
 /// SoundSync
 
-struct_action_res *snd_CreateSyncNode()
+action_res_t *snd_CreateSyncNode()
 {
-    struct_action_res *tmp;
+    action_res_t *tmp;
     tmp = ScrSys_CreateActRes(NODE_TYPE_SYNCSND);
 
     tmp->nodes.node_sync = NEW(syncnode_t);
@@ -262,7 +261,7 @@ struct_action_res *snd_CreateSyncNode()
     return tmp;
 }
 
-int snd_DeleteSync(struct_action_res *nod)
+int snd_DeleteSync(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_SYNCSND)
         return NODE_RET_NO;
@@ -286,7 +285,7 @@ int snd_DeleteSync(struct_action_res *nod)
     return NODE_RET_DELETE;
 }
 
-int snd_ProcessSync(struct_action_res *nod)
+int snd_ProcessSync(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_SYNCSND)
         return NODE_RET_OK;
@@ -312,21 +311,21 @@ int snd_ProcessSync(struct_action_res *nod)
 }
 
 //// Pantracking
-struct_action_res *snd_CreatePanTrack()
+action_res_t *snd_CreatePanTrack()
 {
-    struct_action_res *tmp;
+    action_res_t *tmp;
     tmp = ScrSys_CreateActRes(NODE_TYPE_PANTRACK);
 
     tmp->nodes.node_pantracking = 0;
     return tmp;
 }
 
-int snd_ProcessPanTrack(struct_action_res *nod)
+int snd_ProcessPanTrack(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_PANTRACK)
         return NODE_RET_OK;
 
-    struct_action_res *tr_nod = getGNode(nod->nodes.node_pantracking);
+    action_res_t *tr_nod = getGNode(nod->nodes.node_pantracking);
     if (tr_nod == NULL)
     {
         snd_DeletePanTrack(nod);
@@ -336,12 +335,12 @@ int snd_ProcessPanTrack(struct_action_res *nod)
     return NODE_RET_OK;
 }
 
-int snd_DeletePanTrack(struct_action_res *nod)
+int snd_DeletePanTrack(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_PANTRACK)
         return NODE_RET_NO;
 
-    struct_action_res *tr_nod = getGNode(nod->nodes.node_pantracking);
+    action_res_t *tr_nod = getGNode(nod->nodes.node_pantracking);
     if (tr_nod != NULL)
         if (tr_nod->node_type == NODE_TYPE_MUSIC)
         {

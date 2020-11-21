@@ -7,7 +7,7 @@
 #define AVI_PLAY 1
 #define AVI_STOP 0
 
-struct avi_strm_hdr
+typedef struct
 {
     uint32_t size;
     uint32_t streamType;
@@ -24,17 +24,17 @@ struct avi_strm_hdr
     uint32_t quality;
     uint32_t sampleSize;
     //Common::Rect frame;
-};
+} avi_strm_hdr_t;
 
-struct vid_idx
+typedef struct
 {
     uint32_t id;
     uint32_t flags;
     uint32_t offset;
     uint32_t size;
-};
+} vid_idx_t;
 
-struct vid_trk
+typedef struct
 {
     uint32_t size;
     uint32_t width;
@@ -47,9 +47,10 @@ struct vid_trk
     uint32_t yPelsPerMeter;
     uint32_t clrUsed;
     uint32_t clrImportant;
-    avi_strm_hdr hdr;
-};
-struct aud_trk
+    avi_strm_hdr_t hdr;
+} vid_trk_t;
+
+typedef struct
 {
     uint16_t tag;
     uint16_t channels;
@@ -57,21 +58,20 @@ struct aud_trk
     uint32_t avgBytesPerSec;
     uint16_t blockAlign;
     uint16_t size;
-    avi_strm_hdr hdr;
-};
+    avi_strm_hdr_t hdr;
+} aud_trk_t;
 
-struct vframes
+typedef struct
 {
     uint32_t fof;
     uint32_t sz;
     bool kfrm;
-};
+} vframes_t;
 
 #define MAX_MOVI 10
 
-struct avi_file
+typedef struct
 {
-
     int8_t status;
     uint32_t stime;
 
@@ -106,9 +106,9 @@ struct avi_file
     uint32_t movi_cnt;
 
     uint32_t idx_cnt;
-    vid_idx *idx;
-    vid_trk *vtrk;
-    aud_trk *atrk;
+    vid_idx_t *idx;
+    vid_trk_t *vtrk;
+    aud_trk_t *atrk;
 
     int32_t pix_fmt;
 
@@ -116,10 +116,10 @@ struct avi_file
 
     void *priv_data;
 
-    vframes *vfrm;
+    vframes_t *vfrm;
     int32_t vfrm_cnt;
 
-    vframes *achunk;
+    vframes_t *achunk;
     int32_t achunk_cnt;
 
     uint32_t lastrnd;
@@ -127,16 +127,16 @@ struct avi_file
     void *buf;
 
     uint8_t translate;
-};
+} avi_file_t;
 
-avi_file *avi_openfile(const char *fle, uint8_t transl = 0);
-void avi_set_dem(avi_file *av, int32_t w, int32_t h);
-int8_t avi_renderframe(avi_file *av, int32_t frm);
-void avi_play(avi_file *av);
-Mix_Chunk *avi_get_audio(avi_file *av);
-void avi_to_surf(avi_file *av, SDL_Surface *srf);
-void avi_stop(avi_file *av);
-void avi_update(avi_file *av);
-void avi_close(avi_file *av);
+avi_file_t *avi_openfile(const char *fle, uint8_t transl = 0);
+void avi_set_dem(avi_file_t *av, int32_t w, int32_t h);
+int8_t avi_renderframe(avi_file_t *av, int32_t frm);
+void avi_play(avi_file_t *av);
+Mix_Chunk *avi_get_audio(avi_file_t *av);
+void avi_to_surf(avi_file_t *av, SDL_Surface *srf);
+void avi_stop(avi_file_t *av);
+void avi_update(avi_file_t *av);
+void avi_close(avi_file_t *av);
 
 #endif // SIMPLE_AVI_H_INCLUDED

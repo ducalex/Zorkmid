@@ -1,14 +1,6 @@
 #ifndef RENDER_H_INCLUDED
 #define RENDER_H_INCLUDED
 
-#include "Subtitles.h"
-
-#ifdef SMPEG_SUPPORT
-#include <smpeg/smpeg.h>
-#endif
-
-#include "avi_duck/simple_avi.h"
-
 extern int GAME_W;
 extern int GAME_H;
 extern int GAME_BPP;
@@ -46,7 +38,7 @@ extern int GAMESCREEN_FLAT_X;
     g = (a >> 4) & 0xF;               \
     b = (a >> 8) & 0xF;
 
-struct struct_SubRect
+typedef struct
 {
     int32_t x;
     int32_t y;
@@ -56,7 +48,7 @@ struct struct_SubRect
     int32_t id;
     int32_t timer;
     bool todelete;
-};
+} subrect_t;
 
 typedef struct
 {
@@ -101,7 +93,7 @@ struct anim_mpg
 struct anim_avi
 {
     SDL_Surface *img;
-    avi_file *av;
+    avi_file_t *av;
     bool pld;
     bool loop;
     int32_t lastfrm;
@@ -153,17 +145,18 @@ void Rend_InitGraphics(bool fullscreen, bool widescreen);
 void Rend_SwitchFullscreen();
 void Rend_SetDelay(int32_t delay);
 SDL_Surface *Rend_GetLocationScreenImage();
-struct_SubRect *Rend_CreateSubRect(int x, int y, int w, int h);
-void Rend_DeleteSubRect(struct_SubRect *erect);
+subrect_t *Rend_CreateSubRect(int x, int y, int w, int h);
+void Rend_DeleteSubRect(subrect_t *erect);
 void Rend_ProcessSubs();
-void Rend_DelaySubDelete(struct_SubRect *sub, int32_t time);
+void Rend_DelaySubDelete(subrect_t *sub, int32_t time);
 SDL_Surface *Rend_GetGameScreen();
 uint32_t Rend_MapScreenRGB(int r, int g, int b);
 void Rend_ScreenFlip();
-struct_action_res *Rend_CreateDistortNode();
-int32_t Rend_ProcessDistortNode(struct_action_res *nod);
-int32_t Rend_DeleteDistortNode(struct_action_res *nod);
-int Rend_DeleteRegion(struct_action_res *nod);
+void Rend_Delay(uint32_t delay_ms);
+action_res_t *Rend_CreateDistortNode();
+int32_t Rend_ProcessDistortNode(action_res_t *nod);
+int32_t Rend_DeleteDistortNode(action_res_t *nod);
+int Rend_DeleteRegion(action_res_t *nod);
 int8_t Rend_GetScreenPart(int32_t *x, int32_t *y, int32_t w, int32_t h, SDL_Surface *dst);
 
 int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s_y, float apml, float waveln, float spd);
@@ -176,15 +169,13 @@ void ConvertImage(SDL_Surface **tmp);
 void DrawImage(SDL_Surface *surf, int16_t x, int16_t y);
 void DrawImageToSurf(SDL_Surface *surf, int16_t x, int16_t y, SDL_Surface *dest);
 void SetColorKey(SDL_Surface *surf, int8_t r, int8_t g, int8_t b);
-anim_surf *LoadAnimImage(const char *file, int32_t mask);
 void DrawAnimImageToSurf(anim_surf *anim, int x, int y, int frame, SDL_Surface *surf);
+anim_surf *LoadAnimImage(const char *file, int32_t mask);
 void FreeAnimImage(anim_surf *anim);
 scaler *CreateScaler(SDL_Surface *src, uint16_t w, uint16_t h);
 void DeleteScaler(scaler *scal);
 void DrawScaler(scaler *scal, int16_t x, int16_t y, SDL_Surface *dst);
 void DrawScalerToScreen(scaler *scal, int16_t x, int16_t y);
-int32_t GetFps();
-void FpsCounter();
 void setGamma(float val);
 float getGamma();
 

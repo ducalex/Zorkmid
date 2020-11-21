@@ -6,7 +6,7 @@
 typedef struct
 {
     const char *key;
-    int (*func)(char *, int, pzllst *);
+    int (*func)(char *, int, pzllst_t *);
 } action_t;
 
 static const action_t actions[] = {
@@ -35,6 +35,7 @@ static const action_t actions[] = {
     {"menu_bar_enable", action_menu_bar_enable},
     {"delay_render", action_delay_render},
     {"ttytext", action_ttytext},
+    {"cursor", action_cursor}, // ?
     {"attenuate", action_attenuate},
     {"pan_track", action_pan_track},
     {"animunload", action_animunload},
@@ -52,9 +53,9 @@ static const action_t actions[] = {
     {NULL, NULL},
 };
 
-pzllst *CreatePzlLst(const char *name)
+pzllst_t *CreatePuzzleList(const char *name)
 {
-    pzllst *tmp = NEW(pzllst);
+    pzllst_t *tmp = NEW(pzllst_t);
     tmp->_list = CreateMList();
     tmp->stksize = 0;
     tmp->exec_times = 0;
@@ -103,7 +104,7 @@ static void Parse_Puzzle_Results_Action(char *str, MList *lst)
     }
 }
 
-int Parse_Puzzle_Flags(puzzlenode *pzl, mfile_t *fl)
+int Parse_Puzzle_Flags(puzzlenode_t *pzl, mfile_t *fl)
 {
     char buf[STRBUFSIZE];
     char *str;
@@ -134,7 +135,7 @@ int Parse_Puzzle_Flags(puzzlenode *pzl, mfile_t *fl)
     return 0;
 }
 
-int Parse_Puzzle_Criteria(puzzlenode *pzl, mfile_t *fl)
+int Parse_Puzzle_Criteria(puzzlenode_t *pzl, mfile_t *fl)
 {
     char buf[STRBUFSIZE];
     char *str;
@@ -210,7 +211,7 @@ int Parse_Puzzle_Criteria(puzzlenode *pzl, mfile_t *fl)
     return 0;
 }
 
-static int Parse_Puzzle_Results(puzzlenode *pzl, mfile_t *fl)
+static int Parse_Puzzle_Results(puzzlenode_t *pzl, mfile_t *fl)
 {
     char buf[STRBUFSIZE];
     char *str;
@@ -239,7 +240,7 @@ static int Parse_Puzzle_Results(puzzlenode *pzl, mfile_t *fl)
     return 0;
 }
 
-int Parse_Puzzle(pzllst *lst, mfile_t *fl, char *ctstr)
+int Puzzle_Parse(pzllst_t *lst, mfile_t *fl, char *ctstr)
 {
     int good = 0;
 
@@ -251,7 +252,7 @@ int Parse_Puzzle(pzllst *lst, mfile_t *fl, char *ctstr)
 
     TRACE_PUZZLE("puzzle:%d Creating object\n", slot);
 
-    puzzlenode *pzl = NEW(puzzlenode);
+    puzzlenode_t *pzl = NEW(puzzlenode_t);
 
     pzl->owner = lst;
     pzl->slot = slot;
@@ -297,12 +298,12 @@ int Parse_Puzzle(pzllst *lst, mfile_t *fl, char *ctstr)
     return good;
 }
 
-void FlushPuzzleList(pzllst *lst)
+void FlushPuzzleList(pzllst_t *lst)
 {
     StartMList(lst->_list);
     while (!eofMList(lst->_list))
     {
-        puzzlenode *nod = (puzzlenode *)DataMList(lst->_list);
+        puzzlenode_t *nod = (puzzlenode_t *)DataMList(lst->_list);
 
         TRACE_PUZZLE("Deleting Puzzle #%d\n", nod->slot);
 
@@ -389,7 +390,7 @@ bool ProcessCriteries(MList *lst)
     return tmp;
 }
 
-bool examine_criterias(puzzlenode *nod)
+bool examine_criterias(puzzlenode_t *nod)
 {
     if (nod->CritList->count == 0)
         return true;
@@ -408,7 +409,7 @@ bool examine_criterias(puzzlenode *nod)
     return false;
 }
 
-int Puzzle_try_exec(puzzlenode *pzlnod) //, pzllst *owner)
+int Puzzle_TryExec(puzzlenode_t *pzlnod) //, pzllst_t *owner)
 {
     if (ScrSys_GetFlag(pzlnod->slot) & FLAG_DISABLED)
         return ACTION_NORMAL;

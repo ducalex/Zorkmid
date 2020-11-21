@@ -51,7 +51,7 @@
 #define SLOT_TURN_OFF_ANIM 71 //NoAnimWhileTurning
 #define SLOT_WIN958 72
 #define SLOT_SHOWERRORDIALOG 73
-#define SLOT_DEBUGCHEATS 74 //if set to 1, we may type GOXXXX while game, and it will be changed location to XXXX \
+#define SLOT_DEBUGCHEATS 74 //if set to 1, we may type GOXXXX while game, and it will be changed location to XXXX
                             //To change - type DBGONOFF
 #define SLOT_JAPANESEFONTS 75
 #define SLOT_BRIGHTNESS 77
@@ -114,30 +114,30 @@
 
 typedef struct
 {
-    puzzlenode *nod[PuzzleStack];
+    puzzlenode_t *nod[PuzzleStack];
     int32_t cnt;
 } StateBoxEnt_t;
 
-struct pzllst
+typedef struct pzllst
 {
     char name[32];
     MList *_list;
-    puzzlenode *stack[PuzzleStack];
+    puzzlenode_t *stack[PuzzleStack];
     int16_t stksize;
     uint8_t exec_times;
-};
+} pzllst_t;
 
-struct struct_action_res
+typedef struct struct_action_res
 {
     int32_t slot;
-    pzllst *owner;
+    pzllst_t *owner;
     int8_t node_type;
     union nodes
     {
         musicnode_t *node_music;
-        animnode *node_anim;
-        animnode *node_animpre;
-        anim_preplay_node *node_animpreplay;
+        animnode_t *node_anim;
+        animnode_t *node_animpre;
+        anim_preplay_node_t *node_animpreplay;
         syncnode_t *node_sync;
         int32_t node_timer;
         ttytext_t *tty_text;
@@ -149,36 +149,36 @@ struct struct_action_res
     } nodes;
     bool need_delete;
     bool first_process;
-};
+} action_res_t;
 
-pzllst *GetUni();
-pzllst *Getworld();
-pzllst *Getroom();
-pzllst *Getview();
+pzllst_t *GetUni();
+pzllst_t *Getworld();
+pzllst_t *Getroom();
+pzllst_t *Getview();
 MList *Getctrl();
 MList *GetAction_res_List();
 
-struct_action_res *getGNode(int32_t indx);
-void setGNode(int32_t indx, struct_action_res *data);
+action_res_t *getGNode(int32_t indx);
+void setGNode(int32_t indx, action_res_t *data);
 
 void InitScriptsEngine();
-void LoadScriptFile(pzllst *lst, FManNode *filename, bool control, MList *controlst);
+void LoadScriptFile(pzllst_t *lst, FManNode_t *filename, bool control, MList *controlst);
 
 void SetgVarInt(int32_t indx, int var);
 int GetgVarInt(int32_t indx);
 void SetDirectgVarInt(uint32_t indx, int var);
 int *GetDirectgVarInt(uint32_t indx);
 
-struct_action_res *ScrSys_CreateActRes(int type);
+action_res_t *ScrSys_CreateActRes(int type);
 void ScrSys_AddToActResList(void *);
 void ScrSys_ProcessActResList();
 void ScrSys_FlushActResList();
-int ScrSys_DeleteNode(struct_action_res *nod);
+int ScrSys_DeleteNode(action_res_t *nod);
 uint8_t ScrSys_GetFlag(uint32_t indx);
 void ScrSys_SetFlag(uint32_t indx, uint8_t newval);
 void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X, bool force_all);
-void ScrSys_ExecPuzzleList(pzllst *lst);
-void ScrSys_FlushResourcesByOwner(pzllst *owner);
+void ScrSys_ExecPuzzleList(pzllst_t *lst);
+void ScrSys_FlushResourcesByOwner(pzllst_t *owner);
 void ScrSys_FlushResourcesByType(int type);
 bool ScrSys_BreakExec();
 void ScrSys_SetBreak();

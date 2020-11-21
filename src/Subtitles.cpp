@@ -1,6 +1,6 @@
 #include "System.h"
 
-static sub_textfile_t *sub_LoadTextFile(FManNode *file)
+static sub_textfile_t *sub_LoadTextFile(FManNode_t *file)
 {
     mfile_t *f = mfopen(file);
     if (!f) return NULL;
@@ -80,7 +80,7 @@ subtitles_t *sub_LoadSubtitles(char *filename)
 
     subtitles_t *tmp;
 
-    FManNode *fil = FindInBinTree(filename);
+    FManNode_t *fil = FindInBinTree(filename);
     if (!fil) return NULL;
 
     tmp = NEW(subtitles_t);
@@ -128,7 +128,7 @@ subtitles_t *sub_LoadSubtitles(char *filename)
             }
             else if (strCMP(str1, "TextFile") == 0)
             {
-                FManNode *fil2 = FindInBinTree(str2);
+                FManNode_t *fil2 = FindInBinTree(str2);
                 if (fil2 == NULL)
                 {
                     free(tmp);
@@ -146,8 +146,7 @@ subtitles_t *sub_LoadSubtitles(char *filename)
                 {
                     if (subscount == 0 || sb > subscount)
                     {
-                        printf("Error in subs %s\n", filename);
-                        exit(-1);
+                        Z_PANIC("Error in subs %s\n", filename);
                     }
                     tmp->subs[tmp->subscount].start = st;
                     tmp->subs[tmp->subscount].stop = en;

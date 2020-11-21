@@ -134,7 +134,7 @@ void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_
     }
 }
 
-Mix_Chunk *Load_ZGI(FManNode *file, char type)
+Mix_Chunk *Load_ZGI(FManNode_t *file, char type)
 {
     int32_t freq;
     int32_t bits;
@@ -202,7 +202,7 @@ Mix_Chunk *Load_ZGI(FManNode *file, char type)
     return Mix_LoadWAV_RW(SDL_RWFromMem(raw_w, size2), 1);
 }
 
-Mix_Chunk *Load_ZNEM(FManNode *file, char type)
+Mix_Chunk *Load_ZNEM(FManNode_t *file, char type)
 {
     int32_t freq;
     int32_t bits;
@@ -287,7 +287,7 @@ Mix_Chunk *loader_LoadChunk(const char *file)
 {
     char buf[4];
 
-    FManNode *mfil = FindInBinTree(file);
+    FManNode_t *mfil = FindInBinTree(file);
 
     const char *fil = NULL;
 
@@ -578,7 +578,7 @@ SDL_Surface *loader_Load_GF_File(const char *file, int8_t transpose, int8_t key,
 {
     char buf[4];
 
-    FManNode *mfil = FindInBinTree(file);
+    FManNode_t *mfil = FindInBinTree(file);
 
     const char *fil = NULL;
 
@@ -835,18 +835,12 @@ static void HRLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
 
 anim_surf *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask)
 {
-#ifdef LOADTRACE
-    printf("loader:\trlf\tTry to load %s with ", file);
-#endif
+    TRACE_LOADER("Load RLF file '%s'\n", file);
 
-    FManNode *fil = FindInBinTree(file);
+    FManNode_t *fil = FindInBinTree(file);
 
     if (fil == NULL)
         return LoadAnimImage(file, mask); //rollback mechanism
-
-#ifdef LOADTRACE
-    printf("RLF-mechanism\n");
-#endif
 
     mfile_t *f = mfopen(fil);
     if (!f)
@@ -880,7 +874,7 @@ anim_surf *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask)
     atmp->info.frames = hd.frames;
     atmp->info.w = mn.width;
     atmp->info.h = mn.height;
-    atmp->img = NEW_ARRAY(PSDL_Surface, atmp->info.frames); //frames * sizeof(SDL_Surface *));
+    atmp->img = NEW_ARRAY(PSDL_Surface, atmp->info.frames);
 
     Frame frm;
     int32_t sz_frame = mn.height * mn.width * 2;
@@ -923,16 +917,13 @@ anim_surf *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask)
 
 void loader_LoadZcr(const char *file, Cursor_t *cur)
 {
-#ifdef LOADTRACE
-    printf("loader:\tzcr\tTry to load %s with ", file);
-#endif
-    FManNode *fl = FindInBinTree(file);
+    TRACE_LOADER("Load ZCR file '%s'\n", file);
+
+    FManNode_t *fl = FindInBinTree(file);
 
     if (fl == NULL)
     {
-#ifdef LOADTRACE
-        printf("fallback-mechanism\n");
-#endif
+        TRACE_LOADER("fallback-mechanism\n");
         char tmp[64];
         strcpy(tmp, file);
         int len = strlen(tmp);
@@ -959,9 +950,6 @@ void loader_LoadZcr(const char *file, Cursor_t *cur)
         fclose(f);
         return;
     }
-#ifdef LOADTRACE
-    printf("ZCR-mechanism\n");
-#endif
 
     mfile_t *f = mfopen(fl);
     if (!f) return;
@@ -1023,7 +1011,7 @@ static MList *zfs_arch_list = NULL;
 
 void loader_openzfs(const char *file, MList *list)
 {
-    printf("Loading ZFS : %s\n", file);
+    TRACE_LOADER("Loading ZFS : %s\n", file);
 
     FILE *fl = fopen(file, "rb");
     if (!fl) return;
@@ -1062,9 +1050,9 @@ void loader_openzfs(const char *file, MList *list)
 
             if (strlen(fil.name) > 0)
             {
-                printf("Adding zfs file : %s\n", fil.name);
+                TRACE_LOADER("Adding zfs file : %s\n", fil.name);
 
-                FManNode *nod = NEW(FManNode);
+                FManNode_t *nod = NEW(FManNode_t);
                 nod->Path = strdup(fil.name);
                 nod->File = nod->Path;
                 nod->zfs = NEW(zfs_file_t);
@@ -1105,7 +1093,7 @@ mfile_t *mfopen_path(const char *file)
     return tmp;
 }
 
-mfile_t *mfopen(FManNode *nod)
+mfile_t *mfopen(FManNode_t *nod)
 {
     if (nod->zfs)
     {
@@ -1134,7 +1122,7 @@ mfile_t *mfopen(FManNode *nod)
     }
 }
 
-int32_t mfsize(FManNode *nod)
+int32_t mfsize(FManNode_t *nod)
 {
     if (nod->zfs)
         return nod->zfs->size;

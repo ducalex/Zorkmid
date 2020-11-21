@@ -20,12 +20,12 @@ typedef struct
     uint32_t j;
 } adpcm_context_t;
 
-struct FManNode
+typedef struct
 {
     char *File;
     char *Path;
     zfs_file_t *zfs;
-};
+} FManNode_t;
 
 typedef struct
 {
@@ -35,8 +35,8 @@ typedef struct
 } mfile_t;
 
 mfile_t *mfopen_path(const char *file);
-mfile_t *mfopen(FManNode *nod);
-int32_t mfsize(FManNode *nod);
+mfile_t *mfopen(FManNode_t *nod);
+int32_t mfsize(FManNode_t *nod);
 void mfclose(mfile_t *fil);
 bool mfeof(mfile_t *fil);
 bool mfread(void *buf, int32_t bytes, mfile_t *file);

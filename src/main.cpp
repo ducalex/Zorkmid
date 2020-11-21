@@ -2,11 +2,9 @@
 
 int main(int argc, char **argv)
 {
-    char buf[512];
-    char buf2[512];
     bool fullscreen = false;
     bool widescreen = true;
-    const char *pa = "./";
+    const char *path = "./";
 
     for (int i = 1; i < argc; i++)
     {
@@ -28,13 +26,13 @@ int main(int argc, char **argv)
         }
         else
         {
-            pa = argv[i];
+            path = argv[i];
         }
     }
 
     Rend_InitGraphics(fullscreen, widescreen);
     InitSound();
-    InitFileManager(pa);
+    InitFileManager(path);
     Mouse_LoadCursors();
     menu_LoadGraphics();
     InitVkKeys();

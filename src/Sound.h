@@ -46,19 +46,19 @@ typedef struct
     subtitles_t *sub;
 } syncnode_t;
 
-void snd_DeleteLoopedWavsByOwner(pzllst *owner);
-void snd_DeleteNoUniverse(pzllst *owner);
+void snd_DeleteLoopedWavsByOwner(pzllst_t *owner);
+void snd_DeleteNoUniverse(pzllst_t *owner);
 
-struct_action_res *snd_CreateWavNode();
-int snd_ProcessWav(struct_action_res *nod);
-int snd_DeleteWav(struct_action_res *nod);
+action_res_t *snd_CreateWavNode();
+int snd_ProcessWav(action_res_t *nod);
+int snd_DeleteWav(action_res_t *nod);
 
-struct_action_res *snd_CreateSyncNode();
-int snd_ProcessSync(struct_action_res *nod);
-int snd_DeleteSync(struct_action_res *nod);
+action_res_t *snd_CreateSyncNode();
+int snd_ProcessSync(action_res_t *nod);
+int snd_DeleteSync(action_res_t *nod);
 
-struct_action_res *snd_CreatePanTrack();
-int snd_ProcessPanTrack(struct_action_res *nod);
-int snd_DeletePanTrack(struct_action_res *nod);
+action_res_t *snd_CreatePanTrack();
+int snd_ProcessPanTrack(action_res_t *nod);
+int snd_DeletePanTrack(action_res_t *nod);
 
 #endif // SOUND_H_INCLUDED

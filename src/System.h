@@ -5,10 +5,14 @@
 #define CUR_GAME GAME_ZGI
 // extern int CUR_GAME;
 
+#define TRACE_ACTION()  printf("[ACTION] %s(%s)\n", __func__, params);
+//#define TRACE_ACTION()
+#define TRACE_LOADER(x...)  printf("[LOADER] " x);
+//#define TRACE_LOADER(x...)
+
 //if you plan to build engine with smpeg support
 //#define SMPEG_SUPPORT
 
-#define PREFERENCES_FILE (CUR_GAME == GAME_ZGI ? "INQUIS.INI" : "NEMESIS.INI")
 #define SYS_STRINGS_FILE (CUR_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR")
 #define CTRL_SAVE_FILE   (CUR_GAME == GAME_ZGI ? "inquis.sav" : "nemesis.sav")
 #define CTRL_SAVE_SAVES  (CUR_GAME == GAME_ZGI ? "inqsav%d.sav" : "nemsav%d.sav")
@@ -67,66 +71,30 @@
 #define InitNode 'r'
 #define InitView 'y'
 
-// Default files if Zork.dir not found
-#define ZORK_DIR_ZGI {"ADDON", "taunts", "ZASSETS1/GLOBAL", "ZASSETS1/CASTLE", "ZASSETS1/GRIFFQST", \
-                  "ZASSETS1/JAIL", "ZASSETS1/LUCYQST", "ZASSETS1/MONAST1", "ZASSETS1/PORTFOOZ", \
-                  "ZASSETS1/UNDERG1", "ZASSETS2/GLOBAL", "ZASSETS2/DMLAIR", "ZASSETS2/GRUEQST", \
-                  "ZASSETS2/GUETECH", "ZASSETS2/HADES", "ZASSETS2/MONAST2", "ZASSETS2/UNDERG2", \
-                  "ZGI/ZGI_MX", "ZGI/ZGI_MX/MINMAX", "zgi_mx", "CURSOR.ZFS", "SCRIPTS.ZFS", \
-                  "DEATH.ZFS", "SUBTITLE.ZFS"}
-
-// Default files if Zork.dir not found
-#define ZORK_DIR_NEM {"Addon", "Addon/subpatch.zfs", "ZNEMMX", "ZNEMSCR", "ZNEMSCR/GSCR.ZFS", \
-                  "ZNEMSCR/TSCR.ZFS", "ZNEMSCR/MSCR.ZFS", "ZNEMSCR/VSCR.ZFS", "ZNEMSCR/ASCR.ZFS", \
-                  "ZNEMSCR/CSCR.ZFS", "ZNEMSCR/ESCR.ZFS", "ZNEMSCR/CURSOR.ZFS", "DATA1/ZASSETS", \
-                  "DATA1/ZASSETS/GLOBAL", "DATA1/ZASSETS/GLOBAL/VENUS", "DATA3/ZASSETS/TEMPLE", \
-                  "DATA1/ZASSETS/TEMPLE", "DATA2/ZASSETS", "DATA2/ZASSETS/GLOBAL2", \
-                  "DATA2/ZASSETS/CONSERV", "DATA2/ZASSETS/MONAST", "DATA3/ZASSETS/GLOBAL3", \
-                  "DATA3/ZASSETS/ASYLUM", "DATA3/ZASSETS/CASTLE", "DATA3/ZASSETS/ENDGAME" }
-
 #define NEW(type) (type*)calloc(1, sizeof(type))
 #define NEW_ARRAY(type, n) (type*)calloc((n), sizeof(type))
 
-//System time functions
-#define millisec SDL_GetTicks
-
-#define SDL_TTF_NUM_VERSION (SDL_TTF_MAJOR_VERSION * 10000 + SDL_TTF_MINOR_VERSION * 100 + SDL_TTF_PATCHLEVEL)
+#define Z_PANIC(x...) { \
+    printf("[PANIC] IN FUNCTION %s\n", __func__); \
+    printf(x);    \
+    exit(-1);      \
+}
 
 #ifdef WIN32
-static char *strcasestr(const char *h, const char *n)
-{ /* h="haystack", n="needle" */
-    const char *a = h, *e = n;
-
-    if (!h || !*h || !n || !*n)
-    {
-        return 0;
-    }
-    while (*a && *e)
-    {
-        if ((toupper(((unsigned char)(*a)))) != (toupper(((unsigned char)(*e)))))
-        {
-            ++h;
-            a = h;
-            e = n;
-        }
-        else
-        {
-            ++a;
-            ++e;
-        }
-    }
-    return (char *)(*e ? 0 : h);
-}
+char *strcasestr(const char *h, const char *n);
 #endif
 
-struct puzzlenode;
-struct pzllst;
-struct anim_preplay_node;
-struct animnode;
-struct struct_action_res;
-struct struct_SubRect;
-struct FManNode;
-struct ctrlnode;
+#ifdef SMPEG_SUPPORT
+#include <smpeg/smpeg.h>
+#endif
+
+#include "avi_duck/simple_avi.h"
+
+typedef struct anim_preplay_node anim_preplay_node_t;
+typedef struct struct_action_res action_res_t;
+typedef struct pzllst pzllst_t;
+typedef struct ctrlnode ctrlnode_t;
+typedef struct animnode animnode_t;
 
 #include "mylist.h"
 #include "Render.h"
@@ -145,9 +113,11 @@ struct ctrlnode;
 #include "Game.h"
 
 //Game timer functions
-void InitMTime(float fps);
-void ProcMTime();
+void TimerInit(float fps);
+void TimerTick();
+int32_t GetFps();
 bool GetBeat();
+void Delay(uint32_t ms);
 
 //Keyboard functions
 void FlushKeybKey(SDLKey key);
@@ -166,8 +136,6 @@ void FlushMouseBtn(int btn);
 void SetHit(SDLKey key);
 bool KeyHit(SDLKey key);
 
-void LoadFiles(const char *dir);
-
 void InitVkKeys();
 uint8_t GetWinKey(SDLKey key);
 SDLKey GetLastKey();
@@ -176,15 +144,16 @@ void InitFileManager(const char *dir);
 const char *GetFilePath(const char *chr);
 const char *GetExactFilePath(const char *chr);
 TTF_Font *GetFontByName(char *name, int size);
+const char *GetSystemString(int32_t indx);
 
 int GetKeyBuffered(int indx);
 bool CheckKeyboardMessage(const char *msg, int len);
 
+void FindAssets(const char *dir);
 bool isDirectory(const char *);
 bool FileExist(const char *);
 int32_t FileSize(const char *);
 
-void UpdateDTime();
 uint32_t GetDTime();
 
 char *PrepareString(char *buf);
@@ -195,12 +164,13 @@ int GetIntVal(char *chr);
 
 #define strCMP(X, Y) strncasecmp(X, Y, strlen(Y))
 
-void AddToBinTree(FManNode *nod);
-FManNode *FindInBinTree(const char *chr);
+void AddToBinTree(FManNode_t *nod);
+FManNode_t *FindInBinTree(const char *chr);
 
 double round(double r);
 
 void SetGamePath(const char *pth);
 const char *GetGamePath();
+const char *GetGameTitle();
 
 #endif // SYSTEM_H_INCLUDED

@@ -5,20 +5,20 @@
 #define CURSOR_UP_STATE 0
 #define CURSOR_DW_STATE 1
 
-static const char *(CurNames[]) = {
+static const char *CurNames[] = {
     "active", "arrow", "backward", "downarrow", "forward", "handpt",
     "handpu", "hdown", "hleft", "hright", "hup", "idle", "leftarrow",
     "rightarrow", "suggest_surround", "suggest_tilt", "turnaround",
     "zuparrow"
 };
 
-static const char *(CurFiles_zgi[]) = {
+static const char *CurFiles_zgi[] = {
     "g0gbc011.zcr", "g0gac001.zcr", "g0gac021.zcr", "g0gac031.zcr", "g0gac041.zcr", "g0gac051.zcr",
     "g0gac061.zcr", "g0gac071.zcr", "g0gac081.zcr", "g0gac091.zcr", "g0gac101.zcr", "g0gac011.zcr",
     "g0gac111.zcr", "g0gac121.zcr", "g0gac131.zcr", "g0gac141.zcr", "g0gac151.zcr", "g0gac161.zcr"
 };
 
-static const char *(CurFiles_znemesis[]) = {
+static const char *CurFiles_znemesis[] = {
     "00act", "arrow", "back", "down", "forw", "handpt", "handpu", "hdown", "hleft",
     "hright", "hup", "00idle", "left", "right", "ssurr", "stilt", "turn", "up"
 };

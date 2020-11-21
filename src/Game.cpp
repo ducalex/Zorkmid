@@ -3,57 +3,6 @@
 static Location_t Need_Locate;
 static bool NeedToLoadScript = false;
 static int8_t NeedToLoadScriptDelay = CHANGELOCATIONDELAY;
-static char *SystemStrings[SYSTEM_STRINGS_NUM];
-
-const char *GetGameTitle()
-{
-    switch (CUR_GAME) {
-        case GAME_ZGI: return "Zork: Grand Inquisitor";
-        case GAME_NEM: return "Zork: Nemesis";
-        default: "Unknown";
-    }
-}
-
-static void LoadSystemStrings(void)
-{
-    char filename[PATHBUFSIZ];
-    sprintf(filename, "%s/%s", GetGamePath(), SYS_STRINGS_FILE);
-
-    memset(SystemStrings, 0, sizeof(SystemStrings));
-
-    mfile_t *fl = mfopen_path(filename);
-
-    if (fl == NULL)
-    {
-        printf("File %s not found\n", filename);
-        exit(-1);
-    }
-
-    m_wide_to_utf8(fl);
-
-    int32_t ii = 0;
-
-    char buf[STRBUFSIZE];
-
-    while (!mfeof(fl))
-    {
-        mfgets(buf, STRBUFSIZE, fl);
-        if (ii < SYSTEM_STRINGS_NUM)
-        {
-            SystemStrings[ii] = strdup(TrimRight(buf));
-        }
-        ii++;
-    }
-
-    mfclose(fl);
-}
-
-char *GetSystemString(int32_t indx)
-{
-    if (indx < SYSTEM_STRINGS_NUM)
-        return SystemStrings[indx];
-    return NULL;
-}
 
 void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X)
 {
@@ -93,7 +42,7 @@ void GameInit()
 
     ScrSys_ChangeLocation(InitWorld, InitRoom, InitNode, InitView, 0, true);
 
-    LoadSystemStrings();
+    TimerInit(35.0);
 
     //Hack
     SetDirectgVarInt(SLOT_LASTWORLD, InitWorld);
@@ -110,8 +59,6 @@ void GameInit()
         SetDirectgVarInt(SLOT_KBD_ROTATE_SPEED, 60);
 
     //\Hack
-
-    InitMTime(35.0);
 }
 
 void EasterEggsAndDebug()
@@ -337,25 +284,18 @@ void GameQuit()
 
 void GameUpdate()
 {
-    ProcMTime();
-    UpdateDTime();
-
-    // message processing loop
     SDL_Event event;
 
-    //Clear all hits
+    TimerTick();
     FlushHits();
+
     while (SDL_PollEvent(&event))
     {
-        // check for messages
         switch (event.type)
         {
-            // exit if the window is closed
         case SDL_QUIT:
             GameQuit();
             break;
-
-            // check for keyhit's (one per press)
         case SDL_KEYDOWN:
             SetHit(event.key.keysym.sym);
             break;
@@ -363,7 +303,6 @@ void GameUpdate()
     }
 
     UpdateKeyboard();
-    FpsCounter();
 
     if ((KeyDown(SDLK_RALT) || KeyDown(SDLK_LALT)) && KeyHit(SDLK_RETURN))
         Rend_SwitchFullscreen();
@@ -371,7 +310,7 @@ void GameUpdate()
 
 void game_timed_message(int32_t milsecs, const char *str)
 {
-    struct_SubRect *zzz = Rend_CreateSubRect(SUB_DEF_RECT);
+    subrect_t *zzz = Rend_CreateSubRect(SUB_DEF_RECT);
     txt_DrawTxtInOneLine(str, zzz->img);
     Rend_DelaySubDelete(zzz, milsecs);
 }
@@ -381,19 +320,19 @@ void game_timed_debug_message(int32_t milsecs, const char *str)
     int32_t tmp_up = 40;
     if (tmp_up < GAMESCREEN_Y)
         tmp_up = GAMESCREEN_Y;
-    struct_SubRect *zzz = Rend_CreateSubRect(0, 0, GAMESCREEN_W, tmp_up);
+    subrect_t *zzz = Rend_CreateSubRect(0, 0, GAMESCREEN_W, tmp_up);
     txt_DrawTxtInOneLine(str, zzz->img);
     Rend_DelaySubDelete(zzz, milsecs);
 }
 
 void game_delay_message(int32_t milsecs, const char *str)
 {
-    struct_SubRect *zzz = Rend_CreateSubRect(SUB_DEF_RECT);
+    subrect_t *zzz = Rend_CreateSubRect(SUB_DEF_RECT);
     txt_DrawTxtInOneLine(str, zzz->img);
     Rend_RenderFunc();
     Rend_ScreenFlip();
 
-    int32_t cur_time = millisec();
+    int32_t cur_time = SDL_GetTicks();
     int32_t nexttime = cur_time + milsecs;
 
     FlushKeybKey(SDLK_RETURN);
@@ -403,10 +342,10 @@ void game_delay_message(int32_t milsecs, const char *str)
     while (!KeyDown(SDLK_SPACE) && !KeyDown(SDLK_RETURN) && !KeyDown(SDLK_ESCAPE) && nexttime > cur_time)
     {
         GameUpdate();
-        cur_time = millisec();
+        cur_time = SDL_GetTicks();
         Rend_RenderFunc();
         Rend_ScreenFlip();
-        SDL_Delay(5);
+        Rend_Delay(5);
     }
 
     Rend_DeleteSubRect(zzz);
@@ -414,7 +353,7 @@ void game_delay_message(int32_t milsecs, const char *str)
 
 bool game_question_message(const char *str)
 {
-    struct_SubRect *zzz = Rend_CreateSubRect(SUB_DEF_RECT);
+    subrect_t *zzz = Rend_CreateSubRect(SUB_DEF_RECT);
     txt_DrawTxtInOneLine(str, zzz->img);
     Rend_RenderFunc();
     Rend_ScreenFlip();
@@ -428,7 +367,7 @@ bool game_question_message(const char *str)
         GameUpdate();
         Rend_RenderFunc();
         Rend_ScreenFlip();
-        SDL_Delay(5);
+        Rend_Delay(5);
     }
 
     Rend_DeleteSubRect(zzz);

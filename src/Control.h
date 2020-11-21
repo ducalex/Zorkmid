@@ -101,7 +101,7 @@ typedef struct
 {
     bool forsaving;
     int32_t inputslot[MAX_SAVES];
-    ctrlnode *input_nodes[MAX_SAVES];
+    ctrlnode_t *input_nodes[MAX_SAVES];
     char Names[MAX_SAVES][SAVE_NAME_MAX_LEN + 1];
 } saveloadnode_t;
 
@@ -114,7 +114,7 @@ typedef struct
     Rect_t AnimCoords;
     int16_t frames;
     int16_t startpos;
-    animnode *anm;
+    animnode_t *anm;
     int16_t curfrm;
     int16_t rendfrm;
     struct hotspots
@@ -147,7 +147,7 @@ typedef struct
 {
     int16_t num_states;
     int16_t cur_state;
-    animnode *anm;
+    animnode_t *anm;
     int32_t center_x;
     int32_t center_y;
     Rect_t rectangle;
@@ -213,7 +213,7 @@ typedef struct
         int32_t sound;
     } entries[CTRL_FIST_MAX_ENTRS];
 
-    animnode *anm;
+    animnode_t *anm;
     Rect_t anm_rect;
     int32_t soundkey;
     int32_t frame_cur;
@@ -231,11 +231,11 @@ typedef struct
     int32_t cycle;
     int32_t num_cycles;
     Rect_t *frame_list;
-    animnode *anm;
+    animnode_t *anm;
     Rect_t rect;
 } hotmvnode_t;
 
-struct ctrlnode
+typedef struct ctrlnode
 {
     int32_t slot;
     int8_t type;
@@ -255,13 +255,13 @@ struct ctrlnode
 
         void *unknown;
     } node;
-    void (*func)(ctrlnode *);
-};
+    void (*func)(ctrlnode_t *);
+} ctrlnode_t;
 
 int Parse_Control(MList *controlst, mfile_t *fl, char *ctstr);
 void ProcessControls(MList *ctrlst);
 void Ctrl_DrawControls();
 void FlushControlList(MList *lst);
-ctrlnode *GetControlByID(int32_t id);
+ctrlnode_t *GetControlByID(int32_t id);
 
 #endif // CONTROL_H_INCLUDED
