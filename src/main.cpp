@@ -5,6 +5,7 @@ int main(int argc, char **argv)
     char buf[512];
     char buf2[512];
     bool fullscreen = false;
+    bool widescreen = true;
     const char *pa = "./";
 
     for (int i = 1; i < argc; i++)
@@ -12,6 +13,10 @@ int main(int argc, char **argv)
         if (strcasecmp(argv[i], "-f") == 0)
         {
             fullscreen = true;
+        }
+        else if (strcasecmp(argv[i], "-nocrop") == 0)
+        {
+            widescreen = false;
         }
         else if (strcasecmp(argv[i], "-zgi") == 0)
         {
@@ -27,7 +32,7 @@ int main(int argc, char **argv)
         }
     }
 
-    Rend_InitGraphics(fullscreen);
+    Rend_InitGraphics(fullscreen, widescreen);
     InitSound();
     InitFileManager(pa);
     Mouse_LoadCursors();

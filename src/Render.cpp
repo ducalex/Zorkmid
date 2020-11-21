@@ -272,31 +272,29 @@ void Rend_pana_SetTable()
     Rend_indexer();
 }
 
-void Rend_InitGraphics(bool fullscreen)
+void Rend_InitGraphics(bool fullscreen, bool widescreen)
 {
     // To do : Use a nice struct instead
+    GAME_W = 640;
+    GAME_H = 480;
+    GAME_BPP = 32;
+
     if (CUR_GAME == GAME_ZGI)
     {
-        GAME_W = 640;
-        GAME_H = 480;
-        GAME_BPP = 32;
         GAMESCREEN_W = 640;
         GAMESCREEN_P = 60;
         GAMESCREEN_H = 344;
         GAMESCREEN_X = 0;
         GAMESCREEN_Y = 68;
         GAMESCREEN_FLAT_X = 0;
-        #ifdef WIDESCREEN
-        GAME_W = 854;
-        GAMESCREEN_W = 854;
-        GAMESCREEN_FLAT_X = 107;
-        #endif
+        if (widescreen) {
+            GAME_W = 854;
+            GAMESCREEN_W = 854;
+            GAMESCREEN_FLAT_X = 107;
+        }
     }
     else
     {
-        GAME_W = 640;
-        GAME_H = 480;
-        GAME_BPP = 32;
         GAMESCREEN_W = 512;
         GAMESCREEN_P = 60;
         GAMESCREEN_H = 320;
@@ -314,7 +312,7 @@ void Rend_InitGraphics(bool fullscreen)
     if (fullscreen)
         screen = SDL_SetVideoMode(GAME_W, GAME_H, GAME_BPP, SFTYPE | SDL_FULLSCREEN);
     else
-        screen = SDL_SetVideoMode(GAME_W, GAME_H, GAME_BPP, SFTYPE);
+        screen = SDL_SetVideoMode(GAME_W, GAME_H, GAME_BPP, SFTYPE | SDL_RESIZABLE);
 
     char buffer[128];
     sprintf(buffer, "Zorkmid: %s [build: " __DATE__ " " __TIME__ "]", GetGameTitle());

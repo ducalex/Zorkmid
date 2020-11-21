@@ -149,7 +149,7 @@ void Rend_PanaMouseInteract();
 void Rend_MouseInteractOfRender();
 void Rend_tilt_MouseInteract();
 void Rend_RenderFunc();
-void Rend_InitGraphics(bool fullscreen);
+void Rend_InitGraphics(bool fullscreen, bool widescreen);
 void Rend_SwitchFullscreen();
 void Rend_SetDelay(int32_t delay);
 SDL_Surface *Rend_GetLocationScreenImage();
