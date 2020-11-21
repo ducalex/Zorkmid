@@ -1,5 +1,57 @@
 #include "System.h"
 
+// #define TRACE_PUZZLE(x...) printf(x)
+#define TRACE_PUZZLE(x...)
+
+typedef struct
+{
+    const char *key;
+    int (*func)(char *, int, pzllst *);
+} action_t;
+
+static const action_t actions[] = {
+    {"set_screen", action_set_screen},
+    {"debug", action_debug},
+    {"assign", action_assign},
+    {"timer", action_timer},
+    {"set_partial_screen", action_set_partial_screen},
+    {"change_location", action_change_location},
+    {"dissolve", action_dissolve},
+    {"disable_control", action_disable_control},
+    {"enable_control", action_enable_control},
+    {"add", action_add},
+    {"random", action_random},
+    {"animplay", action_animplay},
+    {"universe_music", action_universe_music},
+    {"music", action_music},
+    {"kill", action_kill},
+    {"stop", action_stop},
+    {"inventory", action_inventory},
+    {"crossfade", action_crossfade},
+    {"streamvideo", action_streamvideo},
+    {"animpreload", action_animpreload},
+    {"playpreload", action_playpreload},
+    {"syncsound", action_syncsound},
+    {"menu_bar_enable", action_menu_bar_enable},
+    {"delay_render", action_delay_render},
+    {"ttytext", action_ttytext},
+    {"attenuate", action_attenuate},
+    {"pan_track", action_pan_track},
+    {"animunload", action_animunload},
+    {"flush_mouse_events", action_flush_mouse_events},
+    {"save_game", action_save_game},
+    {"restore_game", action_restore_game},
+    {"quit", action_quit},
+    {"rotate_to", action_rotate_to},
+    {"distort", action_distort},
+    {"preferences", action_preferences},
+    {"region", action_region},
+    {"display_message", action_display_message},
+    {"set_venus", action_set_venus},
+    {"disable_venus", action_disable_venus},
+    {NULL, NULL},
+};
+
 pzllst *CreatePzlLst()
 {
     pzllst *tmp = NEW(pzllst);
@@ -9,21 +61,16 @@ pzllst *CreatePzlLst()
     return tmp;
 }
 
-void Parse_Puzzle_Results_Action(char *instr, MList *lst)
+void Parse_Puzzle_Results_Action(char *str, MList *lst)
 {
     char buf[255];
-    func_node_t *nod;
     const char *params = " ";
-
-    char *str = instr;
     int slot = 0;
+    int len = strlen(str);
 
     memset(buf, 0, 255);
 
-    int end_s = strlen(str);
-    // printf("%s\n",str);
-
-    for (int i = 0; i < end_s; i++)
+    for (int i = 0; i < len; i++)
     {
         if (str[i] != '(' && str[i] != 0x20 && str[i] != 0x09 && str[i] != '#' && str[i] != 0x00 && str[i] != ':')
             buf[i] = str[i];
@@ -31,467 +78,25 @@ void Parse_Puzzle_Results_Action(char *instr, MList *lst)
         {
             if (str[i] == ':')
                 slot = atoi(str + i + 1);
-
             params = GetParams(str + i);
-
-            end_s = i;
             break;
         }
     }
 
-    if (strCMP(buf, "set_screen") == 0)
+    const action_t *action = &actions[0];
+
+    while (action->key != NULL)
     {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_set_screen;
-        return;
-    }
-
-    if (strCMP(buf, "debug") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_debug;
-        return;
-    }
-
-    if (strCMP(buf, "assign") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_assign;
-        return;
-    }
-    if (strCMP(buf, "timer") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_timer;
-        return;
-    }
-    if (strCMP(buf, "set_partial_screen") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_set_partial_screen;
-        return;
-    }
-
-    if (strCMP(buf, "change_location") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_change_location;
-        return;
-    }
-
-    if (strCMP(buf, "dissolve") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_dissolve;
-        return;
-    }
-
-    if (strCMP(buf, "disable_control") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_disable_control;
-        return;
-    }
-    if (strCMP(buf, "enable_control") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_enable_control;
-        return;
-    }
-    if (strCMP(buf, "add") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_add;
-        return;
-    }
-    if (strCMP(buf, "random") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_random;
-        return;
-    }
-    if (strCMP(buf, "animplay") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_animplay;
-        return;
-    }
-    if (strCMP(buf, "universe_music") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_universe_music;
-        return;
-    }
-    if (strCMP(buf, "music") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_music;
-        return;
-    }
-
-    if (strCMP(buf, "kill") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_kill;
-        return;
-    }
-
-    if (strCMP(buf, "stop") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_stop;
-        return;
-    }
-
-    if (strCMP(buf, "inventory") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_inventory;
-        return;
-    }
-
-    if (strCMP(buf, "crossfade") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_crossfade;
-        return;
-    }
-
-    if (strCMP(buf, "streamvideo") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_streamvideo;
-        return;
-    }
-
-    if (strCMP(buf, "animpreload") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_animpreload;
-        return;
-    }
-    if (strCMP(buf, "playpreload") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_playpreload;
-        return;
-    }
-    if (strCMP(buf, "syncsound") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_syncsound;
-        return;
-    }
-
-    if (strCMP(buf, "menu_bar_enable") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_menu_bar_enable;
-        return;
-    }
-
-    if (strCMP(buf, "delay_render") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_delay_render;
-        return;
-    }
-
-    if (strCMP(buf, "ttytext") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_ttytext;
-        return;
-    }
-
-    if (strCMP(buf, "attenuate") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_attenuate;
-        return;
-    }
-
-    if (strCMP(buf, "pan_track") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_pan_track;
-        return;
-    }
-
-    if (strCMP(buf, "animunload") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_animunload;
-        return;
-    }
-
-    if (strCMP(buf, "flush_mouse_events") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_flush_mouse_events;
-        return;
-    }
-
-    if (strCMP(buf, "save_game") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_save_game;
-        return;
-    }
-
-    if (strCMP(buf, "restore_game") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_restore_game;
-        return;
-    }
-
-    if (strCMP(buf, "quit") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_quit;
-        return;
-    }
-
-    if (strCMP(buf, "rotate_to") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_rotate_to;
-        return;
-    }
-
-    if (strCMP(buf, "distort") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_distort;
-        return;
-    }
-
-    if (strCMP(buf, "preferences") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_preferences;
-        return;
-    }
-
-    if (strCMP(buf, "region") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_region;
-        return;
-    }
-    if (strCMP(buf, "display_message") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_display_message;
-        return;
-    }
-    if (strCMP(buf, "set_venus") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_set_venus;
-        return;
-    }
-    if (strCMP(buf, "disable_venus") == 0)
-    {
-        nod = NEW(func_node_t);
-        AddToMList(lst, nod);
-
-        nod->param = strdup(params);
-        nod->slot = slot;
-
-        nod->func = action_disable_venus;
-        return;
+        if (strCMP(buf, action->key) == 0)
+        {
+            func_node_t *nod = NEW(func_node_t);
+            AddToMList(lst, nod);
+            nod->param = strdup(params);
+            nod->slot = slot;
+            nod->func = action->func;
+            return;
+        }
+        action++;
     }
 }
 
@@ -647,9 +252,7 @@ int Parse_Puzzle(pzllst *lst, mfile_t *fl, char *ctstr)
     uint32_t slot;
     sscanf(ctstr, "puzzle:%d", &slot); //read slot number;
 
-#ifdef FULLTRACE
-    printf("puzzle:%d Creating object\n", slot);
-#endif
+    TRACE_PUZZLE("puzzle:%d Creating object\n", slot);
 
     puzzlenode *pzl = NEW(puzzlenode);
 
@@ -672,23 +275,17 @@ int Parse_Puzzle(pzllst *lst, mfile_t *fl, char *ctstr)
         }
         else if (strCMP(str, "criteria") == 0) //PARSE CRITERIA
         {
-#ifdef FULLTRACE
-            printf("Creating criteria\n");
-#endif
+            TRACE_PUZZLE("Creating criteria\n");
             Parse_Puzzle_Criteria(pzl, fl);
         }
         else if (strCMP(str, "results") == 0) //RESULTS
         {
-#ifdef FULLTRACE
-            printf("Creating results\n");
-#endif
+            TRACE_PUZZLE("Creating results\n");
             Parse_Puzzle_Results(pzl, fl);
         }
         else if (strCMP(str, "flags") == 0) // FLAGS
         {
-#ifdef FULLTRACE
-            printf("Reading flags\n");
-#endif
+            TRACE_PUZZLE("Reading flags\n");
             Parse_Puzzle_Flags(pzl, fl);
         }
     }
@@ -696,59 +293,11 @@ int Parse_Puzzle(pzllst *lst, mfile_t *fl, char *ctstr)
     if ((ScrSys_GetFlag(pzl->slot) & FLAG_ONCE_PER_I))
         SetgVarInt(slot, 0);
 
-    if (good == 1) //All ok? then, adds this puzzle to list
+    if (good) //All ok? then, adds this puzzle to list
         AddToMList(lst->_list, pzl);
+    // else we should cleanup to avoid memleaks...
 
     return good;
-}
-
-void DeletePuzzleList(pzllst *lst)
-{
-    StartMList(lst->_list);
-    while (!eofMList(lst->_list))
-    {
-        puzzlenode *nod = (puzzlenode *)DataMList(lst->_list);
-
-#ifdef FULLTRACE
-        printf("Deleting Puzzle #%d\n", nod->slot);
-#endif
-
-        StartMList(nod->CritList);
-        while (!eofMList(nod->CritList))
-        {
-
-            MList *criteries = (MList *)DataMList(nod->CritList);
-
-            StartMList(criteries);
-            while (!eofMList(criteries))
-            {
-                free(DataMList(criteries));
-                NextMList(criteries);
-            }
-            DeleteMList(criteries);
-
-            NextMList(nod->CritList);
-        }
-        DeleteMList(nod->CritList);
-
-        StartMList(nod->ResList);
-        while (!eofMList(nod->ResList))
-        {
-            func_node_t *fun = (func_node_t *)DataMList(nod->ResList);
-            if (fun->param != NULL)
-                free(fun->param);
-            free(fun);
-            NextMList(nod->ResList);
-        }
-        DeleteMList(nod->ResList);
-
-        free(nod);
-
-        NextMList(lst->_list);
-    }
-
-    DeleteMList(lst->_list);
-    free(lst);
 }
 
 void FlushPuzzleList(pzllst *lst)
@@ -758,9 +307,7 @@ void FlushPuzzleList(pzllst *lst)
     {
         puzzlenode *nod = (puzzlenode *)DataMList(lst->_list);
 
-#ifdef FULLTRACE
-        printf("Deleting Puzzle #%d\n", nod->slot);
-#endif
+        TRACE_PUZZLE("Deleting Puzzle #%d\n", nod->slot);
 
         StartMList(nod->CritList);
         while (!eofMList(nod->CritList))
@@ -810,9 +357,9 @@ bool ProcessCriteries(MList *lst)
     while (!eofMList(lst))
     {
         crit_node_t *critnd = (crit_node_t *)DataMList(lst);
-#ifdef FULLTRACE
-        printf("        [%d] %d [%d] %d\n", critnd->slot1, critnd->oper, critnd->slot2, critnd->var2);
-#endif
+
+        TRACE_PUZZLE("        [%d] %d [%d] %d\n", critnd->slot1, critnd->oper, critnd->slot2, critnd->var2);
+
         int tmp1 = GetgVarInt(critnd->slot1);
         int tmp2;
 
@@ -864,23 +411,6 @@ bool examine_criterias(puzzlenode *nod)
     return false;
 }
 
-int execute_puzzle_node(puzzlenode *nod)
-{
-    StartMList(nod->ResList);
-    while (!eofMList(nod->ResList))
-    {
-        func_node_t *fun = (func_node_t *)DataMList(nod->ResList);
-        if (fun->func(fun->param, fun->slot, nod->owner) == ACTION_BREAK)
-        {
-            return ACTION_BREAK;
-            break;
-        }
-
-        NextMList(nod->ResList);
-    }
-    return ACTION_NORMAL;
-}
-
 int Puzzle_try_exec(puzzlenode *pzlnod) //, pzllst *owner)
 {
     if (ScrSys_GetFlag(pzlnod->slot) & FLAG_DISABLED)
@@ -891,16 +421,23 @@ int Puzzle_try_exec(puzzlenode *pzlnod) //, pzllst *owner)
         if (pzlnod->owner->exec_times == 0)
             if (!(ScrSys_GetFlag(pzlnod->slot) & FLAG_DO_ME_NOW))
                 return ACTION_NORMAL;
+
         if (examine_criterias(pzlnod))
         {
-
-#ifdef TRACE
-            printf("Puzzle: %d (%s) \n", pzlnod->slot, ScrSys_ReturnListName(pzlnod->owner));
-#endif
+            TRACE_PUZZLE("Puzzle: %d (%s) \n", pzlnod->slot, ScrSys_ReturnListName(pzlnod->owner));
 
             SetgVarInt(pzlnod->slot, 1);
 
-            return execute_puzzle_node(pzlnod);
+            StartMList(pzlnod->ResList);
+            while (!eofMList(pzlnod->ResList))
+            {
+                func_node_t *fun = (func_node_t *)DataMList(pzlnod->ResList);
+                if (fun->func(fun->param, fun->slot, pzlnod->owner) == ACTION_BREAK)
+                {
+                    return ACTION_BREAK;
+                }
+                NextMList(pzlnod->ResList);
+            }
         }
     }
 
