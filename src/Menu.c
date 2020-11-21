@@ -73,7 +73,7 @@ uint16_t menu_GetMenuBarVal()
 
 void menu_LoadGraphics()
 {
-    char buf[255];
+    char buf[MINIBUFSZ];
 
     if (CUR_GAME == GAME_ZGI)
     {
@@ -92,11 +92,7 @@ void menu_LoadGraphics()
             menubar[i][1] = loader_LoadFile(buf, 0);
         }
 
-        for (int i = 0; i < 256; i++)
-        {
-            menupicto[i][0] = NULL;
-            menupicto[i][1] = NULL;
-        }
+        memset(menupicto, 0, sizeof(menupicto));
     }
     else
     {
@@ -457,7 +453,7 @@ void menu_DrawMenuBar()
         int menu_MAIN_X = ((GAME_W - 580) >> 1);
         if (inmenu)
         {
-            char buf[255];
+            char buf[MINIBUFSZ];
 
             switch (menu_mousefocus)
             {
@@ -509,7 +505,6 @@ void menu_DrawMenuBar()
 
                     for (int i = 0; i < 12; i++)
                     {
-
                         int itemnum;
                         if (GetgVarInt(SLOT_REVERSED_SPELLBOOK) == 1)
                             itemnum = 0xEE + i;
@@ -523,7 +518,6 @@ void menu_DrawMenuBar()
 
                         if (GetgVarInt(SLOT_SPELL_1 + i) != 0)
                         {
-
                             if (menupicto[itemnum][0] == NULL)
                             {
                                 sprintf(buf, "gmzwu%2.2x1.tga", itemnum);

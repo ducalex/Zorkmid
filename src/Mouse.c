@@ -39,7 +39,7 @@ static void Free_Cursor(Cursor_t *cur)
 
 void Mouse_LoadCursors()
 {
-    char buffer[32];
+    char buffer[MINIBUFSZ];
 
     for (int i = 0; i < 18; i++)
     {
@@ -193,7 +193,7 @@ void Mouse_LoadObjCursor(int num)
 
     current_obj_cur = num;
 
-    char buf[16];
+    char buf[MINIBUFSZ];
 
     if (CUR_GAME == GAME_ZGI)
     {

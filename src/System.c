@@ -32,11 +32,7 @@ static uint32_t time = 0;
 static int32_t frames = 0;
 static int32_t fps = 1;
 
-#ifdef DINGOO
-#define DELAY 2
-#else
 #define DELAY 10
-#endif
 
 typedef struct BinTreeNd
 {
@@ -337,29 +333,24 @@ uint32_t GetDTime()
 
 void LoadSystemStrings(void)
 {
-    char filename[PATHBUFSIZ];
-    sprintf(filename, "%s/%s", GetGamePath(), SYS_STRINGS_FILE);
+    char buffer[STRBUFSIZE];
+    sprintf(buffer, "%s/%s", GetGamePath(), SYS_STRINGS_FILE);
 
-    memset(SystemStrings, 0, sizeof(SystemStrings));
+    mfile_t *fl = mfopen_path(buffer);
 
-    mfile_t *fl = mfopen_path(filename);
-
-    if (fl == NULL)
-    {
-        Z_PANIC("File %s not found\n", filename);
-    }
+    if (!fl)
+        Z_PANIC("File %s not found\n", buffer);
 
     m_wide_to_utf8(fl);
 
-    int32_t ii = 0;
-
-    char buf[STRBUFSIZE];
-
-    while (!mfeof(fl) && ii < 128)
+    for (int i = 0; i < 0xFF; i++)
     {
-        mfgets(buf, STRBUFSIZE, fl);
-        SystemStrings[ii & 0xFF] = strdup(TrimRight(buf));
-        ii++;
+        if (!mfeof(fl)) {
+            mfgets(buffer, STRBUFSIZE, fl);
+            SystemStrings[i] = strdup(TrimRight(buffer));
+        } else {
+            SystemStrings[i] = NULL;
+        }
     }
 
     mfclose(fl);
@@ -394,21 +385,20 @@ int32_t FileSize(const char *path)
 
 void FindAssets(const char *dir)
 {
-    char buf[1024];
-    char buf2[1024];
-    strcpy(buf, dir);
+    char path[PATHBUFSIZ];
+    int len = strlen(dir);
 
-    int len = strlen(buf);
+    strcpy(path, dir);
 
-    while (buf[len - 1] == '/' || buf[len - 1] == '\\')
+    while (path[len - 1] == '/' || path[len - 1] == '\\')
     {
-        buf[len - 1] = 0;
+        path[len - 1] = 0;
         len--;
     }
 
-    TRACE_LOADER("Listing dir: %s\n", buf);
+    TRACE_LOADER("Listing dir: %s\n", path);
 
-    DIR *dr = opendir(buf);
+    DIR *dr = opendir(path);
     struct dirent *de;
 
     if (!dr)
@@ -419,34 +409,34 @@ void FindAssets(const char *dir)
         if (strlen(de->d_name) < 3)
             continue;
 
-        sprintf(buf2, "%s/%s", buf, de->d_name);
+        sprintf(path + len, "/%s", de->d_name);
 
-        if (isDirectory(buf2))
+        if (isDirectory(path))
         {
-            FindAssets(buf2);
+            FindAssets(path);
         }
-        else if (strcontains(buf2, ".ZFS"))
+        else if (findstr(path, ".ZFS"))
         {
-            loader_openzfs(buf2, FMan);
+            loader_openzfs(path, FMan);
         }
-        else if (strcontains(buf2, ".TTF"))
+        else if (findstr(path, ".TTF"))
         {
-            TRACE_LOADER("Adding font : %s\n", buf2);
-            TTF_Font *fnt = TTF_OpenFont(buf2, 10);
+            TRACE_LOADER("Adding font : %s\n", path);
+            TTF_Font *fnt = TTF_OpenFont(path, 10);
             if (fnt != NULL)
             {
                 graph_font_t *tmpfnt = NEW(graph_font_t);
                 strncpy(tmpfnt->Name, TTF_FontFaceFamilyName(fnt), 63);
-                strncpy(tmpfnt->path, buf2, 255);
+                strncpy(tmpfnt->path, path, 255);
                 AddToMList(FontList, tmpfnt);
                 TTF_CloseFont(fnt);
             }
         }
         else
         {
-            TRACE_LOADER("Adding game file : %s\n", buf2);
+            TRACE_LOADER("Adding game file : %s\n", path);
             FManNode_t *nod = NEW(FManNode_t);
-            nod->Path = strdup(buf2);
+            nod->Path = strdup(path);
             nod->File = nod->Path + len + 1;
             nod->zfs = NULL;
             AddToMList(FMan, nod);
@@ -572,16 +562,11 @@ int GetIntVal(char *chr)
 
 BinTreeNd_t *CreateBinTreeNd()
 {
-    BinTreeNd_t *tmp = NEW(BinTreeNd_t);
-    tmp->one = NULL;
-    tmp->zero = NULL;
-    tmp->nod = NULL;
-
     if (BinNodesList == NULL)
         BinNodesList = CreateMList();
 
+    BinTreeNd_t *tmp = NEW(BinTreeNd_t);
     AddToMList(BinNodesList, tmp);
-
     return tmp;
 }
 
@@ -665,7 +650,7 @@ const char *GetFilePath(const char *chr)
 {
     char *path = strdup(chr);
 
-    // if (strcontains(path, ".AVI")) strcpy(tmp, ".MPG");
+    // if (findstr(path, ".AVI")) strcpy(tmp, ".MPG");
 
     FManNode_t *nod = FindInBinTree(path);
 
@@ -720,21 +705,20 @@ const char *GetGameTitle()
     }
 }
 
-char *strcontains(const char *h, const char *n)
-{ /* h="haystack", n="needle" */
-    const char *a = h, *e = n;
+char *findstr(const char *haystack, const char *needle)
+{
+    const char *a = haystack, *e = needle;
 
-    if (!h || !*h || !n || !*n)
-    {
+    if (!haystack || !*haystack || !needle || !*needle)
         return 0;
-    }
+
     while (*a && *e)
     {
         if ((toupper(((unsigned char)(*a)))) != (toupper(((unsigned char)(*e)))))
         {
-            ++h;
-            a = h;
-            e = n;
+            ++haystack;
+            a = haystack;
+            e = needle;
         }
         else
         {
@@ -742,5 +726,5 @@ char *strcontains(const char *h, const char *n)
             ++e;
         }
     }
-    return (char *)(*e ? 0 : h);
+    return (char *)(*e ? 0 : haystack);
 }

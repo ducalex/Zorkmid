@@ -1,7 +1,6 @@
 #include "System.h"
 
 /*********************************** adpcm_Support *******************************/
-
 static const uint8_t wavHeader[0x2C] =
     {
         'R', 'I', 'F', 'F',
@@ -330,11 +329,10 @@ Mix_Chunk *loader_LoadChunk(const char *file)
 
     return chunk;
 }
-
 /*********************************** END adpcm_Support *******************************/
 
-/***********************************TGZ_Support *******************************/
 
+/***********************************TGZ_Support *******************************/
 static void de_lz(SDL_Surface *srf, uint8_t *src, uint32_t size, int32_t transpose)
 {
     uint8_t lz[0x1000];
@@ -677,7 +675,6 @@ SDL_Surface *loader_Load_GF_File(const char *file, int8_t transpose, int8_t key,
 
     return srf;
 }
-
 SDL_Surface *loader_LoadFile(const char *file, int8_t transpose)
 {
     return loader_Load_GF_File(file, transpose, 0, 0);
@@ -686,11 +683,10 @@ SDL_Surface *loader_LoadFile_key(const char *file, int8_t transpose, uint32_t ke
 {
     return loader_Load_GF_File(file, transpose, 1, key);
 }
-
 /*********************************** END TGZ_Support *******************************/
 
-/*********************************** RLF ***************************************/
 
+/*********************************** RLF ***************************************/
 typedef struct
 {
     uint32_t magic; //FELR 0x524C4546
@@ -913,11 +909,10 @@ anim_surf_t *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask)
 
     return atmp;
 }
-
 /*********************************** END RLF ***************************************/
 
-/******************** ZCR ************************/
 
+/******************** ZCR ************************/
 void loader_LoadZcr(const char *file, Cursor_t *cur)
 {
     TRACE_LOADER("Load ZCR file '%s'\n", file);
@@ -985,11 +980,10 @@ void loader_LoadZcr(const char *file, Cursor_t *cur)
     }
     mfclose(f);
 }
-
 /******************** ZCR END************************/
 
-/******************** ZFS Routines************************/
 
+/******************** ZFS Routines************************/
 typedef struct
 {
     uint32_t magic;
@@ -1070,8 +1064,8 @@ void loader_openzfs(const char *file, MList *list)
         }
     }
 }
-
 /******************** ZFS END************************/
+
 
 mfile_t *mfopen_path(const char *file)
 {

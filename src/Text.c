@@ -71,7 +71,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
     const char *find = " ";
 
     //font with "item what i want"
-    char *fontitem = strstr(buf, "font") ?: strstr(buf, "FONT");
+    char *fontitem = findstr(buf, "font");
     if (fontitem != NULL)
     {
         fontitem += 5; //to next item
@@ -637,13 +637,13 @@ int txt_DeleteTTYtext(action_res_t *nod)
     return NODE_RET_DELETE;
 }
 
-void ttynewline(ttytext_t *tty)
+static void ttynewline(ttytext_t *tty)
 {
     tty->dy += tty->style.size;
     tty->dx = 0;
 }
 
-void ttyscroll(ttytext_t *tty)
+static void ttyscroll(ttytext_t *tty)
 {
     int32_t scroll = 0;
     while (tty->dy - scroll > tty->h - tty->style.size)
@@ -655,7 +655,7 @@ void ttyscroll(ttytext_t *tty)
     tty->dy -= scroll;
 }
 
-void outchartotty(uint16_t chr, ttytext_t *tty)
+static void outchartotty(uint16_t chr, ttytext_t *tty)
 {
     SDL_Color clr = {tty->style.red, tty->style.green, tty->style.blue, 255};
 
@@ -677,7 +677,7 @@ void outchartotty(uint16_t chr, ttytext_t *tty)
     SDL_FreeSurface(tmp_surf);
 }
 
-int32_t getglyphwidth(TTF_Font *fnt, uint16_t chr)
+static int32_t getglyphwidth(TTF_Font *fnt, uint16_t chr)
 {
     int32_t minx, maxx, miny, maxy, advice;
     TTF_GlyphMetrics(fnt, chr, &minx, &maxx, &miny, &maxy, &advice);
@@ -752,7 +752,6 @@ int txt_ProcessTTYtext(action_res_t *nod)
                         uint16_t uchr = ReadUtf8Char(&tty->txtbuf[i]);
 
                         width += getglyphwidth(tty->fnt, uchr);
-                        ;
 
                         i += chsz;
                     }

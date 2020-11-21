@@ -3,189 +3,6 @@
 static int FocusInput = 0;
 static bool pushChangeMouse = false;
 
-static void control_slot(ctrlnode_t *ct);
-static void control_push(ctrlnode_t *ct);
-static void control_input(ctrlnode_t *ct);
-static void control_save(ctrlnode_t *ct);
-static void control_lever(ctrlnode_t *ct);
-static void control_safe(ctrlnode_t *ct);
-static void control_safe_draw(ctrlnode_t *ct);
-static void control_fist(ctrlnode_t *ct);
-static void control_fist_draw(ctrlnode_t *ct);
-static void control_titler(ctrlnode_t *ct);
-static void control_titler_draw(ctrlnode_t *ct);
-static void control_paint(ctrlnode_t *ct);
-static void control_hotmv(ctrlnode_t *ct);
-static void control_hotmv_draw(ctrlnode_t *ct);
-static void control_slot_draw(ctrlnode_t *nod);
-
-pushnode_t *CreatePushNode()
-{
-    pushnode_t *tmp = NEW(pushnode_t);
-    tmp->cursor = CURSOR_IDLE;
-    tmp->count_to = 2;
-    tmp->event = CTRL_PUSH_EV_UP;
-    return tmp;
-}
-
-inputnode_t *CreateInputNode()
-{
-    inputnode_t *tmp = NEW(inputnode_t);
-    tmp->textchanged = true;
-    txt_init_txt_struct(&tmp->string_init);
-    txt_init_txt_struct(&tmp->string_chooser_init);
-    return tmp;
-}
-
-slotnode_t *CreateSlotNode()
-{
-    slotnode_t *tmp = NEW(slotnode_t);
-    tmp->cursor = CURSOR_IDLE;
-    tmp->loaded_img = -1;
-    return tmp;
-}
-
-fistnode_t *CreateFistNode()
-{
-    fistnode_t *tmp = NEW(fistnode_t);
-    tmp->cursor = CURSOR_IDLE;
-    tmp->frame_cur = -1;
-    tmp->frame_end = -1;
-    return tmp;
-}
-
-hotmvnode_t *CreateHotMovieNode()
-{
-    hotmvnode_t *tmp = NEW(hotmvnode_t);
-    tmp->cur_frame = -1;
-    tmp->rend_frame = -1;
-    return tmp;
-}
-
-levernode_t *CreateLeverNode()
-{
-    levernode_t *tmp = NEW(levernode_t);
-    tmp->cursor = CURSOR_IDLE;
-    tmp->rendfrm = -1;
-    tmp->autoseq = -1;
-    for (int16_t i = 0; i < CTRL_LEVER_MAX_FRAMES; i++)
-        for (int16_t j = 0; j < CTRL_LEVER_MAX_DIRECTS; j++)
-            tmp->hotspots[i].directions[j].toframe = -1;
-    return tmp;
-}
-
-saveloadnode_t *CreateSaveNode()
-{
-    saveloadnode_t *tmp = NEW(saveloadnode_t);
-    for (int32_t i = 0; i < MAX_SAVES; i++)
-        tmp->inputslot[i] = -1;
-    return tmp;
-}
-
-safenode_t *CreateSafeNode()
-{
-    safenode_t *tmp = NEW(safenode_t);
-    tmp->cur_frame = -1;
-    return tmp;
-}
-
-paintnode_t *CreatePaintNode()
-{
-    paintnode_t *tmp = NEW(paintnode_t);
-    tmp->cursor = CURSOR_IDLE;
-    return tmp;
-}
-
-titlernode_t *CreateTitlerNode()
-{
-    return NEW(titlernode_t);
-}
-
-ctrlnode_t *Ctrl_CreateNode(int type)
-{
-    ctrlnode_t *tmp;
-    tmp = NEW(ctrlnode_t);
-    tmp->node.unknown = NULL;
-    tmp->slot = 0;
-    tmp->venus = -1;
-    tmp->type = CTRL_UNKN;
-    tmp->func = NULL;
-
-    switch (type)
-    {
-    case CTRL_PUSH:
-        tmp->type = CTRL_PUSH;
-        tmp->node.push = CreatePushNode();
-        tmp->func = control_push;
-        break;
-
-    case CTRL_INPUT:
-        tmp->type = CTRL_INPUT;
-        tmp->node.inp = CreateInputNode();
-        tmp->func = control_input;
-        break;
-
-    case CTRL_SLOT:
-        tmp->type = CTRL_SLOT;
-        tmp->node.slot = CreateSlotNode();
-        tmp->func = control_slot;
-        break;
-
-    case CTRL_SAVE:
-        tmp->type = CTRL_SAVE;
-        tmp->node.svld = CreateSaveNode();
-        tmp->func = control_save;
-        break;
-    case CTRL_LEVER:
-        tmp->type = CTRL_LEVER;
-        tmp->node.lev = CreateLeverNode();
-        tmp->func = control_lever;
-        break;
-    case CTRL_SAFE:
-        tmp->type = CTRL_SAFE;
-        tmp->node.safe = CreateSafeNode();
-        tmp->func = control_safe;
-        break;
-    case CTRL_FIST:
-        tmp->type = CTRL_FIST;
-        tmp->node.fist = CreateFistNode();
-        tmp->func = control_fist;
-        break;
-    case CTRL_HOTMV:
-        tmp->type = CTRL_HOTMV;
-        tmp->node.hotmv = CreateHotMovieNode();
-        tmp->func = control_hotmv;
-        break;
-    case CTRL_PAINT:
-        tmp->type = CTRL_PAINT;
-        tmp->node.paint = CreatePaintNode();
-        tmp->func = control_paint;
-        break;
-    case CTRL_TITLER:
-        tmp->type = CTRL_TITLER;
-        tmp->node.titler = CreateTitlerNode();
-        tmp->func = control_titler;
-        break;
-    };
-    return tmp;
-}
-
-bool Ctrl_Eligeblity(int obj, slotnode_t *slot)
-{
-    for (int i = 0; i < slot->eligable_cnt; i++)
-        if (obj == slot->eligible_objects[i])
-            return true;
-    return false;
-}
-
-bool Ctrl_Eligeblity_Slots(int obj, int32_t *slots, int32_t count)
-{
-    for (int i = 0; i < count; i++)
-        if (obj == slots[i])
-            return true;
-    return false;
-}
-
 static void ctrl_setvenus(ctrlnode_t *nod)
 {
     if (nod->venus >= 0)
@@ -193,6 +10,22 @@ static void ctrl_setvenus(ctrlnode_t *nod)
         if (GetgVarInt(nod->venus) > 0)
             SetgVarInt(SLOT_VENUS, nod->venus);
     }
+}
+
+static bool ctrl_eligeblity(int obj, slotnode_t *slot)
+{
+    for (int i = 0; i < slot->eligable_cnt; i++)
+        if (obj == slot->eligible_objects[i])
+            return true;
+    return false;
+}
+
+static bool ctrl_eligeblity_slots(int obj, int32_t *slots, int32_t count)
+{
+    for (int i = 0; i < count; i++)
+        if (obj == slots[i])
+            return true;
+    return false;
 }
 
 static void control_slot_draw(ctrlnode_t *nod)
@@ -311,36 +144,6 @@ static void control_lever_draw(ctrlnode_t *ct)
         anim_RenderAnimFrame(lev->anm, lev->AnimCoords.x, lev->AnimCoords.y, lev->AnimCoords.w, lev->AnimCoords.h, lev->curfrm);
 
     lev->rendfrm = lev->curfrm;
-}
-
-void Ctrl_DrawControls()
-{
-    MList *ctrl = Getctrl();
-    StartMList(ctrl);
-
-    while (!eofMList(ctrl))
-    {
-        ctrlnode_t *nod = (ctrlnode_t *)DataMList(ctrl);
-
-        if (!(ScrSys_GetFlag(nod->slot) & FLAG_DISABLED))
-        {
-            if (nod->type == CTRL_SLOT)
-                control_slot_draw(nod);
-            else if (nod->type == CTRL_INPUT)
-                control_input_draw(nod);
-            else if (nod->type == CTRL_LEVER)
-                control_lever_draw(nod);
-            else if (nod->type == CTRL_SAFE)
-                control_safe_draw(nod);
-            else if (nod->type == CTRL_HOTMV)
-                control_hotmv_draw(nod);
-            else if (nod->type == CTRL_FIST)
-                control_fist_draw(nod);
-            else if (nod->type == CTRL_TITLER)
-                control_titler_draw(nod);
-        }
-        NextMList(ctrl);
-    }
 }
 
 static void control_input(ctrlnode_t *ct)
@@ -515,7 +318,7 @@ static void control_slot(ctrlnode_t *ct)
             {
                 if (mouse_item != 0)
                 {
-                    if (Ctrl_Eligeblity(mouse_item, slot))
+                    if (ctrl_eligeblity(mouse_item, slot))
                     {
                         inv_drop(mouse_item);
                         inv_add(item);
@@ -530,13 +333,13 @@ static void control_slot(ctrlnode_t *ct)
             }
             else if (mouse_item == 0)
             {
-                if (Ctrl_Eligeblity(0, slot))
+                if (ctrl_eligeblity(0, slot))
                 {
                     inv_drop(0);
                     SetgVarInt(ct->slot, 0);
                 }
             }
-            else if (Ctrl_Eligeblity(mouse_item, slot))
+            else if (ctrl_eligeblity(mouse_item, slot))
             {
                 SetgVarInt(ct->slot, mouse_item);
                 inv_drop(mouse_item);
@@ -570,7 +373,7 @@ static void control_paint(ctrlnode_t *ct)
 
     if (mousein)
     {
-        if (Ctrl_Eligeblity_Slots(GetgVarInt(SLOT_INVENTORY_MOUSE), paint->eligible_objects, paint->eligable_cnt))
+        if (ctrl_eligeblity_slots(GetgVarInt(SLOT_INVENTORY_MOUSE), paint->eligible_objects, paint->eligable_cnt))
         {
             if (Mouse_IsCurrentCur(CURSOR_IDLE))
                 Mouse_SetCursor(paint->cursor);
@@ -1095,6 +898,8 @@ static void control_push(ctrlnode_t *ct)
 static void control_save(ctrlnode_t *ct)
 {
     saveloadnode_t *sv = ct->node.svld;
+    char fln[32];
+
     for (int i = 0; i < MAX_SAVES; i++)
         if (sv->inputslot[i] != -1)
             if (sv->input_nodes[i]->node.inp->enterkey)
@@ -1103,8 +908,6 @@ static void control_save(ctrlnode_t *ct)
                 {
                     if (strlen(sv->input_nodes[i]->node.inp->text) > 0)
                     {
-                        char fln[32];
-
                         bool tosave = true;
 
                         sprintf(fln, CTRL_SAVE_SAVES, i + 1);
@@ -1141,12 +944,8 @@ static void control_save(ctrlnode_t *ct)
                 }
                 else
                 {
-                    char fln[32];
-
                     sprintf(fln, CTRL_SAVE_SAVES, i + 1);
-
                     ScrSys_LoadGame(fln);
-
                     break;
                 }
 
@@ -1254,13 +1053,164 @@ static void control_lever(ctrlnode_t *ct)
     lev->mouse_count -= GetDTime();
 }
 
-int Parse_Control_Flat()
+static pushnode_t *CreatePushNode()
+{
+    pushnode_t *tmp = NEW(pushnode_t);
+    tmp->cursor = CURSOR_IDLE;
+    tmp->count_to = 2;
+    tmp->event = CTRL_PUSH_EV_UP;
+    return tmp;
+}
+
+static inputnode_t *CreateInputNode()
+{
+    inputnode_t *tmp = NEW(inputnode_t);
+    tmp->textchanged = true;
+    txt_init_txt_struct(&tmp->string_init);
+    txt_init_txt_struct(&tmp->string_chooser_init);
+    return tmp;
+}
+
+static slotnode_t *CreateSlotNode()
+{
+    slotnode_t *tmp = NEW(slotnode_t);
+    tmp->cursor = CURSOR_IDLE;
+    tmp->loaded_img = -1;
+    return tmp;
+}
+
+static fistnode_t *CreateFistNode()
+{
+    fistnode_t *tmp = NEW(fistnode_t);
+    tmp->cursor = CURSOR_IDLE;
+    tmp->frame_cur = -1;
+    tmp->frame_end = -1;
+    return tmp;
+}
+
+static hotmvnode_t *CreateHotMovieNode()
+{
+    hotmvnode_t *tmp = NEW(hotmvnode_t);
+    tmp->cur_frame = -1;
+    tmp->rend_frame = -1;
+    return tmp;
+}
+
+static levernode_t *CreateLeverNode()
+{
+    levernode_t *tmp = NEW(levernode_t);
+    tmp->cursor = CURSOR_IDLE;
+    tmp->rendfrm = -1;
+    tmp->autoseq = -1;
+    for (int16_t i = 0; i < CTRL_LEVER_MAX_FRAMES; i++)
+        for (int16_t j = 0; j < CTRL_LEVER_MAX_DIRECTS; j++)
+            tmp->hotspots[i].directions[j].toframe = -1;
+    return tmp;
+}
+
+static saveloadnode_t *CreateSaveNode()
+{
+    saveloadnode_t *tmp = NEW(saveloadnode_t);
+    for (int32_t i = 0; i < MAX_SAVES; i++)
+        tmp->inputslot[i] = -1;
+    return tmp;
+}
+
+static safenode_t *CreateSafeNode()
+{
+    safenode_t *tmp = NEW(safenode_t);
+    tmp->cur_frame = -1;
+    return tmp;
+}
+
+static paintnode_t *CreatePaintNode()
+{
+    paintnode_t *tmp = NEW(paintnode_t);
+    tmp->cursor = CURSOR_IDLE;
+    return tmp;
+}
+
+static titlernode_t *CreateTitlerNode()
+{
+    return NEW(titlernode_t);
+}
+
+static ctrlnode_t *Ctrl_CreateNode(int type)
+{
+    ctrlnode_t *tmp;
+    tmp = NEW(ctrlnode_t);
+    tmp->node.unknown = NULL;
+    tmp->slot = 0;
+    tmp->venus = -1;
+    tmp->type = CTRL_UNKN;
+    tmp->func = NULL;
+
+    switch (type)
+    {
+    case CTRL_PUSH:
+        tmp->type = CTRL_PUSH;
+        tmp->node.push = CreatePushNode();
+        tmp->func = control_push;
+        break;
+
+    case CTRL_INPUT:
+        tmp->type = CTRL_INPUT;
+        tmp->node.inp = CreateInputNode();
+        tmp->func = control_input;
+        break;
+
+    case CTRL_SLOT:
+        tmp->type = CTRL_SLOT;
+        tmp->node.slot = CreateSlotNode();
+        tmp->func = control_slot;
+        break;
+
+    case CTRL_SAVE:
+        tmp->type = CTRL_SAVE;
+        tmp->node.svld = CreateSaveNode();
+        tmp->func = control_save;
+        break;
+    case CTRL_LEVER:
+        tmp->type = CTRL_LEVER;
+        tmp->node.lev = CreateLeverNode();
+        tmp->func = control_lever;
+        break;
+    case CTRL_SAFE:
+        tmp->type = CTRL_SAFE;
+        tmp->node.safe = CreateSafeNode();
+        tmp->func = control_safe;
+        break;
+    case CTRL_FIST:
+        tmp->type = CTRL_FIST;
+        tmp->node.fist = CreateFistNode();
+        tmp->func = control_fist;
+        break;
+    case CTRL_HOTMV:
+        tmp->type = CTRL_HOTMV;
+        tmp->node.hotmv = CreateHotMovieNode();
+        tmp->func = control_hotmv;
+        break;
+    case CTRL_PAINT:
+        tmp->type = CTRL_PAINT;
+        tmp->node.paint = CreatePaintNode();
+        tmp->func = control_paint;
+        break;
+    case CTRL_TITLER:
+        tmp->type = CTRL_TITLER;
+        tmp->node.titler = CreateTitlerNode();
+        tmp->func = control_titler;
+        break;
+    };
+    return tmp;
+}
+
+static int Parse_Control_Flat()
 {
     Rend_SetRenderer(RENDER_FLAT);
     return 1;
 }
 
-int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     char buf[STRBUFSIZE];
     char *str;
@@ -1430,7 +1380,7 @@ int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
     return 1;
 }
 
-int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     char buf[STRBUFSIZE];
     char *str;
@@ -1521,7 +1471,7 @@ int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
     return 1;
 }
 
-int Parse_Control_Panorama(mfile_t *fl)
+static int Parse_Control_Panorama(mfile_t *fl)
 {
     char buf[STRBUFSIZE];
     char *str;
@@ -1577,7 +1527,7 @@ int Parse_Control_Panorama(mfile_t *fl)
     return good;
 }
 
-int Parse_Control_Tilt(mfile_t *fl)
+static int Parse_Control_Tilt(mfile_t *fl)
 {
     char buf[STRBUFSIZE];
     char *str;
@@ -1627,10 +1577,11 @@ int Parse_Control_Tilt(mfile_t *fl)
     return good;
 }
 
-int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
+    char fln[MINIBUFSZ];
     char *str;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_SAVE);
@@ -1657,7 +1608,6 @@ int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
         str = TrimRight(buf);
         if (strlen(str) > 0)
         {
-            char fln[32];
             sprintf(fln, CTRL_SAVE_SAVES, i + 1);
             FILE *d = fopen(fln, "rb");
             if (d != NULL)
@@ -1726,7 +1676,7 @@ int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -1792,7 +1742,7 @@ int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -1884,7 +1834,7 @@ int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -2017,7 +1967,7 @@ int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_Slot(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Slot(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -2108,7 +2058,7 @@ int Parse_Control_Slot(MList *controlst, mfile_t *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_PushTgl(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_PushTgl(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -2189,7 +2139,7 @@ int Parse_Control_PushTgl(MList *controlst, mfile_t *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -2375,7 +2325,7 @@ int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
     return good;
 }
 
-int Parse_Control_Safe(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Safe(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -2460,6 +2410,115 @@ int Parse_Control_Safe(MList *controlst, mfile_t *fl, uint32_t slot)
         AddToMList(controlst, ctnode);
 
     return good;
+}
+
+static void ctrl_Delete_PushNode(ctrlnode_t *nod)
+{
+    free(nod->node.push);
+}
+
+static void ctrl_Delete_SlotNode(ctrlnode_t *nod)
+{
+    if (nod->node.slot->srf)
+        SDL_FreeSurface(nod->node.slot->srf);
+    if (nod->node.slot->eligible_objects)
+        free(nod->node.slot->eligible_objects);
+    free(nod->node.slot);
+}
+
+static void ctrl_Delete_InputNode(ctrlnode_t *nod)
+{
+    if (nod->node.inp->cursor)
+        FreeAnimImage(nod->node.inp->cursor);
+    if (nod->node.inp->rect)
+        SDL_FreeSurface(nod->node.inp->rect);
+    free(nod->node.inp);
+}
+
+static void ctrl_Delete_SaveNode(ctrlnode_t *nod)
+{
+    free(nod->node.svld);
+}
+
+static void ctrl_Delete_LeverNode(ctrlnode_t *nod)
+{
+    if (nod->node.lev->anm != NULL)
+        anim_DeleteAnim(nod->node.lev->anm);
+    free(nod->node.lev);
+}
+
+static void ctrl_Delete_SafeNode(ctrlnode_t *nod)
+{
+    if (nod->node.safe->anm != NULL)
+        anim_DeleteAnim(nod->node.safe->anm);
+    free(nod->node.safe);
+}
+
+static void ctrl_Delete_FistNode(ctrlnode_t *nod)
+{
+    if (nod->node.fist->anm != NULL)
+        anim_DeleteAnim(nod->node.fist->anm);
+    free(nod->node.fist);
+}
+
+static void ctrl_Delete_HotmovNode(ctrlnode_t *nod)
+{
+    if (nod->node.hotmv->anm != NULL)
+        anim_DeleteAnim(nod->node.hotmv->anm);
+    if (nod->node.hotmv->frame_list != NULL)
+        free(nod->node.hotmv->frame_list);
+    free(nod->node.hotmv);
+}
+
+static void ctrl_Delete_PaintNode(ctrlnode_t *nod)
+{
+    if (nod->node.paint->brush != NULL)
+        free(nod->node.paint->brush);
+    if (nod->node.paint->eligible_objects != NULL)
+        free(nod->node.paint->eligible_objects);
+    if (nod->node.paint->paint != NULL)
+        SDL_FreeSurface(nod->node.paint->paint);
+    free(nod->node.paint);
+}
+
+static void ctrl_Delete_TitlerNode(ctrlnode_t *nod)
+{
+    if (nod->node.titler->surface != NULL)
+        SDL_FreeSurface(nod->node.titler->surface);
+    for (int32_t i = 0; i < CTRL_TITLER_MAX_STRINGS; i++)
+        if (nod->node.titler->strings[i] != NULL)
+            free(nod->node.titler->strings[i]);
+    free(nod->node.titler);
+}
+
+void Ctrl_DrawControls()
+{
+    MList *ctrl = Getctrl();
+    StartMList(ctrl);
+
+    while (!eofMList(ctrl))
+    {
+        ctrlnode_t *nod = (ctrlnode_t *)DataMList(ctrl);
+
+        if (!(ScrSys_GetFlag(nod->slot) & FLAG_DISABLED))
+        {
+            if (nod->type == CTRL_SLOT)
+                control_slot_draw(nod);
+            else if (nod->type == CTRL_INPUT)
+                control_input_draw(nod);
+            else if (nod->type == CTRL_LEVER)
+                control_lever_draw(nod);
+            else if (nod->type == CTRL_SAFE)
+                control_safe_draw(nod);
+            else if (nod->type == CTRL_HOTMV)
+                control_hotmv_draw(nod);
+            else if (nod->type == CTRL_FIST)
+                control_fist_draw(nod);
+            else if (nod->type == CTRL_TITLER)
+                control_titler_draw(nod);
+        }
+        NextMList(ctrl);
+    }
 }
 
 int Parse_Control(MList *controlst, mfile_t *fl, char *ctstr)
@@ -2567,124 +2626,6 @@ void ProcessControls(MList *ctrlst)
     }
 }
 
-void ctrl_Delete_PushNode(ctrlnode_t *nod)
-{
-    free(nod->node.push);
-}
-
-void ctrl_Delete_SlotNode(ctrlnode_t *nod)
-{
-    if (nod->node.slot->srf)
-        SDL_FreeSurface(nod->node.slot->srf);
-    if (nod->node.slot->eligible_objects)
-        free(nod->node.slot->eligible_objects);
-    free(nod->node.slot);
-}
-
-void ctrl_Delete_InputNode(ctrlnode_t *nod)
-{
-    if (nod->node.inp->cursor)
-        FreeAnimImage(nod->node.inp->cursor);
-    if (nod->node.inp->rect)
-        SDL_FreeSurface(nod->node.inp->rect);
-    free(nod->node.inp);
-}
-
-void ctrl_Delete_SaveNode(ctrlnode_t *nod)
-{
-    free(nod->node.svld);
-}
-
-void ctrl_Delete_LeverNode(ctrlnode_t *nod)
-{
-    if (nod->node.lev->anm != NULL)
-        anim_DeleteAnim(nod->node.lev->anm);
-    free(nod->node.lev);
-}
-
-void ctrl_Delete_SafeNode(ctrlnode_t *nod)
-{
-    if (nod->node.safe->anm != NULL)
-        anim_DeleteAnim(nod->node.safe->anm);
-    free(nod->node.safe);
-}
-
-void ctrl_Delete_FistNode(ctrlnode_t *nod)
-{
-    if (nod->node.fist->anm != NULL)
-        anim_DeleteAnim(nod->node.fist->anm);
-    free(nod->node.fist);
-}
-
-void ctrl_Delete_HotmovNode(ctrlnode_t *nod)
-{
-    if (nod->node.hotmv->anm != NULL)
-        anim_DeleteAnim(nod->node.hotmv->anm);
-    if (nod->node.hotmv->frame_list != NULL)
-        free(nod->node.hotmv->frame_list);
-    free(nod->node.hotmv);
-}
-
-void ctrl_Delete_PaintNode(ctrlnode_t *nod)
-{
-    if (nod->node.paint->brush != NULL)
-        free(nod->node.paint->brush);
-    if (nod->node.paint->eligible_objects != NULL)
-        free(nod->node.paint->eligible_objects);
-    if (nod->node.paint->paint != NULL)
-        SDL_FreeSurface(nod->node.paint->paint);
-    free(nod->node.paint);
-}
-
-void ctrl_Delete_TitlerNode(ctrlnode_t *nod)
-{
-    if (nod->node.titler->surface != NULL)
-        SDL_FreeSurface(nod->node.titler->surface);
-    for (int32_t i = 0; i < CTRL_TITLER_MAX_STRINGS; i++)
-        if (nod->node.titler->strings[i] != NULL)
-            free(nod->node.titler->strings[i]);
-    free(nod->node.titler);
-}
-
-void DeleteSelControl(ctrlnode_t *nod)
-{
-    switch (nod->type)
-    {
-    case CTRL_PUSH:
-        ctrl_Delete_PushNode(nod);
-        break;
-    case CTRL_SLOT:
-        ctrl_Delete_SlotNode(nod);
-        break;
-    case CTRL_INPUT:
-        ctrl_Delete_InputNode(nod);
-        break;
-    case CTRL_SAVE:
-        ctrl_Delete_SaveNode(nod);
-        break;
-    case CTRL_LEVER:
-        ctrl_Delete_LeverNode(nod);
-        break;
-    case CTRL_SAFE:
-        ctrl_Delete_SafeNode(nod);
-        break;
-    case CTRL_HOTMV:
-        ctrl_Delete_HotmovNode(nod);
-        break;
-    case CTRL_FIST:
-        ctrl_Delete_FistNode(nod);
-        break;
-    case CTRL_PAINT:
-        ctrl_Delete_PaintNode(nod);
-        break;
-    case CTRL_TITLER:
-        ctrl_Delete_TitlerNode(nod);
-        break;
-    }
-
-    free(nod);
-}
-
 void FlushControlList(MList *lst)
 {
     StartMList(lst);
@@ -2692,7 +2633,40 @@ void FlushControlList(MList *lst)
     {
         ctrlnode_t *nod = (ctrlnode_t *)DataMList(lst);
 
-        DeleteSelControl(nod);
+        switch (nod->type)
+        {
+        case CTRL_PUSH:
+            ctrl_Delete_PushNode(nod);
+            break;
+        case CTRL_SLOT:
+            ctrl_Delete_SlotNode(nod);
+            break;
+        case CTRL_INPUT:
+            ctrl_Delete_InputNode(nod);
+            break;
+        case CTRL_SAVE:
+            ctrl_Delete_SaveNode(nod);
+            break;
+        case CTRL_LEVER:
+            ctrl_Delete_LeverNode(nod);
+            break;
+        case CTRL_SAFE:
+            ctrl_Delete_SafeNode(nod);
+            break;
+        case CTRL_HOTMV:
+            ctrl_Delete_HotmovNode(nod);
+            break;
+        case CTRL_FIST:
+            ctrl_Delete_FistNode(nod);
+            break;
+        case CTRL_PAINT:
+            ctrl_Delete_PaintNode(nod);
+            break;
+        case CTRL_TITLER:
+            ctrl_Delete_TitlerNode(nod);
+            break;
+        }
+        free(nod);
 
         NextMList(lst);
     }

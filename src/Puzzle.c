@@ -1,8 +1,5 @@
 #include "System.h"
 
-// #define TRACE_PUZZLE(x...) printf(x)
-#define TRACE_PUZZLE(x...)
-
 typedef struct
 {
     const char *key;
@@ -57,13 +54,58 @@ pzllst_t *CreatePuzzleList(const char *name)
 {
     pzllst_t *tmp = NEW(pzllst_t);
     tmp->_list = CreateMList();
-    tmp->stksize = 0;
-    tmp->exec_times = 0;
     if (name)
-    {
         strcpy(tmp->name, name);
-    }
     return tmp;
+}
+
+void FlushPuzzleList(pzllst_t *lst)
+{
+    StartMList(lst->_list);
+    while (!eofMList(lst->_list))
+    {
+        puzzlenode_t *nod = (puzzlenode_t *)DataMList(lst->_list);
+
+        TRACE_PUZZLE("Deleting Puzzle #%d\n", nod->slot);
+
+        StartMList(nod->CritList);
+        while (!eofMList(nod->CritList))
+        {
+
+            MList *criteries = (MList *)DataMList(nod->CritList);
+
+            StartMList(criteries);
+            while (!eofMList(criteries))
+            {
+                free(DataMList(criteries));
+                NextMList(criteries);
+            }
+            DeleteMList(criteries);
+
+            NextMList(nod->CritList);
+        }
+        DeleteMList(nod->CritList);
+
+        StartMList(nod->ResList);
+        while (!eofMList(nod->ResList))
+        {
+            func_node_t *fun = (func_node_t *)DataMList(nod->ResList);
+            if (fun->param != NULL)
+                free(fun->param);
+            free(fun);
+            NextMList(nod->ResList);
+        }
+        DeleteMList(nod->ResList);
+
+        free(nod);
+
+        NextMList(lst->_list);
+    }
+
+    lst->exec_times = 0;
+    lst->stksize = 0;
+
+    FlushMList(lst->_list);
 }
 
 static void Parse_Puzzle_Results_Action(char *str, MList *lst)
@@ -105,7 +147,7 @@ static void Parse_Puzzle_Results_Action(char *str, MList *lst)
     }
 }
 
-int Parse_Puzzle_Flags(puzzlenode_t *pzl, mfile_t *fl)
+static int Parse_Puzzle_Flags(puzzlenode_t *pzl, mfile_t *fl)
 {
     char buf[STRBUFSIZE];
     char *str;
@@ -136,7 +178,7 @@ int Parse_Puzzle_Flags(puzzlenode_t *pzl, mfile_t *fl)
     return 0;
 }
 
-int Parse_Puzzle_Criteria(puzzlenode_t *pzl, mfile_t *fl)
+static int Parse_Puzzle_Criteria(puzzlenode_t *pzl, mfile_t *fl)
 {
     char buf[STRBUFSIZE];
     char *str;
@@ -299,56 +341,7 @@ int Puzzle_Parse(pzllst_t *lst, mfile_t *fl, char *ctstr)
     return good;
 }
 
-void FlushPuzzleList(pzllst_t *lst)
-{
-    StartMList(lst->_list);
-    while (!eofMList(lst->_list))
-    {
-        puzzlenode_t *nod = (puzzlenode_t *)DataMList(lst->_list);
-
-        TRACE_PUZZLE("Deleting Puzzle #%d\n", nod->slot);
-
-        StartMList(nod->CritList);
-        while (!eofMList(nod->CritList))
-        {
-
-            MList *criteries = (MList *)DataMList(nod->CritList);
-
-            StartMList(criteries);
-            while (!eofMList(criteries))
-            {
-                free(DataMList(criteries));
-                NextMList(criteries);
-            }
-            DeleteMList(criteries);
-
-            NextMList(nod->CritList);
-        }
-        DeleteMList(nod->CritList);
-
-        StartMList(nod->ResList);
-        while (!eofMList(nod->ResList))
-        {
-            func_node_t *fun = (func_node_t *)DataMList(nod->ResList);
-            if (fun->param != NULL)
-                free(fun->param);
-            free(fun);
-            NextMList(nod->ResList);
-        }
-        DeleteMList(nod->ResList);
-
-        free(nod);
-
-        NextMList(lst->_list);
-    }
-
-    lst->exec_times = 0;
-    lst->stksize = 0;
-
-    FlushMList(lst->_list);
-}
-
-bool ProcessCriteries(MList *lst)
+static bool ProcessCriteries(MList *lst)
 {
     bool tmp = true;
 
@@ -391,25 +384,6 @@ bool ProcessCriteries(MList *lst)
     return tmp;
 }
 
-bool examine_criterias(puzzlenode_t *nod)
-{
-    if (nod->CritList->count == 0)
-        return true;
-
-    StartMList(nod->CritList);
-
-    while (!eofMList(nod->CritList))
-    {
-        MList *criteries = (MList *)DataMList(nod->CritList);
-
-        if (ProcessCriteries(criteries))
-            return true;
-
-        NextMList(nod->CritList);
-    }
-    return false;
-}
-
 int Puzzle_TryExec(puzzlenode_t *pzlnod) //, pzllst_t *owner)
 {
     if (ScrSys_GetFlag(pzlnod->slot) & FLAG_DISABLED)
@@ -422,8 +396,26 @@ int Puzzle_TryExec(puzzlenode_t *pzlnod) //, pzllst_t *owner)
         if (!(ScrSys_GetFlag(pzlnod->slot) & FLAG_DO_ME_NOW))
             return ACTION_NORMAL;
 
-    if (!examine_criterias(pzlnod))
-        return ACTION_NORMAL;
+    if (pzlnod->CritList->count > 0)
+    {
+        bool match = false;
+
+        StartMList(pzlnod->CritList);
+        while (!eofMList(pzlnod->CritList))
+        {
+            MList *criteries = (MList *)DataMList(pzlnod->CritList);
+
+            if (ProcessCriteries(criteries))
+            {
+                match = true;
+                break;
+            }
+
+            NextMList(pzlnod->CritList);
+        }
+        if (!match)
+            return ACTION_NORMAL;
+    }
 
     TRACE_PUZZLE("Puzzle: %d (%s) \n", pzlnod->slot, pzlnod->owner->name);
 
@@ -439,5 +431,6 @@ int Puzzle_TryExec(puzzlenode_t *pzlnod) //, pzllst_t *owner)
         }
         NextMList(pzlnod->ResList);
     }
+
     return ACTION_NORMAL;
 }

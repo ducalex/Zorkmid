@@ -9,6 +9,8 @@
 //#define TRACE_ACTION()
 #define TRACE_LOADER(x...) printf("[LOADER] " x);
 //#define TRACE_LOADER(x...)
+#define TRACE_PUZZLE(x...) printf(x)
+// #define TRACE_PUZZLE(x...)
 
 //if you plan to build engine with smpeg support
 //#define SMPEG_SUPPORT
@@ -83,7 +85,7 @@
         exit(-1);                                               \
     }
 
-char *strcontains(const char *h, const char *n);
+char *findstr(const char *h, const char *n);
 
 #ifdef SMPEG_SUPPORT
 #include <smpeg/smpeg.h>

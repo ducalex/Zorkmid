@@ -31,7 +31,7 @@ void anim_LoadAnim(animnode_t *nod, char *filename, int u1, int u2, int32_t mask
     nod->nexttick = 0;
     nod->loops = 0;
 
-    if (strcontains(filename, ".avi"))
+    if (findstr(filename, ".avi"))
     {
         nod->anim.avi = NEW(anim_avi_t);
         nod->vid = 1;
@@ -53,7 +53,7 @@ void anim_LoadAnim(animnode_t *nod, char *filename, int u1, int u2, int32_t mask
         nod->rel_w = w;
     }
 #ifdef SMPEG_SUPPORT
-    else if (strcontains(filename, ".mpg"))
+    else if (findstr(filename, ".mpg"))
     {
         nod->anim.mpg = NEW(anim_mpg);
         nod->vid = 2;
@@ -80,7 +80,7 @@ void anim_LoadAnim(animnode_t *nod, char *filename, int u1, int u2, int32_t mask
 #endif
     else
     {
-        if (strcontains(filename, ".rlf"))
+        if (findstr(filename, ".rlf"))
             nod->anim.rlf = loader_LoadRlf(filename, Rend_GetRenderer() == RENDER_PANA, mask);
         else
             nod->anim.rlf = LoadAnimImage(filename, mask);

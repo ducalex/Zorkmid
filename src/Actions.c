@@ -515,9 +515,8 @@ int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
     char file[16];
     char loop[16];
     char vol[16];
+    char fn[PATHBUFSIZ];
     int8_t read_params = sscanf(params, "%d %s %s %s", &type, file, loop, vol);
-
-    //printf ("%s %d %d\n",file,GetIntVal(vol),SoundVol[GetIntVal(vol)]);
 
     if (getGNode(aSlot) != NULL)
         return ACTION_NORMAL;
@@ -531,14 +530,13 @@ int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
 
     if (type == 4)
     {
-        char fil[STRBUFSIZE];
         int32_t instr = atoi(file);
         int32_t pitch = atoi(loop);
-        sprintf(fil, "%s/MIDI/%d/%d.wav", GetGamePath(), instr, pitch);
-        if (FileExist(fil))
+        sprintf(fn, "%s/MIDI/%d/%d.wav", GetGamePath(), instr, pitch);
+        if (FileExist(fn))
         {
             nod->nodes.node_music->universe = universe;
-            nod->nodes.node_music->chunk = Mix_LoadWAV(fil);
+            nod->nodes.node_music->chunk = Mix_LoadWAV(fn);
 
             nod->nodes.node_music->chn = GetFreeChannel();
             if (nod->nodes.node_music->chn == -1)
