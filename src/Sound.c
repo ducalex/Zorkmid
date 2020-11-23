@@ -19,7 +19,7 @@ static const int SoundVol[101] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
                                   3, 3, 3, 4, 4, 4, 5, 5, 6, 7, 7, 8, 9, 10, 11, 12, 14, 15, 17,
                                   18, 20, 23, 26, 29, 32, 36, 41, 46, 51, 57, 64, 72, 81, 91, 102, 114, 127};
 
-int GetLogVol(uint8_t linear)
+int Sound_GetLogVol(uint8_t linear)
 {
     if (linear < 101)
         return SoundVol[linear];
@@ -29,7 +29,15 @@ int GetLogVol(uint8_t linear)
         return 0;
 }
 
-void InitSound()
+static uint32_t GetChanTime(int i)
+{
+    if (i >= 0 && i < CHANNELS)
+        if (ChanStatus[i])
+            return SDL_GetTicks() - chantime[i];
+    return 0;
+}
+
+void Sound_Init()
 {
     if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
     {
@@ -41,12 +49,12 @@ void InitSound()
     CHANNELS = Mix_AllocateChannels(TRY_CHANNELS);
 }
 
-void DeinitMusic()
+void Sound_DeInit()
 {
     Mix_CloseAudio();
 }
 
-int GetFreeChannel()
+int Sound_GetFreeChannel()
 {
     for (int i = 0; i < CHANNELS; i++)
         if (ChanStatus[i] == false)
@@ -55,7 +63,7 @@ int GetFreeChannel()
     return -1;
 }
 
-void LockChan(int i)
+void Sound_LockChannel(int i)
 {
     if (i >= 0 && i < CHANNELS)
     {
@@ -64,75 +72,15 @@ void LockChan(int i)
     }
 }
 
-void UnlockChan(int i)
+void Sound_UnLockChannel(int i)
 {
     if (i >= 0 && i < CHANNELS)
         ChanStatus[i] = false;
 }
 
-void SaveVol()
-{
-    for (int i = 0; i < CHANNELS; i++)
-        chanvol[i] = Mix_Volume(i, -1);
-}
-
-void SilenceVol()
-{
-    for (int i = 0; i < CHANNELS; i++)
-        Mix_Volume(i, 0);
-}
-
-void RestoreVol()
-{
-    for (int i = 0; i < CHANNELS; i++)
-        Mix_Volume(i, chanvol[i]);
-}
-
-uint32_t GetChanTime(int i)
-{
-    if (i >= 0 && i < CHANNELS)
-        if (ChanStatus[i])
-            return SDL_GetTicks() - chantime[i];
-    return 0;
-}
-
 #define pi180 0.0174
 
-void snd_DeleteNoUniverse(pzllst_t *owner)
-{
-    MList *allres = GetAction_res_List();
-    StartMList(allres);
-    while (!eofMList(allres))
-    {
-        action_res_t *nod = (action_res_t *)DataMList(allres);
-        if (nod->node_type == NODE_TYPE_MUSIC)
-            if (nod->owner == owner && nod->nodes.node_music->universe == false)
-            {
-                snd_DeleteWav(nod);
-                DeleteCurrent(allres);
-            }
-        NextMList(allres);
-    }
-}
-
-void snd_DeleteLoopedWavsByOwner(pzllst_t *owner)
-{
-    MList *allres = GetAction_res_List();
-    StartMList(allres);
-    while (!eofMList(allres))
-    {
-        action_res_t *nod = (action_res_t *)DataMList(allres);
-        if (nod->node_type == NODE_TYPE_MUSIC)
-            if (nod->owner == owner && nod->nodes.node_music->looped)
-            {
-                snd_DeleteWav(nod);
-                DeleteCurrent(allres);
-            }
-        NextMList(allres);
-    }
-}
-
-int snd_ProcessWav(action_res_t *nod)
+int Sound_ProcessWav(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_MUSIC)
         return NODE_RET_OK;
@@ -141,7 +89,7 @@ int snd_ProcessWav(action_res_t *nod)
 
     if (!Mix_Playing(mnod->chn))
     {
-        snd_DeleteWav(nod);
+        Sound_DeleteWav(nod);
         return NODE_RET_DELETE;
     }
 
@@ -153,7 +101,7 @@ int snd_ProcessWav(action_res_t *nod)
             {
                 mnod->volume += mnod->crossfade_params.deltavolume;
                 if (Mix_Playing(mnod->chn))
-                    Mix_Volume(mnod->chn, GetLogVol(mnod->volume));
+                    Mix_Volume(mnod->chn, Sound_GetLogVol(mnod->volume));
                 mnod->crossfade_params.times--;
             }
         }
@@ -189,12 +137,12 @@ int snd_ProcessWav(action_res_t *nod)
     }
 
     if (mnod->sub != NULL)
-        sub_ProcessSub(mnod->sub, GetChanTime(mnod->chn) / 100);
+        Subtitles_Process(mnod->sub, GetChanTime(mnod->chn) / 100);
 
     return NODE_RET_OK;
 }
 
-int snd_DeleteWav(action_res_t *nod)
+int Sound_DeleteWav(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_MUSIC)
         return NODE_RET_NO;
@@ -205,14 +153,14 @@ int snd_DeleteWav(action_res_t *nod)
             Mix_HaltChannel(nod->nodes.node_music->chn);
 
         Mix_UnregisterAllEffects(nod->nodes.node_music->chn);
-        UnlockChan(nod->nodes.node_music->chn);
+        Sound_UnLockChannel(nod->nodes.node_music->chn);
     }
     Mix_FreeChunk(nod->nodes.node_music->chunk);
     if (nod->slot != 0)
         SetgVarInt(nod->slot, 2);
 
     if (nod->nodes.node_music->sub != NULL)
-        sub_DeleteSub(nod->nodes.node_music->sub);
+        Subtitles_Delete(nod->nodes.node_music->sub);
 
     setGNode(nod->slot, NULL);
 
@@ -222,10 +170,9 @@ int snd_DeleteWav(action_res_t *nod)
     return NODE_RET_DELETE;
 }
 
-action_res_t *snd_CreateWavNode()
+action_res_t *Sound_CreateWavNode()
 {
-    action_res_t *tmp;
-    tmp = ScrSys_CreateActRes(NODE_TYPE_MUSIC);
+    action_res_t *tmp = ScrSys_CreateActRes(NODE_TYPE_MUSIC);
 
     tmp->nodes.node_music = NEW(musicnode_t);
     tmp->nodes.node_music->chn = -1;
@@ -245,12 +192,9 @@ action_res_t *snd_CreateWavNode()
     return tmp;
 }
 
-/// SoundSync
-
-action_res_t *snd_CreateSyncNode()
+action_res_t *Sound_CreateSyncNode()
 {
-    action_res_t *tmp;
-    tmp = ScrSys_CreateActRes(NODE_TYPE_SYNCSND);
+    action_res_t *tmp = ScrSys_CreateActRes(NODE_TYPE_SYNCSND);
 
     tmp->nodes.node_sync = NEW(syncnode_t);
     tmp->nodes.node_sync->chn = -1;
@@ -261,7 +205,7 @@ action_res_t *snd_CreateSyncNode()
     return tmp;
 }
 
-int snd_DeleteSync(action_res_t *nod)
+int Sound_DeleteSync(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_SYNCSND)
         return NODE_RET_NO;
@@ -272,12 +216,12 @@ int snd_DeleteSync(action_res_t *nod)
             Mix_HaltChannel(nod->nodes.node_sync->chn);
 
         Mix_UnregisterAllEffects(nod->nodes.node_sync->chn);
-        UnlockChan(nod->nodes.node_sync->chn);
+        Sound_UnLockChannel(nod->nodes.node_sync->chn);
     }
     Mix_FreeChunk(nod->nodes.node_sync->chunk);
 
     if (nod->nodes.node_sync->sub != NULL)
-        sub_DeleteSub(nod->nodes.node_sync->sub);
+        Subtitles_Delete(nod->nodes.node_sync->sub);
 
     free(nod->nodes.node_sync);
     free(nod);
@@ -285,7 +229,7 @@ int snd_DeleteSync(action_res_t *nod)
     return NODE_RET_DELETE;
 }
 
-int snd_ProcessSync(action_res_t *nod)
+int Sound_ProcessSync(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_SYNCSND)
         return NODE_RET_OK;
@@ -293,7 +237,7 @@ int snd_ProcessSync(action_res_t *nod)
     syncnode_t *mnod = nod->nodes.node_sync;
 
     if (mnod->sub != NULL)
-        sub_ProcessSub(mnod->sub, GetChanTime(mnod->chn) / 100);
+        Subtitles_Process(mnod->sub, GetChanTime(mnod->chn) / 100);
 
     if (!Mix_Playing(mnod->chn) || getGNode(mnod->syncto) == NULL)
     {
@@ -303,7 +247,7 @@ int snd_ProcessSync(action_res_t *nod)
         else
             printf("NULL \n");
 #endif
-        snd_DeleteSync(nod);
+        Sound_DeleteSync(nod);
         return NODE_RET_DELETE;
     }
 
@@ -311,7 +255,7 @@ int snd_ProcessSync(action_res_t *nod)
 }
 
 //// Pantracking
-action_res_t *snd_CreatePanTrack()
+action_res_t *Sound_CreatePanTrack()
 {
     action_res_t *tmp;
     tmp = ScrSys_CreateActRes(NODE_TYPE_PANTRACK);
@@ -320,7 +264,7 @@ action_res_t *snd_CreatePanTrack()
     return tmp;
 }
 
-int snd_ProcessPanTrack(action_res_t *nod)
+int Sound_ProcessPanTrack(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_PANTRACK)
         return NODE_RET_OK;
@@ -328,14 +272,14 @@ int snd_ProcessPanTrack(action_res_t *nod)
     action_res_t *tr_nod = getGNode(nod->nodes.node_pantracking);
     if (tr_nod == NULL)
     {
-        snd_DeletePanTrack(nod);
+        Sound_DeletePanTrack(nod);
         return NODE_RET_DELETE;
     }
 
     return NODE_RET_OK;
 }
 
-int snd_DeletePanTrack(action_res_t *nod)
+int Sound_DeletePanTrack(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_PANTRACK)
         return NODE_RET_NO;

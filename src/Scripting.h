@@ -161,14 +161,13 @@ MList *GetAction_res_List();
 action_res_t *getGNode(int32_t indx);
 void setGNode(int32_t indx, action_res_t *data);
 
-void InitScriptsEngine();
-void LoadScriptFile(pzllst_t *lst, FManNode_t *filename, bool control, MList *controlst);
-
 void SetgVarInt(int32_t indx, int var);
 int GetgVarInt(int32_t indx);
 void SetDirectgVarInt(uint32_t indx, int var);
 int *GetDirectgVarInt(uint32_t indx);
 
+void ScrSys_Init();
+void ScrSys_LoadScript(pzllst_t *lst, FManNode_t *filename, bool control, MList *controlst);
 action_res_t *ScrSys_CreateActRes(int type);
 void ScrSys_AddToActResList(void *);
 void ScrSys_ProcessActResList();

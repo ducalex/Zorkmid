@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     }
 
     Rend_InitGraphics(fullscreen, widescreen);
-    InitSound();
+    Sound_Init();
     InitVkKeys();
     GameInit(path);
 

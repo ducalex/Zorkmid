@@ -11,10 +11,6 @@
 
 #define SFTYPE SDL_SWSURFACE // SDL_HWSURFACE
 
-#define CTRL_SAVE_FILE (CUR_GAME == GAME_ZGI ? "inquis.sav" : "nemesis.sav")
-#define CTRL_SAVE_SAVES (CUR_GAME == GAME_ZGI ? "inqsav%d.sav" : "nemsav%d.sav")
-#define TIMER_DELAY (CUR_GAME == GAME_ZGI ? 100 : 1000)
-
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -103,20 +99,13 @@ typedef struct animnode animnode_t;
 #include "Mouse.h"
 #include "Loader.h"
 #include "Puzzle.h"
-#include "Control.h"
+#include "Controls.h"
 #include "Scripting.h"
 #include "Inventory.h"
 #include "Actions.h"
 #include "Anims.h"
 #include "Menu.h"
 #include "Game.h"
-
-//Game timer functions
-void TimerInit(float fps);
-void TimerTick();
-int32_t GetFps();
-bool GetBeat();
-uint32_t GetDTime();
 
 //Keyboard functions
 void FlushKeybKey(SDLKey key);
@@ -139,23 +128,14 @@ void InitVkKeys();
 uint8_t GetWinKey(SDLKey key);
 SDLKey GetLastKey();
 
-void InitFileManager(const char *dir);
-const char *GetFilePath(const char *chr);
-TTF_Font *GetFontByName(char *name, int size);
-
 int GetKeyBuffered(int indx);
 bool CheckKeyboardMessage(const char *msg, int len);
 
-void FindAssets(const char *dir);
 bool isDirectory(const char *);
 bool FileExists(const char *);
 
 char *PrepareString(char *buf);
 char *GetParams(char *str);
-int GetIntVal(char *chr);
-
-void AddToBinTree(FManNode_t *nod);
-FManNode_t *FindInBinTree(const char *chr);
 
 double round(double r);
 

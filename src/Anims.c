@@ -1,27 +1,27 @@
 #include "Anims.h"
 
-action_res_t *anim_CreateAnimPlayNode()
+action_res_t *Anim_CreateAnimPlayNode()
 {
     action_res_t *tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPLAY);
     tmp->nodes.node_anim = NEW(animnode_t);
     return tmp;
 }
 
-action_res_t *anim_CreateAnimPreNode()
+action_res_t *Anim_CreateAnimPreNode()
 {
     action_res_t *tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPRE);
     tmp->nodes.node_animpre = NEW(animnode_t);
     return tmp;
 }
 
-action_res_t *anim_CreateAnimPlayPreNode()
+action_res_t *Anim_CreateAnimPlayPreNode()
 {
     action_res_t *tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPRPL);
     tmp->nodes.node_animpreplay = NEW(anim_preplay_node_t);
     return tmp;
 }
 
-void anim_LoadAnim(animnode_t *nod, char *filename, int u1, int u2, int32_t mask, int framerate)
+void Anim_Load(animnode_t *nod, char *filename, int u1, int u2, int32_t mask, int framerate)
 {
     if (framerate != 0)
         nod->framerate = 1000.0 / framerate;
@@ -34,7 +34,7 @@ void anim_LoadAnim(animnode_t *nod, char *filename, int u1, int u2, int32_t mask
     if (str_ends_with(filename, ".avi")) // AVI
     {
         nod->anim_avi = NEW(anim_avi_t);
-        nod->anim_avi->av = avi_openfile(GetFilePath(filename), Rend_GetRenderer() == RENDER_PANA);
+        nod->anim_avi->av = avi_openfile(Loader_GetPath(filename), Rend_GetRenderer() == RENDER_PANA);
         nod->anim_avi->lastfrm = -1;
 
         int w = nod->anim_avi->av->w;
@@ -50,7 +50,7 @@ void anim_LoadAnim(animnode_t *nod, char *filename, int u1, int u2, int32_t mask
     }
     else if (str_ends_with(filename, ".rlf"))
     {
-        nod->anim_rlf = loader_LoadRlf(filename, Rend_GetRenderer() == RENDER_PANA, mask);
+        nod->anim_rlf = Loader_LoadRLF(filename, Rend_GetRenderer() == RENDER_PANA, mask);
 
         if (nod->framerate == 0)
             nod->framerate = nod->anim_rlf->info.time;
@@ -64,7 +64,7 @@ void anim_LoadAnim(animnode_t *nod, char *filename, int u1, int u2, int32_t mask
     }
 }
 
-void anim_ProcessAnim(animnode_t *mnod)
+void Anim_Process(animnode_t *mnod)
 {
     if (!mnod->playing || !mnod)
         return;
@@ -106,12 +106,12 @@ void anim_ProcessAnim(animnode_t *mnod)
     }
 }
 
-int anim_ProcessAnimPlayNode(action_res_t *nod)
+int Anim_ProcessPlayNode(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_ANIMPLAY)
         return NODE_RET_OK;
 
-    anim_ProcessAnim(nod->nodes.node_anim);
+    Anim_Process(nod->nodes.node_anim);
 
     if (!nod->nodes.node_anim->playing)
     {
@@ -122,17 +122,17 @@ int anim_ProcessAnimPlayNode(action_res_t *nod)
     return NODE_RET_OK;
 }
 
-int anim_ProcessAnimPreNode(action_res_t *nod)
+int Anim_ProcessPreNode(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_ANIMPRE)
         return NODE_RET_OK;
 
-    anim_ProcessAnim(nod->nodes.node_animpre);
+    Anim_Process(nod->nodes.node_animpre);
 
     return NODE_RET_OK;
 }
 
-int anim_ProcessAnimPrePlayNode(action_res_t *nod)
+int Anim_ProcessPrePlayNode(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_ANIMPRPL)
         return NODE_RET_OK;
@@ -141,7 +141,7 @@ int anim_ProcessAnimPrePlayNode(action_res_t *nod)
 
     if (pre->playerid == 0)
     {
-        pre->playerid = anim_PlayAnim(pre->point, pre->x,
+        pre->playerid = Anim_Play(pre->point, pre->x,
                                       pre->y,
                                       pre->w,
                                       pre->h,
@@ -166,7 +166,7 @@ int anim_ProcessAnimPrePlayNode(action_res_t *nod)
     return NODE_RET_OK;
 }
 
-int anim_PlayAnim(animnode_t *nod, int x, int y, int w, int h, int start, int end, int loop)
+int Anim_Play(animnode_t *nod, int x, int y, int w, int h, int start, int end, int loop)
 {
     static int AnimID = 1;
 
@@ -197,7 +197,7 @@ int anim_PlayAnim(animnode_t *nod, int x, int y, int w, int h, int start, int en
     return nod->playID;
 }
 
-void anim_RenderAnimFrame(animnode_t *mnod, int16_t x, int16_t y, int16_t w, int16_t h, int16_t frame)
+void Anim_RenderFrame(animnode_t *mnod, int16_t x, int16_t y, int16_t w, int16_t h, int16_t frame)
 {
     if (!mnod)
         return;

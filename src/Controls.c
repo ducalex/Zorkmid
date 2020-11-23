@@ -1,4 +1,4 @@
-#include "Control.h"
+#include "System.h"
 
 static int FocusInput = 0;
 static bool pushChangeMouse = false;
@@ -53,7 +53,7 @@ static void control_slot_draw(ctrlnode_t *nod)
             else
                 sprintf(bff, "%d%sOBJ.TGA", tmp1, slut->distance_id);
 
-            slut->srf = loader_LoadFile_key(bff, 0, Rend_MapScreenRGB(0, 0, 0));
+            slut->srf = Loader_LoadFile_key(bff, 0, Rend_MapScreenRGB(0, 0, 0));
 
             slut->loaded_img = tmp1;
         }
@@ -94,9 +94,9 @@ static void control_input_draw(ctrlnode_t *ct)
             SDL_FillRect(inp->rect, NULL, 0);
 
             if (!inp->readonly || !inp->focused)
-                inp->textwidth = txt_DrawTxt(inp->text, &inp->string_init, inp->rect);
+                inp->textwidth = Text_Draw(inp->text, &inp->string_init, inp->rect);
             else
-                inp->textwidth = txt_DrawTxt(inp->text, &inp->string_chooser_init, inp->rect);
+                inp->textwidth = Text_Draw(inp->text, &inp->string_chooser_init, inp->rect);
 
             inp->textchanged = false;
         }
@@ -138,9 +138,9 @@ static void control_lever_draw(ctrlnode_t *ct)
         return;
 
     if ((lev->rendfrm > lev->curfrm) && lev->mirrored)
-        anim_RenderAnimFrame(lev->anm, lev->AnimCoords.x, lev->AnimCoords.y, lev->AnimCoords.w, lev->AnimCoords.h, lev->frames * 2 - 1 - lev->curfrm);
+        Anim_RenderFrame(lev->anm, lev->AnimCoords.x, lev->AnimCoords.y, lev->AnimCoords.w, lev->AnimCoords.h, lev->frames * 2 - 1 - lev->curfrm);
     else
-        anim_RenderAnimFrame(lev->anm, lev->AnimCoords.x, lev->AnimCoords.y, lev->AnimCoords.w, lev->AnimCoords.h, lev->curfrm);
+        Anim_RenderFrame(lev->anm, lev->AnimCoords.x, lev->AnimCoords.y, lev->AnimCoords.w, lev->AnimCoords.h, lev->curfrm);
 
     lev->rendfrm = lev->curfrm;
 }
@@ -217,7 +217,7 @@ static void control_input(ctrlnode_t *ct)
                     ctrlnode_t *c_tmp = ct;
                     while (cycle > 0 && cycle != ct->slot && c_tmp != NULL)
                     {
-                        c_tmp = GetControlByID(cycle);
+                        c_tmp = Controls_GetControl(cycle);
 
                         if (c_tmp)
                             if (c_tmp->type == CTRL_INPUT)
@@ -319,14 +319,14 @@ static void control_slot(ctrlnode_t *ct)
                 {
                     if (ctrl_eligeblity(mouse_item, slot))
                     {
-                        inv_drop(mouse_item);
-                        inv_add(item);
+                        Inventory_Drop(mouse_item);
+                        Inventory_Add(item);
                         SetgVarInt(ct->slot, mouse_item);
                     }
                 }
                 else
                 {
-                    inv_add(item);
+                    Inventory_Add(item);
                     SetgVarInt(ct->slot, 0);
                 }
             }
@@ -334,14 +334,14 @@ static void control_slot(ctrlnode_t *ct)
             {
                 if (ctrl_eligeblity(0, slot))
                 {
-                    inv_drop(0);
+                    Inventory_Drop(0);
                     SetgVarInt(ct->slot, 0);
                 }
             }
             else if (ctrl_eligeblity(mouse_item, slot))
             {
                 SetgVarInt(ct->slot, mouse_item);
-                inv_drop(mouse_item);
+                Inventory_Drop(mouse_item);
             }
 
             FlushMouseBtn(SDL_BUTTON_LEFT);
@@ -574,7 +574,7 @@ static void control_fist_draw(ctrlnode_t *ct)
             {
                 fist->frame_time = fist->anm->framerate;
 
-                anim_RenderAnimFrame(fist->anm, fist->anm_rect.x, fist->anm_rect.y,
+                Anim_RenderFrame(fist->anm, fist->anm_rect.x, fist->anm_rect.y,
                                      fist->anm->rel_w, fist->anm->rel_h,
                                      fist->frame_cur);
 
@@ -710,7 +710,7 @@ static void control_titler(ctrlnode_t *ct)
         titler->current_string = titler->next_string;
         SDL_FillRect(titler->surface, NULL, SDL_MapRGBA(titler->surface->format, 0, 0, 0, 255));
         if (titler->strings[titler->current_string] != NULL && titler->surface != NULL)
-            txt_DrawTxtInOneLine(titler->strings[titler->current_string], titler->surface);
+            Text_DrawInOneLine(titler->strings[titler->current_string], titler->surface);
     }
 }
 
@@ -731,7 +731,7 @@ static void control_hotmv_draw(ctrlnode_t *ct)
     hotm->rend_frame = hotm->cur_frame;
 
     if (hotm->cycle < hotm->num_cycles)
-        anim_RenderAnimFrame(hotm->anm, hotm->rect.x, hotm->rect.y, hotm->rect.w, hotm->rect.h, hotm->cur_frame);
+        Anim_RenderFrame(hotm->anm, hotm->rect.x, hotm->rect.y, hotm->rect.w, hotm->rect.h, hotm->cur_frame);
 }
 
 static void control_safe(ctrlnode_t *ct)
@@ -807,12 +807,12 @@ static void control_safe_draw(ctrlnode_t *ct)
         if (safe->cur_frame < safe->to_frame)
         {
             safe->cur_frame++;
-            anim_RenderAnimFrame(safe->anm, safe->rectangle.x, safe->rectangle.y, safe->rectangle.w, safe->rectangle.h, safe->cur_frame);
+            Anim_RenderFrame(safe->anm, safe->rectangle.x, safe->rectangle.y, safe->rectangle.w, safe->rectangle.h, safe->cur_frame);
         }
         else
         {
             safe->cur_frame--;
-            anim_RenderAnimFrame(safe->anm, safe->rectangle.x, safe->rectangle.y, safe->rectangle.w, safe->rectangle.h, safe->num_states * 2 - safe->cur_frame);
+            Anim_RenderFrame(safe->anm, safe->rectangle.x, safe->rectangle.y, safe->rectangle.w, safe->rectangle.h, safe->num_states * 2 - safe->cur_frame);
         }
 
         safe->frame_time = safe->anm->framerate;
@@ -902,7 +902,7 @@ static void control_save(ctrlnode_t *ct)
                         sprintf(fln, CTRL_SAVE_SAVES, i + 1);
                         if (FileExists(fln))
                         {
-                            if (game_question_message(GetSystemString(SYSTEM_STR_SAVEEXIST)))
+                            if (game_question_message(GetGameString(SYSTEM_STR_SAVEEXIST)))
                                 tosave = true;
                             else
                                 tosave = false;
@@ -921,14 +921,14 @@ static void control_save(ctrlnode_t *ct)
                             fclose(f);
 
                             ScrSys_SaveGame(fln);
-                            game_delay_message(1500, GetSystemString(SYSTEM_STR_SAVED));
+                            game_delay_message(1500, GetGameString(SYSTEM_STR_SAVED));
                             SetNeedLocate('0', '0', '0', '0', 0);
                             break;
                         }
                     }
                     else
                     {
-                        game_timed_message(2000, GetSystemString(SYSTEM_STR_SAVEEMPTY));
+                        game_timed_message(2000, GetGameString(SYSTEM_STR_SAVEEMPTY));
                     }
                 }
                 else
@@ -1055,8 +1055,8 @@ static inputnode_t *CreateInputNode()
 {
     inputnode_t *tmp = NEW(inputnode_t);
     tmp->textchanged = true;
-    txt_init_txt_struct(&tmp->string_init);
-    txt_init_txt_struct(&tmp->string_chooser_init);
+    Text_InitStyle(&tmp->string_init);
+    Text_InitStyle(&tmp->string_chooser_init);
     return tmp;
 }
 
@@ -1235,7 +1235,7 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
         }
     }
 
-    const char *descfile = GetFilePath(filename);
+    const char *descfile = Loader_GetPath(filename);
 
     if (!descfile)
         return 0; //FAIL
@@ -1259,7 +1259,7 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
             if (minbuf[ln - 1] == '~')
                 minbuf[ln - 1] = 0;
             lev->anm = NEW(animnode_t);
-            anim_LoadAnim(lev->anm, minbuf, 0, 0, 0, 0);
+            Anim_Load(lev->anm, minbuf, 0, 0, 0, 0);
         }
         else if (str_starts_with(str, "skipcolor"))
         {
@@ -1411,7 +1411,7 @@ static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
             char file[MINIBUFSZ];
             sscanf(str, "%s", file);
             hotm->anm = NEW(animnode_t);
-            anim_LoadAnim(hotm->anm, file, 0, 0, 0, 0);
+            Anim_Load(hotm->anm, file, 0, 0, 0, 0);
         }
         else if (str_starts_with(str, "rectangle"))
         {
@@ -1430,7 +1430,7 @@ static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
         }
     }
 
-    const char *descfile = GetFilePath(filename);
+    const char *descfile = Loader_GetPath(filename);
 
     if (!descfile)
         return 0; //FAIL
@@ -1575,7 +1575,7 @@ static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
 
     if (FileExists(CTRL_SAVE_FILE))
     {
-        char **saves = loader_loadStr(CTRL_SAVE_FILE);
+        char **saves = Loader_LoadSTR(CTRL_SAVE_FILE);
 
         for (int i = 0; saves[i] != NULL; i++)
         {
@@ -1606,7 +1606,7 @@ static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
 
             saveslot--;
 
-            ctrlnode_t *nd = GetControlByID(ctrlslot);
+            ctrlnode_t *nd = Controls_GetControl(ctrlslot);
             if (nd && nd->type == CTRL_INPUT)
             {
                 strcpy(nd->node.inp->text, sv->Names[saveslot]);
@@ -1677,10 +1677,10 @@ static int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "string_resource_file") == 0)
         {
-            const char *path = GetFilePath(GetParams(str));
+            const char *path = Loader_GetPath(GetParams(str));
             if (path)
             {
-                char **strings = loader_loadStr(path);
+                char **strings = Loader_LoadSTR(path);
 
                 titler->num_strings = 0;
 
@@ -1754,7 +1754,7 @@ static int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
         {
             char file[16];
             sscanf(GetParams(str), "%s", file);
-            inp->cursor = loader_LoadRlf(file, 0, 0);
+            inp->cursor = Loader_LoadRLF(file, 0, 0);
         }
         else if (str_starts_with(str, "focus"))
         {
@@ -1763,15 +1763,15 @@ static int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "string_init"))
         {
-            const char *tmp = GetSystemString(atoi(GetParams(str)));
+            const char *tmp = GetGameString(atoi(GetParams(str)));
             if (tmp != NULL)
-                txt_get_font_style(&inp->string_init, tmp);
+                Text_GetStyle(&inp->string_init, tmp);
         }
         else if (str_starts_with(str, "chooser_init_string"))
         {
-            const char *tmp = GetSystemString(atoi(GetParams(str)));
+            const char *tmp = GetGameString(atoi(GetParams(str)));
             if (tmp != NULL)
-                txt_get_font_style(&inp->string_chooser_init, tmp);
+                Text_GetStyle(&inp->string_chooser_init, tmp);
         }
         else if (str_starts_with(str, "venus_id"))
         {
@@ -1816,7 +1816,7 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
         else if (str_starts_with(str, "brush_file"))
         {
             str = GetParams(str);
-            SDL_Surface *tmp = loader_LoadFile(str, 0);
+            SDL_Surface *tmp = Loader_LoadFile(str, 0);
             if (tmp)
             {
                 paint->brush = NEW_ARRAY(uint8_t, tmp->w * tmp->h);
@@ -1887,7 +1887,7 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
         }     //if (str[0] == '}')
     }         //while (!feof(fl))
 
-    SDL_Surface *tmp = loader_LoadFile(filename, 0);
+    SDL_Surface *tmp = Loader_LoadFile(filename, 0);
 
     if (tmp)
     {
@@ -2107,7 +2107,7 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
         }
     }
 
-    const char *pth = GetFilePath(filename);
+    const char *pth = Loader_GetPath(filename);
 
     if (pth != NULL)
     {
@@ -2130,7 +2130,7 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
                 char minbuf[MINIBUFSZ];
                 sscanf(str, "animation:%s", minbuf);
                 fist->anm = NEW(animnode_t);
-                anim_LoadAnim(fist->anm, minbuf, 0, 0, 0, 0);
+                Anim_Load(fist->anm, minbuf, 0, 0, 0, 0);
             }
             else if (str_starts_with(str, "anim_rect"))
             {
@@ -2266,7 +2266,7 @@ static int Parse_Control_Safe(MList *controlst, mfile_t *fl, uint32_t slot)
         else if (str_starts_with(str, "animation"))
         {
             safe->anm = NEW(animnode_t);
-            anim_LoadAnim(safe->anm, GetParams(str), 0, 0, 0, 0);
+            Anim_Load(safe->anm, GetParams(str), 0, 0, 0, 0);
         }
         else if (str_starts_with(str, "rectangle"))
         {
@@ -2403,7 +2403,7 @@ static void ctrl_Delete_TitlerNode(ctrlnode_t *nod)
     free(nod->node.titler);
 }
 
-void DrawControls()
+void Controls_Draw()
 {
     MList *ctrl = Getctrl();
     StartMList(ctrl);
@@ -2433,7 +2433,7 @@ void DrawControls()
     }
 }
 
-void Parse_Control(MList *controlst, mfile_t *fl, char *ctstr)
+void Control_Parse(MList *controlst, mfile_t *fl, char *ctstr)
 {
     uint32_t slot;
     char ctrltp[100];
@@ -2458,7 +2458,7 @@ void Parse_Control(MList *controlst, mfile_t *fl, char *ctstr)
     else if (str_equals(ctrltp, "titler"))      Parse_Control_Titler(controlst, fl, slot);
 }
 
-void ProcessControls(MList *ctrlst)
+void Controls_ProcessList(MList *ctrlst)
 {
     pushChangeMouse = false;
 
@@ -2478,7 +2478,7 @@ void ProcessControls(MList *ctrlst)
     }
 }
 
-void FlushControlList(MList *lst)
+void Controls_FlushList(MList *lst)
 {
     StartMList(lst);
     while (!eofMList(lst))
@@ -2526,7 +2526,7 @@ void FlushControlList(MList *lst)
     FlushMList(lst);
 }
 
-ctrlnode_t *GetControlByID(int32_t id)
+ctrlnode_t *Controls_GetControl(int32_t id)
 {
     MList *lst = Getctrl();
     pushMList(lst);

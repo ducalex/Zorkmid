@@ -1,8 +1,8 @@
 #ifndef INVENTORY_H_INCLUDED
 #define INVENTORY_H_INCLUDED
 
-void inv_drop(int item);
-void inv_add(int item);
-void inv_cycle();
+void Inventory_Drop(int item);
+void Inventory_Add(int item);
+void Inventory_Cycle();
 
 #endif // INVENTORY_H_INCLUDED

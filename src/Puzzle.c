@@ -1,6 +1,41 @@
 #include "System.h"
 
-pzllst_t *CreatePuzzleList(const char *name)
+static void DeletePuzzleNode(puzzlenode_t *nod)
+{
+    TRACE_PUZZLE("Deleting Puzzle #%d\n", nod->slot);
+
+    StartMList(nod->CritList);
+    while (!eofMList(nod->CritList))
+    {
+        MList *criteries = (MList *)DataMList(nod->CritList);
+
+        StartMList(criteries);
+        while (!eofMList(criteries))
+        {
+            free(DataMList(criteries));
+            NextMList(criteries);
+        }
+        DeleteMList(criteries);
+
+        NextMList(nod->CritList);
+    }
+    DeleteMList(nod->CritList);
+
+    StartMList(nod->ResList);
+    while (!eofMList(nod->ResList))
+    {
+        func_node_t *fun = (func_node_t *)DataMList(nod->ResList);
+        if (fun->param != NULL)
+            free(fun->param);
+        free(fun);
+        NextMList(nod->ResList);
+    }
+    DeleteMList(nod->ResList);
+
+    free(nod);
+}
+
+pzllst_t *Puzzle_CreateList(const char *name)
 {
     pzllst_t *tmp = NEW(pzllst_t);
     tmp->_list = CreateMList();
@@ -9,46 +44,12 @@ pzllst_t *CreatePuzzleList(const char *name)
     return tmp;
 }
 
-void FlushPuzzleList(pzllst_t *lst)
+void Puzzle_FlushList(pzllst_t *lst)
 {
     StartMList(lst->_list);
     while (!eofMList(lst->_list))
     {
-        puzzlenode_t *nod = (puzzlenode_t *)DataMList(lst->_list);
-
-        TRACE_PUZZLE("Deleting Puzzle #%d\n", nod->slot);
-
-        StartMList(nod->CritList);
-        while (!eofMList(nod->CritList))
-        {
-
-            MList *criteries = (MList *)DataMList(nod->CritList);
-
-            StartMList(criteries);
-            while (!eofMList(criteries))
-            {
-                free(DataMList(criteries));
-                NextMList(criteries);
-            }
-            DeleteMList(criteries);
-
-            NextMList(nod->CritList);
-        }
-        DeleteMList(nod->CritList);
-
-        StartMList(nod->ResList);
-        while (!eofMList(nod->ResList))
-        {
-            func_node_t *fun = (func_node_t *)DataMList(nod->ResList);
-            if (fun->param != NULL)
-                free(fun->param);
-            free(fun);
-            NextMList(nod->ResList);
-        }
-        DeleteMList(nod->ResList);
-
-        free(nod);
-
+        DeletePuzzleNode((puzzlenode_t *)DataMList(lst->_list));
         NextMList(lst->_list);
     }
 
@@ -197,44 +198,34 @@ static int Parse_Puzzle_Criteria(puzzlenode_t *pzl, mfile_t *fl)
 static int Parse_Puzzle_Results(puzzlenode_t *pzl, mfile_t *fl)
 {
     char buf[STRBUFSIZE];
-    char *str;
 
     while (!mfeof(fl))
     {
         mfgets(buf, STRBUFSIZE, fl);
-        str = PrepareString(buf);
+
+        // Format is `action: background: event: other`
+        char *str = PrepareString(buf);
+        char *str2;
 
         if (str[0] == '}')
-        {
             return 1;
-        }
-        else if (!str_empty(str))
-        {
-            char *str2 = strchr(str, ':'); //action: background: event: other
-            if (str2)
-                Parse_Puzzle_Results_Action(str2 + 1, pzl->ResList);
-            else
-                LOG_WARN("Unknown result action: %s\n", str);
-        }
+        else if ((str2 = strchr(str, ':')))
+            Parse_Puzzle_Results_Action(str2 + 1, pzl->ResList);
+        else
+            LOG_WARN("Unknown result action: %s\n", str);
     }
 
     return 0;
 }
 
-int Puzzle_Parse(pzllst_t *lst, mfile_t *fl, char *ctstr)
+void Puzzle_Parse(pzllst_t *lst, mfile_t *fl, char *ctstr)
 {
-    int good = 0;
-
     char buf[STRBUFSIZE];
-    char *str;
-
     uint32_t slot;
-    sscanf(ctstr, "puzzle:%d", &slot); //read slot number;
 
-    TRACE_PUZZLE("puzzle:%d Creating object\n", slot);
+    sscanf(ctstr, "puzzle:%d", &slot);
 
     puzzlenode_t *pzl = NEW(puzzlenode_t);
-
     pzl->owner = lst;
     pzl->slot = slot;
     pzl->CritList = CreateMList();
@@ -245,38 +236,37 @@ int Puzzle_Parse(pzllst_t *lst, mfile_t *fl, char *ctstr)
     while (!mfeof(fl))
     {
         mfgets(buf, STRBUFSIZE, fl);
-        str = PrepareString(buf);
+        char *str = PrepareString(buf);
 
-        if (str[0] == '}')
+        if (str[0] == '}') // We've reached the end!
         {
-            good = 1;
-            break;
+            if ((ScrSys_GetFlag(pzl->slot) & FLAG_ONCE_PER_I))
+                SetgVarInt(slot, 0);
+
+            TRACE_PUZZLE("Created Puzzle %d\n", slot);
+            AddToMList(lst->_list, pzl);
+            return;
         }
-        else if (str_starts_with(str, "criteria")) //PARSE CRITERIA
+        else if (str_starts_with(str, "criteria"))
         {
             TRACE_PUZZLE("Creating criteria\n");
             Parse_Puzzle_Criteria(pzl, fl);
         }
-        else if (str_starts_with(str, "results")) //RESULTS
+        else if (str_starts_with(str, "results"))
         {
             TRACE_PUZZLE("Creating results\n");
             Parse_Puzzle_Results(pzl, fl);
         }
-        else if (str_starts_with(str, "flags")) // FLAGS
+        else if (str_starts_with(str, "flags"))
         {
             TRACE_PUZZLE("Reading flags\n");
             Parse_Puzzle_Flags(pzl, fl);
         }
     }
 
-    if ((ScrSys_GetFlag(pzl->slot) & FLAG_ONCE_PER_I))
-        SetgVarInt(slot, 0);
-
-    if (good) //All ok? then, adds this puzzle to list
-        AddToMList(lst->_list, pzl);
-    // else we should cleanup to avoid memleaks...
-
-    return good;
+    // If we reach that point the parsing failed...
+    LOG_WARN("Failed to parse puzzle '%s'...", ctstr);
+    DeletePuzzleNode(pzl);
 }
 
 static bool ProcessCriteries(MList *lst)
@@ -291,12 +281,7 @@ static bool ProcessCriteries(MList *lst)
         TRACE_PUZZLE("        [%d] %d [%d] %d\n", critnd->slot1, critnd->oper, critnd->slot2, critnd->var2);
 
         int tmp1 = GetgVarInt(critnd->slot1);
-        int tmp2;
-
-        if (critnd->var2)
-            tmp2 = GetgVarInt(critnd->slot2);
-        else
-            tmp2 = critnd->slot2;
+        int tmp2 = critnd->var2 ? GetgVarInt(critnd->slot2) : critnd->slot2;
 
         switch (critnd->oper)
         {
@@ -363,7 +348,7 @@ int Puzzle_TryExec(puzzlenode_t *pzlnod) //, pzllst_t *owner)
     while (!eofMList(pzlnod->ResList))
     {
         func_node_t *fun = (func_node_t *)DataMList(pzlnod->ResList);
-        if (action_exec(fun->action, fun->param, fun->slot, pzlnod->owner) == ACTION_BREAK)
+        if (Actions_Run(fun->action, fun->param, fun->slot, pzlnod->owner) == ACTION_BREAK)
         {
             return ACTION_BREAK;
         }

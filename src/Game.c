@@ -5,6 +5,98 @@ static bool NeedToLoadScript = false;
 static int8_t NeedToLoadScriptDelay = CHANGELOCATIONDELAY;
 static char *GamePath = "./";
 
+static char **GameStrings;
+
+static uint32_t CurrentTime = 0;
+static uint32_t DeltaTime = 0;
+
+static uint64_t mtime = 0;   // Game timer ticks [after ~23 milliards years will came overflow of this var, don't play so long]
+static bool btime = false;   // Indicates new Tick
+static uint64_t reltime = 0; // Realtime ticks for calculate game ticks
+static int tofps = 0;
+
+static uint32_t time = 0;
+static int32_t frames = 0;
+static int32_t fps = 1;
+
+#define DELAY 10
+
+//Resets game timer and set next realtime point to incriment game timer
+static void TimerInit(float throttle)
+{
+    mtime = 0;
+    btime = false;
+    frames = 0;
+    fps = 1;
+    tofps = ceil((1000.0 - (float)(DELAY << 1)) / (throttle));
+    reltime = SDL_GetTicks() + tofps;
+}
+
+//Process game timer.
+static void TimerTick()
+{
+    if (reltime < SDL_GetTicks()) //New tick
+    {
+        mtime++;
+        btime = true;
+        reltime = SDL_GetTicks() + tofps;
+    }
+    else //No new tick
+    {
+        btime = false;
+    }
+
+    Rend_Delay(DELAY);
+
+    //
+    uint32_t tmptime = SDL_GetTicks();
+    if (CurrentTime != 0)
+        DeltaTime = tmptime - CurrentTime;
+    CurrentTime = tmptime;
+
+    // FPS
+    if (SDL_GetTicks() > time)
+    {
+        fps = frames;
+        if (fps == 0)
+            fps = 1;
+        frames = 0;
+        time = SDL_GetTicks() + 1000;
+    }
+    frames++;
+}
+
+//Resturn true if new tick appeared
+bool GetBeat()
+{
+    return btime;
+}
+
+uint32_t GetDTime()
+{
+    if (DeltaTime == 0)
+        DeltaTime = 1;
+    return DeltaTime;
+}
+
+float GetFps()
+{
+    return fps;
+}
+
+static void LoadGameStrings(void)
+{
+    const char *file = (CUR_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR");
+    char filename[PATHBUFSIZ];
+    sprintf(filename, "%s/%s", GetGamePath(), file);
+    GameStrings = Loader_LoadSTR(filename);
+}
+
+const char *GetGameString(int32_t indx)
+{
+    return GameStrings[indx & 0xFF];
+}
+
 const char *GetGamePath()
 {
     return GamePath;
@@ -64,12 +156,13 @@ void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X)
 void GameInit(const char *path)
 {
     SetGamePath(path);
-    InitFileManager(path);
+    Loader_Init(path);
+    LoadGameStrings();
     Mouse_LoadCursors();
-    menu_LoadGraphics();
+    Menu_LoadGraphics();
 
-    InitScriptsEngine();
-    LoadScriptFile(GetUni(), FindInBinTree("universe.scr"), false, NULL);
+    ScrSys_Init();
+    ScrSys_LoadScript(GetUni(), Loader_FindNode("universe.scr"), false, NULL);
 
     ScrSys_ChangeLocation(InitWorld, InitRoom, InitNode, InitView, 0, true);
 
@@ -178,7 +271,7 @@ void EasterEggsAndDebug()
             else
                 sprintf(message_buffer, "0 %s 0", "v000hnta.raw");
 
-            action_exec("universe_music", message_buffer, 0, GetUni());
+            Actions_Run("universe_music", message_buffer, 0, GetUni());
         }
     }
 
@@ -233,7 +326,7 @@ void GameLoop()
 
         if (CUR_GAME == GAME_NEM)
             if (MouseUp(SDL_BUTTON_RIGHT))
-                inv_cycle();
+                Inventory_Cycle();
 
         if (GetgVarInt(SLOT_MOUSE_RIGHT_CLICK) != 1)
             if (MouseDown(SDL_BUTTON_LEFT))
@@ -255,7 +348,7 @@ void GameLoop()
         ScrSys_ExecPuzzleList(GetUni());
 
     if (!ScrSys_BreakExec())
-        menu_UpdateMenuBar();
+        Menu_Update();
 
     if (!NeedToLoadScript)
     {
@@ -263,7 +356,7 @@ void GameLoop()
             Rend_MouseInteractOfRender();
 
         if (!ScrSys_BreakExec())
-            ProcessControls(Getctrl());
+            Controls_ProcessList(Getctrl());
 
         if (!ScrSys_BreakExec())
             Rend_RenderFunc();
@@ -284,22 +377,22 @@ void GameLoop()
     EasterEggsAndDebug();
 
     // Keyboard shortcuts
-    if (menu_GetMenuBarVal())
+    if (Menu_GetVal())
     {
         if (KeyHit(SDLK_s) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
-            if (menu_GetMenuBarVal() & menu_BAR_SAVE)
+            if (Menu_GetVal() & MENU_BAR_SAVE)
                 SetNeedLocate(SaveWorld, SaveRoom, SaveNode, SaveView, 0);
 
         if (KeyHit(SDLK_r) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
-            if (menu_GetMenuBarVal() & menu_BAR_RESTORE)
+            if (Menu_GetVal() & MENU_BAR_RESTORE)
                 SetNeedLocate(LoadWorld, LoadRoom, LoadNode, LoadView, 0);
 
         if (KeyHit(SDLK_p) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
-            if (menu_GetMenuBarVal() & menu_BAR_SETTINGS)
+            if (Menu_GetVal() & MENU_BAR_SETTINGS)
                 SetNeedLocate(PrefWorld, PrefRoom, PrefNode, PrefView, 0);
 
         if (KeyHit(SDLK_q) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
-            if (menu_GetMenuBarVal() & menu_BAR_EXIT)
+            if (Menu_GetVal() & MENU_BAR_EXIT)
                 game_try_quit();
     }
 
@@ -342,7 +435,7 @@ void GameUpdate()
 void game_timed_message(int32_t milsecs, const char *str)
 {
     subrect_t *zzz = Rend_CreateSubRect(SUB_DEF_RECT);
-    txt_DrawTxtInOneLine(str, zzz->img);
+    Text_DrawInOneLine(str, zzz->img);
     Rend_DelaySubDelete(zzz, milsecs);
 }
 
@@ -352,14 +445,14 @@ void game_timed_debug_message(int32_t milsecs, const char *str)
     if (tmp_up < GAMESCREEN_Y)
         tmp_up = GAMESCREEN_Y;
     subrect_t *zzz = Rend_CreateSubRect(0, 0, GAMESCREEN_W, tmp_up);
-    txt_DrawTxtInOneLine(str, zzz->img);
+    Text_DrawInOneLine(str, zzz->img);
     Rend_DelaySubDelete(zzz, milsecs);
 }
 
 void game_delay_message(int32_t milsecs, const char *str)
 {
     subrect_t *zzz = Rend_CreateSubRect(SUB_DEF_RECT);
-    txt_DrawTxtInOneLine(str, zzz->img);
+    Text_DrawInOneLine(str, zzz->img);
     Rend_RenderFunc();
     Rend_ScreenFlip();
 
@@ -385,7 +478,7 @@ void game_delay_message(int32_t milsecs, const char *str)
 bool game_question_message(const char *str)
 {
     subrect_t *zzz = Rend_CreateSubRect(SUB_DEF_RECT);
-    txt_DrawTxtInOneLine(str, zzz->img);
+    Text_DrawInOneLine(str, zzz->img);
     Rend_RenderFunc();
     Rend_ScreenFlip();
 
@@ -408,6 +501,6 @@ bool game_question_message(const char *str)
 
 void game_try_quit()
 {
-    if (game_question_message(GetSystemString(SYSTEM_STR_EXITPROMT)))
+    if (game_question_message(GetGameString(SYSTEM_STR_EXITPROMT)))
         GameQuit();
 }

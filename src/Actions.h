@@ -8,6 +8,6 @@
 #define ACTION_ERROR -1
 #define ACTION_BREAK -2
 
-int action_exec(const char* name, char *params, int aSlot, pzllst_t *owner);
+int Actions_Run(const char* name, char *params, int aSlot, pzllst_t *owner);
 
 #endif // ACTIONS_H_INCLUDED

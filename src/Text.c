@@ -33,32 +33,14 @@ static uint16_t ReadUtf8Char(char *chr)
     return result;
 }
 
-txt_style_t *txt_init_txt_struct(txt_style_t *style)
+static SDL_Surface *RenderUTF8(TTF_Font *fnt, char *text, txt_style_t *style)
 {
-    if (style == NULL)
-    {
-        style = NEW(txt_style_t);
-    }
-
-    style->blue = 255;
-    style->green = 255;
-    style->red = 255;
-    strcpy(style->fontname, "Arial");
-    style->bold = TXT_STYLE_VAR_FALSE;
-    style->escapement = 0;
-    style->italic = TXT_STYLE_VAR_FALSE;
-    style->justify = TXT_JUSTIFY_LEFT;
-    style->newline = 0;
-    style->size = 12;
-    style->skipcolor = TXT_STYLE_VAR_FALSE;
-    style->strikeout = TXT_STYLE_VAR_FALSE;
-    style->underline = TXT_STYLE_VAR_FALSE;
-    style->statebox = 0;
-
-    return style;
+    Text_SetStyle(fnt, style);
+    SDL_Color clr = {style->red, style->green, style->blue, 255};
+    return TTF_RenderUTF8_Solid(fnt, text, clr);
 }
 
-int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
+static int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
 {
     char buf[TXT_CFG_BUF_MAX_LEN];
     memcpy(buf, strin, len);
@@ -345,7 +327,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
     return retval;
 }
 
-void txt_DrawTxtWithJustify(char *txt, TTF_Font *fnt, SDL_Color clr, SDL_Surface *dst, int lineY, int justify)
+static void Text_DrawWithJustify(char *txt, TTF_Font *fnt, SDL_Color clr, SDL_Surface *dst, int lineY, int justify)
 {
     SDL_Surface *aaa = TTF_RenderUTF8_Solid(fnt, txt, clr);
 
@@ -362,277 +344,6 @@ void txt_DrawTxtWithJustify(char *txt, TTF_Font *fnt, SDL_Color clr, SDL_Surface
         DrawImageToSurf(aaa, dst->w - aaa->w, lineY - aaa->h, dst);
 
     SDL_FreeSurface(aaa);
-}
-
-void txt_get_font_style(txt_style_t *style, const char *strin)
-{
-    int32_t strt = -1;
-    int32_t endt = -1;
-
-    int32_t t_len = strlen(strin);
-
-    for (int32_t i = 0; i < t_len; i++)
-    {
-        if (strin[i] == '<')
-            strt = i;
-        else if (strin[i] == '>')
-        {
-            endt = i;
-            if (strt != -1)
-                if ((endt - strt - 1) > 0)
-                    txt_parse_txt_params(style, strin + strt + 1, endt - strt - 1);
-        }
-    }
-}
-
-void txt_set_font_style(TTF_Font *font, txt_style_t *fnt_stl)
-{
-    int32_t temp_stl = 0;
-
-    if (fnt_stl->bold == TXT_STYLE_VAR_TRUE)
-        temp_stl |= TTF_STYLE_BOLD;
-
-    if (fnt_stl->italic == TXT_STYLE_VAR_TRUE)
-        temp_stl |= TTF_STYLE_ITALIC;
-
-    if (fnt_stl->underline == TXT_STYLE_VAR_TRUE)
-        temp_stl |= TTF_STYLE_UNDERLINE;
-
-#ifdef TTF_STYLE_STRIKETHROUGH
-    if (fnt_stl->strikeout == TXT_STYLE_VAR_TRUE)
-        temp_stl |= TTF_STYLE_STRIKETHROUGH;
-#endif
-
-    TTF_SetFontStyle(font, temp_stl);
-}
-
-int32_t txt_DrawTxt(char *txt, txt_style_t *fnt_stl, SDL_Surface *dst)
-{
-    TTF_Font *temp_font = GetFontByName(fnt_stl->fontname, fnt_stl->size);
-    if (!temp_font)
-    {
-        Z_PANIC("TTF_OpenFont: %s\n", TTF_GetError());
-    }
-
-    SDL_FillRect(dst, NULL, 0);
-
-    SDL_Color clr = {fnt_stl->red, fnt_stl->green, fnt_stl->blue, 255};
-
-    txt_set_font_style(temp_font, fnt_stl);
-
-    int32_t w, h;
-
-    TTF_SizeUTF8(temp_font, txt, &w, &h);
-
-    txt_DrawTxtWithJustify(txt, temp_font, clr, dst, fnt_stl->size, fnt_stl->justify);
-
-    TTF_CloseFont(temp_font);
-
-    return w;
-}
-
-SDL_Surface *txt_RenderUTF8(TTF_Font *fnt, char *text, txt_style_t *style)
-{
-    txt_set_font_style(fnt, style);
-    SDL_Color clr = {style->red, style->green, style->blue, 255};
-    return TTF_RenderUTF8_Solid(fnt, text, clr);
-}
-
-void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
-{
-    txt_style_t style, style2;
-    txt_init_txt_struct(&style);
-    int32_t strt = -1;
-    int32_t endt = -1;
-    int32_t i = 0;
-    int32_t dx = 0, dy = 0;
-    int32_t txt_w, txt_h;
-    int32_t txtpos = 0;
-    char buf[TXT_CFG_BUF_MAX_LEN];
-    char buf2[TXT_CFG_BUF_MAX_LEN];
-    memset(buf, 0, TXT_CFG_BUF_MAX_LEN);
-    memset(buf2, 0, TXT_CFG_BUF_MAX_LEN);
-
-    SDL_Surface *TxtSurfaces[TXT_CFG_TEXTURES_LINES][TXT_CFG_TEXTURES_PER_LINE];
-    int32_t currentline = 0, currentlineitm = 0;
-
-    int8_t TxtJustify[TXT_CFG_TEXTURES_LINES];
-    int8_t TxtPoint[TXT_CFG_TEXTURES_LINES];
-
-    memset(TxtSurfaces, 0, sizeof(TxtSurfaces));
-
-    int32_t stringlen = strlen(text);
-
-    TTF_Font *font = NULL;
-
-    font = GetFontByName(style.fontname, style.size);
-    txt_set_font_style(font, &style);
-
-    int32_t prevbufspace = 0, prevtxtspace = 0;
-
-    while (i < stringlen)
-    {
-        TxtJustify[currentline] = style.justify;
-        TxtPoint[currentline] = style.size;
-        if (text[i] == '<')
-        {
-            int32_t ret = 0;
-
-            strt = i;
-            while (i < stringlen && text[i] != '>')
-                i++;
-            endt = i;
-            if (strt != -1)
-                if ((endt - strt - 1) > 0)
-                {
-                    style2 = style;
-                    ret = txt_parse_txt_params(&style, text + strt + 1, endt - strt - 1);
-                }
-
-            if (ret & (TXT_RET_FNTCHG | TXT_RET_FNTSTL | TXT_RET_NEWLN))
-            {
-                if (!str_empty(buf))
-                {
-                    TTF_SizeUTF8(font, buf, &txt_w, &txt_h);
-
-                    TxtSurfaces[currentline][currentlineitm] = txt_RenderUTF8(font, buf, &style2);
-
-                    currentlineitm++;
-
-                    memset(buf, 0, TXT_CFG_BUF_MAX_LEN);
-                    prevbufspace = 0;
-                    txtpos = 0;
-                    dx += txt_w;
-                }
-                if (ret & TXT_RET_FNTCHG)
-                {
-                    TTF_CloseFont(font);
-                    font = GetFontByName(style.fontname, style.size);
-                    txt_set_font_style(font, &style);
-                }
-                if (ret & TXT_RET_FNTSTL)
-                    txt_set_font_style(font, &style);
-
-                if (ret & TXT_RET_NEWLN)
-                {
-                    currentline++;
-                    currentlineitm = 0;
-                    dx = 0;
-                }
-            }
-
-            if (ret & TXT_RET_HASSTBOX)
-            {
-                char buf3[MINIBUFSZ];
-                sprintf(buf3, "%d", GetgVarInt(style.statebox));
-                strcat(buf, buf3);
-                txtpos += strlen(buf3);
-            }
-        }
-        else
-        {
-            buf[txtpos++] = text[i];
-
-            if (text[i] == ' ')
-            {
-                prevbufspace = txtpos - 1;
-                prevtxtspace = i;
-            }
-
-            if (font != NULL)
-            {
-                TTF_SizeUTF8(font, buf, &txt_w, &txt_h);
-                if (txt_w + dx > dst->w)
-                {
-                    if (prevbufspace == 0)
-                    {
-                        prevtxtspace = i;
-                        prevbufspace = txtpos - 1;
-                    }
-                    memcpy(buf2, buf, prevbufspace + 1);
-                    buf2[prevbufspace + 1] = 0x0;
-
-                    if (!str_empty(buf2))
-                        TxtSurfaces[currentline][currentlineitm] = txt_RenderUTF8(font, buf2, &style);
-
-                    memset(buf, 0, TXT_CFG_BUF_MAX_LEN);
-                    i = prevtxtspace;
-                    prevbufspace = 0;
-                    txtpos = 0;
-                    currentline++;
-                    currentlineitm = 0;
-                    dx = 0;
-                }
-            }
-        }
-        i++;
-    }
-
-    if (!str_empty(buf))
-        TxtSurfaces[currentline][currentlineitm] = txt_RenderUTF8(font, buf, &style);
-
-    dy = 0;
-    for (i = 0; i <= currentline; i++)
-    {
-        int32_t j = 0;
-        int32_t width = 0;
-        while (TxtSurfaces[i][j] != NULL)
-        {
-            width += TxtSurfaces[i][j]->w;
-            j++;
-        }
-        dx = 0;
-        for (int32_t jj = 0; jj < j; jj++)
-        {
-            if (TxtJustify[i] == TXT_JUSTIFY_LEFT)
-                DrawImageToSurf(TxtSurfaces[i][jj], dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
-
-            else if (TxtJustify[i] == TXT_JUSTIFY_CENTER)
-                DrawImageToSurf(TxtSurfaces[i][jj], ((dst->w - width) >> 1) + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
-
-            else if (TxtJustify[i] == TXT_JUSTIFY_RIGHT)
-                DrawImageToSurf(TxtSurfaces[i][jj], dst->w - width + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
-
-            dx += TxtSurfaces[i][jj]->w;
-        }
-
-        dy += TxtPoint[i];
-    }
-
-    for (i = 0; i < TXT_CFG_TEXTURES_LINES; i++)
-        for (int32_t j = 0; j < TXT_CFG_TEXTURES_PER_LINE; j++)
-            if (TxtSurfaces[i][j] != NULL)
-                SDL_FreeSurface(TxtSurfaces[i][j]);
-}
-
-action_res_t *txt_CreateTTYtext()
-{
-    action_res_t *tmp = ScrSys_CreateActRes(NODE_TYPE_TTYTEXT);
-    tmp->nodes.tty_text = NEW(ttytext_t);
-    txt_init_txt_struct(&tmp->nodes.tty_text->style);
-    return tmp;
-}
-
-int txt_DeleteTTYtext(action_res_t *nod)
-{
-    if (nod->node_type != NODE_TYPE_TTYTEXT)
-        return NODE_RET_NO;
-
-    if (nod->nodes.tty_text->img != NULL)
-        SDL_FreeSurface(nod->nodes.tty_text->img);
-
-    if (nod->nodes.tty_text->fnt != NULL)
-        TTF_CloseFont(nod->nodes.tty_text->fnt);
-
-    if (nod->slot > 0)
-    {
-        SetgVarInt(nod->slot, 2);
-        setGNode(nod->slot, NULL);
-    }
-
-    free(nod);
-
-    return NODE_RET_DELETE;
 }
 
 static void ttynewline(ttytext_t *tty)
@@ -682,7 +393,292 @@ static int32_t getglyphwidth(TTF_Font *fnt, uint16_t chr)
     return advice;
 }
 
-int txt_ProcessTTYtext(action_res_t *nod)
+void Text_InitStyle(txt_style_t *style)
+{
+    if (style == NULL)
+        Z_PANIC("style is NULL")
+
+    style->blue = 255;
+    style->green = 255;
+    style->red = 255;
+    strcpy(style->fontname, "Arial");
+    style->bold = TXT_STYLE_VAR_FALSE;
+    style->escapement = 0;
+    style->italic = TXT_STYLE_VAR_FALSE;
+    style->justify = TXT_JUSTIFY_LEFT;
+    style->newline = 0;
+    style->size = 12;
+    style->skipcolor = TXT_STYLE_VAR_FALSE;
+    style->strikeout = TXT_STYLE_VAR_FALSE;
+    style->underline = TXT_STYLE_VAR_FALSE;
+    style->statebox = 0;
+}
+
+void Text_GetStyle(txt_style_t *style, const char *strin)
+{
+    int32_t strt = -1;
+    int32_t endt = -1;
+
+    int32_t t_len = strlen(strin);
+
+    for (int32_t i = 0; i < t_len; i++)
+    {
+        if (strin[i] == '<')
+            strt = i;
+        else if (strin[i] == '>')
+        {
+            endt = i;
+            if (strt != -1)
+                if ((endt - strt - 1) > 0)
+                    txt_parse_txt_params(style, strin + strt + 1, endt - strt - 1);
+        }
+    }
+}
+
+void Text_SetStyle(TTF_Font *font, txt_style_t *fnt_stl)
+{
+    int32_t temp_stl = 0;
+
+    if (fnt_stl->bold == TXT_STYLE_VAR_TRUE)
+        temp_stl |= TTF_STYLE_BOLD;
+
+    if (fnt_stl->italic == TXT_STYLE_VAR_TRUE)
+        temp_stl |= TTF_STYLE_ITALIC;
+
+    if (fnt_stl->underline == TXT_STYLE_VAR_TRUE)
+        temp_stl |= TTF_STYLE_UNDERLINE;
+
+#ifdef TTF_STYLE_STRIKETHROUGH
+    if (fnt_stl->strikeout == TXT_STYLE_VAR_TRUE)
+        temp_stl |= TTF_STYLE_STRIKETHROUGH;
+#endif
+
+    TTF_SetFontStyle(font, temp_stl);
+}
+
+int32_t Text_Draw(char *txt, txt_style_t *fnt_stl, SDL_Surface *dst)
+{
+    TTF_Font *temp_font = Loader_LoadFont(fnt_stl->fontname, fnt_stl->size);
+    if (!temp_font)
+    {
+        Z_PANIC("TTF_OpenFont: %s\n", TTF_GetError());
+    }
+
+    SDL_FillRect(dst, NULL, 0);
+
+    SDL_Color clr = {fnt_stl->red, fnt_stl->green, fnt_stl->blue, 255};
+
+    Text_SetStyle(temp_font, fnt_stl);
+
+    int32_t w, h;
+
+    TTF_SizeUTF8(temp_font, txt, &w, &h);
+
+    Text_DrawWithJustify(txt, temp_font, clr, dst, fnt_stl->size, fnt_stl->justify);
+
+    TTF_CloseFont(temp_font);
+
+    return w;
+}
+
+void Text_DrawInOneLine(const char *text, SDL_Surface *dst)
+{
+    txt_style_t style, style2;
+    Text_InitStyle(&style);
+    int32_t strt = -1;
+    int32_t endt = -1;
+    int32_t i = 0;
+    int32_t dx = 0, dy = 0;
+    int32_t txt_w, txt_h;
+    int32_t txtpos = 0;
+    char buf[TXT_CFG_BUF_MAX_LEN];
+    char buf2[TXT_CFG_BUF_MAX_LEN];
+    memset(buf, 0, TXT_CFG_BUF_MAX_LEN);
+    memset(buf2, 0, TXT_CFG_BUF_MAX_LEN);
+
+    SDL_Surface *TxtSurfaces[TXT_CFG_TEXTURES_LINES][TXT_CFG_TEXTURES_PER_LINE];
+    int32_t currentline = 0, currentlineitm = 0;
+
+    int8_t TxtJustify[TXT_CFG_TEXTURES_LINES];
+    int8_t TxtPoint[TXT_CFG_TEXTURES_LINES];
+
+    memset(TxtSurfaces, 0, sizeof(TxtSurfaces));
+
+    int32_t stringlen = strlen(text);
+
+    TTF_Font *font = NULL;
+
+    font = Loader_LoadFont(style.fontname, style.size);
+    Text_SetStyle(font, &style);
+
+    int32_t prevbufspace = 0, prevtxtspace = 0;
+
+    while (i < stringlen)
+    {
+        TxtJustify[currentline] = style.justify;
+        TxtPoint[currentline] = style.size;
+        if (text[i] == '<')
+        {
+            int32_t ret = 0;
+
+            strt = i;
+            while (i < stringlen && text[i] != '>')
+                i++;
+            endt = i;
+            if (strt != -1)
+                if ((endt - strt - 1) > 0)
+                {
+                    style2 = style;
+                    ret = txt_parse_txt_params(&style, text + strt + 1, endt - strt - 1);
+                }
+
+            if (ret & (TXT_RET_FNTCHG | TXT_RET_FNTSTL | TXT_RET_NEWLN))
+            {
+                if (!str_empty(buf))
+                {
+                    TTF_SizeUTF8(font, buf, &txt_w, &txt_h);
+
+                    TxtSurfaces[currentline][currentlineitm] = RenderUTF8(font, buf, &style2);
+
+                    currentlineitm++;
+
+                    memset(buf, 0, TXT_CFG_BUF_MAX_LEN);
+                    prevbufspace = 0;
+                    txtpos = 0;
+                    dx += txt_w;
+                }
+                if (ret & TXT_RET_FNTCHG)
+                {
+                    TTF_CloseFont(font);
+                    font = Loader_LoadFont(style.fontname, style.size);
+                    Text_SetStyle(font, &style);
+                }
+                if (ret & TXT_RET_FNTSTL)
+                    Text_SetStyle(font, &style);
+
+                if (ret & TXT_RET_NEWLN)
+                {
+                    currentline++;
+                    currentlineitm = 0;
+                    dx = 0;
+                }
+            }
+
+            if (ret & TXT_RET_HASSTBOX)
+            {
+                char buf3[MINIBUFSZ];
+                sprintf(buf3, "%d", GetgVarInt(style.statebox));
+                strcat(buf, buf3);
+                txtpos += strlen(buf3);
+            }
+        }
+        else
+        {
+            buf[txtpos++] = text[i];
+
+            if (text[i] == ' ')
+            {
+                prevbufspace = txtpos - 1;
+                prevtxtspace = i;
+            }
+
+            if (font != NULL)
+            {
+                TTF_SizeUTF8(font, buf, &txt_w, &txt_h);
+                if (txt_w + dx > dst->w)
+                {
+                    if (prevbufspace == 0)
+                    {
+                        prevtxtspace = i;
+                        prevbufspace = txtpos - 1;
+                    }
+                    memcpy(buf2, buf, prevbufspace + 1);
+                    buf2[prevbufspace + 1] = 0x0;
+
+                    if (!str_empty(buf2))
+                        TxtSurfaces[currentline][currentlineitm] = RenderUTF8(font, buf2, &style);
+
+                    memset(buf, 0, TXT_CFG_BUF_MAX_LEN);
+                    i = prevtxtspace;
+                    prevbufspace = 0;
+                    txtpos = 0;
+                    currentline++;
+                    currentlineitm = 0;
+                    dx = 0;
+                }
+            }
+        }
+        i++;
+    }
+
+    if (!str_empty(buf))
+        TxtSurfaces[currentline][currentlineitm] = RenderUTF8(font, buf, &style);
+
+    dy = 0;
+    for (i = 0; i <= currentline; i++)
+    {
+        int32_t j = 0;
+        int32_t width = 0;
+        while (TxtSurfaces[i][j] != NULL)
+        {
+            width += TxtSurfaces[i][j]->w;
+            j++;
+        }
+        dx = 0;
+        for (int32_t jj = 0; jj < j; jj++)
+        {
+            if (TxtJustify[i] == TXT_JUSTIFY_LEFT)
+                DrawImageToSurf(TxtSurfaces[i][jj], dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
+
+            else if (TxtJustify[i] == TXT_JUSTIFY_CENTER)
+                DrawImageToSurf(TxtSurfaces[i][jj], ((dst->w - width) >> 1) + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
+
+            else if (TxtJustify[i] == TXT_JUSTIFY_RIGHT)
+                DrawImageToSurf(TxtSurfaces[i][jj], dst->w - width + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
+
+            dx += TxtSurfaces[i][jj]->w;
+        }
+
+        dy += TxtPoint[i];
+    }
+
+    for (i = 0; i < TXT_CFG_TEXTURES_LINES; i++)
+        for (int32_t j = 0; j < TXT_CFG_TEXTURES_PER_LINE; j++)
+            if (TxtSurfaces[i][j] != NULL)
+                SDL_FreeSurface(TxtSurfaces[i][j]);
+}
+
+action_res_t *Text_CreateTTYText()
+{
+    action_res_t *tmp = ScrSys_CreateActRes(NODE_TYPE_TTYTEXT);
+    tmp->nodes.tty_text = NEW(ttytext_t);
+    Text_InitStyle(&tmp->nodes.tty_text->style);
+    return tmp;
+}
+
+int Text_DeleteTTYText(action_res_t *nod)
+{
+    if (nod->node_type != NODE_TYPE_TTYTEXT)
+        return NODE_RET_NO;
+
+    if (nod->nodes.tty_text->img != NULL)
+        SDL_FreeSurface(nod->nodes.tty_text->img);
+
+    if (nod->nodes.tty_text->fnt != NULL)
+        TTF_CloseFont(nod->nodes.tty_text->fnt);
+
+    if (nod->slot > 0)
+    {
+        SetgVarInt(nod->slot, 2);
+        setGNode(nod->slot, NULL);
+    }
+
+    free(nod);
+
+    return NODE_RET_DELETE;
+}
+
+int Text_ProcessTTYText(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_TTYTEXT)
         return NODE_RET_NO;
@@ -711,11 +707,11 @@ int txt_ProcessTTYtext(action_res_t *nod)
                     if (ret & TXT_RET_FNTCHG)
                     {
                         TTF_CloseFont(tty->fnt);
-                        tty->fnt = GetFontByName(tty->style.fontname, tty->style.size);
-                        txt_set_font_style(tty->fnt, &tty->style);
+                        tty->fnt = Loader_LoadFont(tty->style.fontname, tty->style.size);
+                        Text_SetStyle(tty->fnt, &tty->style);
                     }
                     if (ret & TXT_RET_FNTSTL)
-                        txt_set_font_style(tty->fnt, &tty->style);
+                        Text_SetStyle(tty->fnt, &tty->style);
 
                     if (ret & TXT_RET_NEWLN)
                         ttynewline(tty);
@@ -765,7 +761,7 @@ int txt_ProcessTTYtext(action_res_t *nod)
         }
         else
         {
-            txt_DeleteTTYtext(nod);
+            Text_DeleteTTYText(nod);
             return NODE_RET_DELETE;
         }
     }

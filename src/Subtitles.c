@@ -1,6 +1,6 @@
 #include "System.h"
 
-subtitles_t *sub_LoadSubtitles(char *filename)
+subtitles_t *Subtitles_Load(char *filename)
 {
     char buf[STRBUFSIZE];
     char *str1;        // without left spaces, paramname
@@ -10,15 +10,12 @@ subtitles_t *sub_LoadSubtitles(char *filename)
 
     subtitles_t *tmp;
 
-    FManNode_t *fil = FindInBinTree(filename);
+    FManNode_t *fil = Loader_FindNode(filename);
     if (!fil)
         return NULL;
 
     tmp = NEW(subtitles_t);
-
     tmp->currentsub = -1;
-    tmp->SubRect = NULL;
-    tmp->subscount = 0;
 
     mfile_t *f = mfopen(fil);
     while (!mfeof(f))
@@ -60,21 +57,18 @@ subtitles_t *sub_LoadSubtitles(char *filename)
         }
         else if (str_starts_with(str1, "TextFile"))
         {
-            FManNode_t *fil2 = FindInBinTree(str2);
+            FManNode_t *fil2 = Loader_FindNode(str2);
             if (fil2 == NULL)
             {
                 free(tmp);
                 return NULL;
             }
 
-            tmp->txt = NEW(sub_textfile_t);
-            tmp->txt->subs = loader_loadStr_m(mfopen(fil2));
-            while (tmp->txt->subs[tmp->txt->count] != NULL)
-            {
-                tmp->txt->count++;
-            }
-            tmp->subs = NEW_ARRAY(one_subtitle_t, tmp->txt->count);
-            subscount = tmp->txt->count;
+            tmp->txt = Loader_LoadSTR_m(mfopen(fil2));
+            subscount = 0;
+            while (tmp->txt[subscount])
+                subscount++;
+            tmp->subs = NEW_ARRAY(subtitle_t, subscount);
         }
         else //it's must be sub info
         {
@@ -85,11 +79,11 @@ subtitles_t *sub_LoadSubtitles(char *filename)
                 {
                     Z_PANIC("Error in subs %s\n", filename);
                 }
-                tmp->subs[tmp->subscount].start = st;
-                tmp->subs[tmp->subscount].stop = en;
-                tmp->subs[tmp->subscount].sub = sb;
+                tmp->subs[tmp->count].start = st;
+                tmp->subs[tmp->count].stop = en;
+                tmp->subs[tmp->count].sub = sb;
 
-                tmp->subscount++;
+                tmp->count++;
             }
         }
     }
@@ -98,10 +92,10 @@ subtitles_t *sub_LoadSubtitles(char *filename)
     return tmp;
 }
 
-void sub_ProcessSub(subtitles_t *sub, int subtime)
+void Subtitles_Process(subtitles_t *sub, int subtime)
 {
     int j = -1;
-    for (int i = 0; i < sub->subscount; i++)
+    for (int i = 0; i < sub->count; i++)
         if (subtime >= sub->subs[i].start && subtime <= sub->subs[i].stop)
         {
             j = i;
@@ -116,20 +110,24 @@ void sub_ProcessSub(subtitles_t *sub, int subtime)
 
     if (j != -1 && j != sub->currentsub)
     {
-        char *sss = sub->txt->subs[sub->subs[j].sub];
+        char *sss = sub->txt[sub->subs[j].sub];
         if (!str_empty(sss))
         {
             SDL_FillRect(sub->SubRect->img, NULL, SDL_MapRGBA(sub->SubRect->img->format, 0, 0, 0, 255));
-            txt_DrawTxtInOneLine(sss, sub->SubRect->img);
+            Text_DrawInOneLine(sss, sub->SubRect->img);
         }
         sub->currentsub = j;
     }
 }
 
-void sub_DeleteSub(subtitles_t *sub)
+void Subtitles_Delete(subtitles_t *sub)
 {
+    if (sub->txt)
+    {
+        for (int i = 0; i < sub->count; i++)
+            free(sub->txt[i]);
+    }
     Rend_DeleteSubRect(sub->SubRect);
-    free(sub->txt->subs);
     free(sub->txt);
     free(sub->subs);
     free(sub);

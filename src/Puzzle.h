@@ -26,10 +26,9 @@ typedef struct
     bool var2; //if true: slot2 is slot; false: slot2 - number
 } crit_node_t;
 
-pzllst_t *CreatePuzzleList(const char *name);
-void FlushPuzzleList(pzllst_t *lst);
-
-int Puzzle_Parse(pzllst_t *lst, mfile_t *fl, char *ctstr);
+pzllst_t *Puzzle_CreateList(const char *name);
+void Puzzle_FlushList(pzllst_t *lst);
+void Puzzle_Parse(pzllst_t *lst, mfile_t *fl, char *ctstr);
 int Puzzle_TryExec(puzzlenode_t *pzlnod);
 
 #endif // PUZZLE_H_INCLUDED

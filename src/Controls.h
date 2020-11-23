@@ -37,6 +37,9 @@
 #define CTRL_PUSH_EV_DWN 1
 #define CTRL_PUSH_EV_DBL 2
 
+#define CTRL_SAVE_FILE (CUR_GAME == GAME_ZGI ? "inquis.sav" : "nemesis.sav")
+#define CTRL_SAVE_SAVES (CUR_GAME == GAME_ZGI ? "inqsav%d.sav" : "nemsav%d.sav")
+
 typedef struct
 {
     int32_t x;
@@ -258,10 +261,10 @@ typedef struct ctrlnode
     void (*func)(ctrlnode_t *);
 } ctrlnode_t;
 
-void Parse_Control(MList *controlst, mfile_t *fl, char *ctstr);
-void ProcessControls(MList *ctrlst);
-void DrawControls();
-void FlushControlList(MList *lst);
-ctrlnode_t *GetControlByID(int32_t id);
+void Control_Parse(MList *controlst, mfile_t *fl, char *ctstr);
+void Controls_ProcessList(MList *ctrlst);
+void Controls_Draw();
+void Controls_FlushList(MList *lst);
+ctrlnode_t *Controls_GetControl(int32_t id);
 
 #endif // CONTROL_H_INCLUDED

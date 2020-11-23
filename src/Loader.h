@@ -32,12 +32,33 @@ typedef struct
     zfs_file_t *zfs;
 } FManNode_t;
 
+typedef struct BinTreeNd
+{
+    struct BinTreeNd *zero;
+    struct BinTreeNd *one;
+    FManNode_t *nod;
+} BinTreeNd_t;
+
 typedef struct
 {
     char *buf;
     int32_t size;
     int32_t pos;
 } mfile_t;
+
+FManNode_t *Loader_FindNode(const char *chr);
+void Loader_Init(const char *dir);
+const char *Loader_GetPath(const char *chr);
+TTF_Font *Loader_LoadFont(char *name, int size);
+Mix_Chunk *Loader_LoadChunk(const char *file);
+SDL_Surface *Loader_LoadFile(const char *file, int8_t transpose);
+SDL_Surface *Loader_LoadFile_key(const char *file, int8_t transpose, uint32_t key);
+anim_surf_t *Loader_LoadRLF(const char *file, int8_t transpose, int32_t mask);
+char **Loader_LoadSTR(const char *file);
+char **Loader_LoadSTR_m(mfile_t *mfp);
+void Loader_LoadZCR(const char *file, Cursor_t *cur);
+void Loader_OpenZFS(const char *file);
+void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_t *ctx);
 
 mfile_t *mfopen(FManNode_t *nod);
 int32_t mfsize(FManNode_t *nod);
@@ -49,19 +70,5 @@ void mfseek(mfile_t *fil, int32_t pos);
 bool mfread_ptr(void **buf, int32_t bytes, mfile_t *file);
 char *mfgets(char *str, int32_t num, mfile_t *stream);
 void m_wide_to_utf8(mfile_t *file);
-
-Mix_Chunk *loader_LoadChunk(const char *file);
-SDL_Surface *loader_LoadFile(const char *file, int8_t transpose);
-SDL_Surface *loader_LoadFile_key(const char *file, int8_t transpose, uint32_t key);
-anim_surf_t *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask);
-char **loader_loadStr(const char *file);
-char **loader_loadStr_m(mfile_t *mfp);
-void loader_LoadZcr(const char *file, Cursor_t *cur);
-void loader_openzfs(const char *file, MList *list);
-void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_t *ctx);
-
-void LoadSystemStrings(void);
-const char *GetSystemString(int32_t indx);
-
 
 #endif // LOADER_H_INCLUDED

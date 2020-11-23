@@ -379,13 +379,56 @@ void Rend_DrawImageToScr(SDL_Surface *scr, int x, int y)
     DrawImageToSurf(scr, x, y, screen);
 }
 
+void Rend_DrawTilt_pre()
+{
+    DrawImageToSurf(scrbuf, 0, GAMESCREEN_H_2 - *view_X, tempbuf);
+}
+
+void Rend_DrawTilt()
+{
+    SDL_LockSurface(tempbuf);
+    SDL_LockSurface(viewportbuf);
+    if (GAME_BPP == 32)
+    {
+        uint32_t *nww = (uint32_t *)viewportbuf->pixels;
+        uint32_t *old = (uint32_t *)tempbuf->pixels;
+        int32_t *ofs = new_render_table;
+        for (int32_t ai = 0; ai < GAMESCREEN_H * GAMESCREEN_W; ai++)
+        {
+            old += *ofs;
+            *nww = *old;
+            nww++;
+            ofs++;
+        }
+    }
+    else if (GAME_BPP == 16)
+    {
+        uint16_t *nww = (uint16_t *)viewportbuf->pixels;
+        uint16_t *old = (uint16_t *)tempbuf->pixels;
+        int32_t *ofs = new_render_table;
+        for (int32_t ai = 0; ai < GAMESCREEN_H * GAMESCREEN_W; ai++)
+        {
+            old += *ofs;
+            *nww = *old;
+            nww++;
+            ofs++;
+        }
+    }
+    else
+    {
+        Z_PANIC("Bit depth %d not supported!\n", GAME_BPP);
+    }
+    SDL_UnlockSurface(tempbuf);
+    SDL_UnlockSurface(viewportbuf);
+}
+
 int8_t Rend_LoadGamescr(const char *file)
 {
     int8_t good = 1;
     if (scrbuf)
         SDL_FreeSurface(scrbuf);
 
-    scrbuf = loader_LoadFile(file, Rend_GetRenderer() == RENDER_PANA);
+    scrbuf = Loader_LoadFile(file, Rend_GetRenderer() == RENDER_PANA);
 
     SDL_FillRect(tempbuf, 0, 0);
 
@@ -712,7 +755,7 @@ void Rend_RenderFunc()
         Rend_DrawTilt_pre();
 
     //draw dynamic controls
-    DrawControls();
+    Controls_Draw();
 
     //effect-processor
     for (int32_t i = 0; i < EFFECTS_MAX_CNT; i++)
@@ -738,7 +781,7 @@ void Rend_RenderFunc()
 
     Rend_ProcessSubs();
 
-    menu_DrawMenuBar();
+    Menu_Draw();
 
     Rend_ProcessCursor();
 }
@@ -895,49 +938,6 @@ void Rend_tilt_SetTable()
     Rend_indexer();
 }
 
-void Rend_DrawTilt_pre()
-{
-    DrawImageToSurf(scrbuf, 0, GAMESCREEN_H_2 - *view_X, tempbuf);
-}
-
-void Rend_DrawTilt()
-{
-    SDL_LockSurface(tempbuf);
-    SDL_LockSurface(viewportbuf);
-    if (GAME_BPP == 32)
-    {
-        uint32_t *nww = (uint32_t *)viewportbuf->pixels;
-        uint32_t *old = (uint32_t *)tempbuf->pixels;
-        int32_t *ofs = new_render_table;
-        for (int32_t ai = 0; ai < GAMESCREEN_H * GAMESCREEN_W; ai++)
-        {
-            old += *ofs;
-            *nww = *old;
-            nww++;
-            ofs++;
-        }
-    }
-    else if (GAME_BPP == 16)
-    {
-        uint16_t *nww = (uint16_t *)viewportbuf->pixels;
-        uint16_t *old = (uint16_t *)tempbuf->pixels;
-        int32_t *ofs = new_render_table;
-        for (int32_t ai = 0; ai < GAMESCREEN_H * GAMESCREEN_W; ai++)
-        {
-            old += *ofs;
-            *nww = *old;
-            nww++;
-            ofs++;
-        }
-    }
-    else
-    {
-        Z_PANIC("Bit depth %d not supported!\n", GAME_BPP);
-    }
-    SDL_UnlockSurface(tempbuf);
-    SDL_UnlockSurface(viewportbuf);
-}
-
 void Rend_tilt_MouseInteract()
 {
     if (KeyDown(SDLK_UP))
@@ -995,7 +995,7 @@ float Rend_GetRendererLinscale()
         return 1.0;
 }
 
-void Rend_SetRendererAngle(float angle)
+static void SetRendererAngle(float angle)
 {
     if (Renderer == RENDER_PANA)
         pana_angle = angle;
@@ -1003,7 +1003,7 @@ void Rend_SetRendererAngle(float angle)
         tilt_angle = angle;
 }
 
-void Rend_SetRendererLinscale(float lin)
+static void SetRendererLinscale(float lin)
 {
     if (Renderer == RENDER_PANA)
         pana_linscale = lin;
@@ -1011,7 +1011,7 @@ void Rend_SetRendererLinscale(float lin)
         tilt_linscale = lin;
 }
 
-void Rend_SetRendererTable()
+static void SetRendererTable()
 {
     if (Renderer == RENDER_PANA)
         Rend_pana_SetTable();
@@ -1022,20 +1022,9 @@ void Rend_SetRendererTable()
 action_res_t *Rend_CreateDistortNode()
 {
     action_res_t *act = ScrSys_CreateActRes(NODE_TYPE_DISTORT);
+
     act->nodes.distort = NEW(distort_t);
-    act->nodes.distort->cur_frame = 0;
     act->nodes.distort->increase = true;
-    act->nodes.distort->frames = 0;
-    act->nodes.distort->speed = 0;
-    act->nodes.distort->param1 = 0.0;
-    act->nodes.distort->dif_angl = 0.0;
-    act->nodes.distort->st_angl = 0.0;
-    act->nodes.distort->end_angl = 0.0;
-    act->nodes.distort->rend_angl = 0.0;
-    act->nodes.distort->st_lin = 0.0;
-    act->nodes.distort->end_lin = 0.0;
-    act->nodes.distort->dif_lin = 0.0;
-    act->nodes.distort->rend_lin = 0.0;
 
     return act;
 }
@@ -1068,9 +1057,9 @@ int32_t Rend_ProcessDistortNode(action_res_t *nod)
 
     float diff = (1.0 / (5.0 - ((float)dist->cur_frame * dist->param1))) / (5.0 - dist->param1);
 
-    Rend_SetRendererAngle(dist->st_angl + diff * dist->dif_angl);
-    Rend_SetRendererLinscale(dist->st_lin + diff * dist->dif_lin);
-    Rend_SetRendererTable();
+    SetRendererAngle(dist->st_angl + diff * dist->dif_angl);
+    SetRendererLinscale(dist->st_lin + diff * dist->dif_lin);
+    SetRendererTable();
     return NODE_RET_OK;
 }
 
@@ -1079,9 +1068,9 @@ int32_t Rend_DeleteDistortNode(action_res_t *nod)
     if (nod->node_type != NODE_TYPE_DISTORT)
         return NODE_RET_NO;
 
-    Rend_SetRendererAngle(nod->nodes.distort->rend_angl);
-    Rend_SetRendererLinscale(nod->nodes.distort->rend_lin);
-    Rend_SetRendererTable();
+    SetRendererAngle(nod->nodes.distort->rend_angl);
+    SetRendererLinscale(nod->nodes.distort->rend_lin);
+    SetRendererTable();
 
     if (nod->slot > 0)
     {
@@ -1672,8 +1661,8 @@ int32_t Rend_EF_9_Setup(char *mask, char *clouds, int32_t delay, int32_t x, int3
         return -1;
     }
 
-    ef->effect.ef9.cloud = loader_LoadFile(clouds, 0);
-    ef->effect.ef9.mask = loader_LoadFile(mask, 0);
+    ef->effect.ef9.cloud = Loader_LoadFile(clouds, 0);
+    ef->effect.ef9.mask = Loader_LoadFile(mask, 0);
 
     if (ef->effect.ef9.cloud == NULL || ef->effect.ef9.mask == NULL)
     {

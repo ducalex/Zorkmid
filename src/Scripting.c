@@ -60,7 +60,7 @@ MList *GetAction_res_List()
     return actres;
 }
 
-int tmr_DeleteTimer(action_res_t *nod)
+static int DeleteTimer(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_TIMER)
         return NODE_RET_NO;
@@ -77,14 +77,14 @@ int tmr_DeleteTimer(action_res_t *nod)
     return NODE_RET_DELETE;
 }
 
-int tmr_ProcessTimer(action_res_t *nod)
+static int ProcessTimer(action_res_t *nod)
 {
     if (nod->node_type != NODE_TYPE_TIMER)
         return NODE_RET_OK;
 
     if (nod->nodes.node_timer < 0)
     {
-        tmr_DeleteTimer(nod);
+        DeleteTimer(nod);
         return NODE_RET_DELETE;
     }
 
@@ -158,7 +158,7 @@ void setGNode(int32_t indx, action_res_t *data)
         gNodes[indx] = data;
 }
 
-void InitScriptsEngine()
+void ScrSys_Init()
 {
     if (CUR_GAME == GAME_ZGI)
     {
@@ -176,10 +176,10 @@ void InitScriptsEngine()
     memset(gVars, 0x0, sizeof(gVars));
     memset(gNodes, 0x0, sizeof(gNodes));
 
-    view = CreatePuzzleList("view");
-    room = CreatePuzzleList("room");
-    world = CreatePuzzleList("world");
-    uni = CreatePuzzleList("universe");
+    view = Puzzle_CreateList("view");
+    room = Puzzle_CreateList("room");
+    world = Puzzle_CreateList("world");
+    uni = Puzzle_CreateList("universe");
     ctrl = CreateMList();
     actres = CreateMList();
 
@@ -191,7 +191,7 @@ void InitScriptsEngine()
     ScrSys_LoadPreferences();
 }
 
-void LoadScriptFile(pzllst_t *lst, FManNode_t *filename, bool control, MList *controlst)
+void ScrSys_LoadScript(pzllst_t *lst, FManNode_t *filename, bool control, MList *controlst)
 {
     if (!filename)
         Z_PANIC("filename is NULL\n");
@@ -218,7 +218,7 @@ void LoadScriptFile(pzllst_t *lst, FManNode_t *filename, bool control, MList *co
         }
         else if (str_starts_with(str, "control") && control)
         {
-            Parse_Control(controlst, fl, str);
+            Control_Parse(controlst, fl, str);
         }
     }
 
@@ -406,7 +406,7 @@ void ScrSys_LoadGame(char *file)
         fread(&time, 4, 1, f);
 
         sprintf(buf, "%d", time / 100);
-        action_exec("timer", buf, slot, view);
+        Actions_Run("timer", buf, slot, view);
     }
 
     fread(&tmp, 4, 1, f);
@@ -492,8 +492,8 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
     {
         ScrSys_FlushResourcesByOwner(view);
 
-        FlushPuzzleList(view);
-        FlushControlList(ctrl);
+        Puzzle_FlushList(view);
+        Controls_FlushList(ctrl);
 
         tm[0] = temp.World;
         tm[1] = temp.Room;
@@ -501,9 +501,9 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         tm[3] = temp.View;
         tm[4] = 0;
         sprintf(buf, "%s.scr", tm);
-        FManNode_t *fil = FindInBinTree(buf);
+        FManNode_t *fil = Loader_FindNode(buf);
         if (fil != NULL)
-            LoadScriptFile(view, fil, true, ctrl);
+            ScrSys_LoadScript(view, fil, true, ctrl);
     }
 
     if (temp.Room != GetgVarInt(SLOT_ROOM) ||
@@ -512,16 +512,16 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
     {
         ScrSys_FlushResourcesByOwner(room);
 
-        FlushPuzzleList(room);
+        Puzzle_FlushList(room);
 
         tm[0] = temp.World;
         tm[1] = temp.Room;
         tm[2] = 0;
         sprintf(buf, "%s.scr", tm);
 
-        FManNode_t *fil = FindInBinTree(buf);
+        FManNode_t *fil = Loader_FindNode(buf);
         if (fil != NULL)
-            LoadScriptFile(room, fil, false, NULL);
+            ScrSys_LoadScript(room, fil, false, NULL);
     }
 
     if (temp.World != GetgVarInt(SLOT_WORLD) ||
@@ -529,15 +529,15 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
     {
         ScrSys_FlushResourcesByOwner(world);
 
-        FlushPuzzleList(world);
+        Puzzle_FlushList(world);
 
         tm[0] = temp.World;
         tm[1] = 0;
         sprintf(buf, "%s.scr", tm);
 
-        FManNode_t *fil = FindInBinTree(buf);
+        FManNode_t *fil = Loader_FindNode(buf);
         if (fil != NULL)
-            LoadScriptFile(world, fil, false, NULL);
+            ScrSys_LoadScript(world, fil, false, NULL);
 
         Mouse_ShowCursor();
     }
@@ -553,7 +553,7 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
     SetgVarInt(SLOT_VIEW, v2);
     SetgVarInt(SLOT_VIEW_POS, X);
 
-    menu_SetMenuBarVal(0xFFFF);
+    Menu_SetVal(0xFFFF);
 
     BreakExecute = false;
 }
@@ -729,28 +729,28 @@ void ScrSys_ProcessActResList()
             switch (nod->node_type)
             {
             case NODE_TYPE_MUSIC:
-                result = snd_ProcessWav(nod);
+                result = Sound_ProcessWav(nod);
                 break;
             case NODE_TYPE_TIMER:
-                result = tmr_ProcessTimer(nod);
+                result = ProcessTimer(nod);
                 break;
             case NODE_TYPE_ANIMPLAY:
-                result = anim_ProcessAnimPlayNode(nod);
+                result = Anim_ProcessPlayNode(nod);
                 break;
             case NODE_TYPE_ANIMPRE:
-                result = anim_ProcessAnimPreNode(nod);
+                result = Anim_ProcessPreNode(nod);
                 break;
             case NODE_TYPE_ANIMPRPL:
-                result = anim_ProcessAnimPrePlayNode(nod);
+                result = Anim_ProcessPrePlayNode(nod);
                 break;
             case NODE_TYPE_SYNCSND:
-                result = snd_ProcessSync(nod);
+                result = Sound_ProcessSync(nod);
                 break;
             case NODE_TYPE_PANTRACK:
-                result = snd_ProcessPanTrack(nod);
+                result = Sound_ProcessPanTrack(nod);
                 break;
             case NODE_TYPE_TTYTEXT:
-                result = txt_ProcessTTYtext(nod);
+                result = Text_ProcessTTYText(nod);
                 break;
             case NODE_TYPE_DISTORT:
                 result = Rend_ProcessDistortNode(nod);
@@ -781,9 +781,9 @@ int ScrSys_DeleteNode(action_res_t *nod)
     switch (nod->node_type)
     {
     case NODE_TYPE_MUSIC:
-        return snd_DeleteWav(nod);
+        return Sound_DeleteWav(nod);
     case NODE_TYPE_TIMER:
-        return tmr_DeleteTimer(nod);
+        return DeleteTimer(nod);
     case NODE_TYPE_ANIMPLAY:
         return anim_DeleteAnimPlay(nod);
     case NODE_TYPE_ANIMPRE:
@@ -791,11 +791,11 @@ int ScrSys_DeleteNode(action_res_t *nod)
     case NODE_TYPE_ANIMPRPL:
         return anim_DeleteAnimPrePlayNode(nod);
     case NODE_TYPE_SYNCSND:
-        return snd_DeleteSync(nod);
+        return Sound_DeleteSync(nod);
     case NODE_TYPE_PANTRACK:
-        return snd_DeletePanTrack(nod);
+        return Sound_DeletePanTrack(nod);
     case NODE_TYPE_TTYTEXT:
-        return txt_DeleteTTYtext(nod);
+        return Text_DeleteTTYText(nod);
     case NODE_TYPE_DISTORT:
         return Rend_DeleteDistortNode(nod);
     case NODE_TYPE_REGION:
@@ -834,7 +834,7 @@ void ScrSys_FlushResourcesByOwner(pzllst_t *owner)
             if (nod->node_type == NODE_TYPE_MUSIC)
             {
                 if (nod->nodes.node_music->universe == false)
-                    result = snd_DeleteWav(nod);
+                    result = Sound_DeleteWav(nod);
             }
             else
                 result = ScrSys_DeleteNode(nod);
@@ -898,7 +898,7 @@ static const struct
 
 void ScrSys_LoadPreferences()
 {
-    char **rows = loader_loadStr(PreferencesFile);
+    char **rows = Loader_LoadSTR(PreferencesFile);
     const char *par;
     int pos = 0;
 

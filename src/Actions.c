@@ -35,6 +35,14 @@ static const char *get_addition(const char *str)
     return s;
 }
 
+static int GetIntVal(char *chr)
+{
+    if (chr[0] == '[')
+        return GetgVarInt(atoi(chr + 1));
+    else
+        return atoi(chr);
+}
+
 static void useart_recovery(char *str)
 {
     int32_t len = strlen(str);
@@ -80,10 +88,10 @@ static int action_set_partial_screen(char *params, int aSlot, pzllst_t *owner)
         b = ((tmp2 >> 10) & 0x1F) * 8;
         g = ((tmp2 >> 5) & 0x1F) * 8;
         r = (tmp2 & 0x1F) * 8;
-        tmp = loader_LoadFile_key(file, Rend_GetRenderer() == RENDER_PANA, Rend_MapScreenRGB(r, g, b));
+        tmp = Loader_LoadFile_key(file, Rend_GetRenderer() == RENDER_PANA, Rend_MapScreenRGB(r, g, b));
     }
     else
-        tmp = loader_LoadFile(file, Rend_GetRenderer() == RENDER_PANA);
+        tmp = Loader_LoadFile(file, Rend_GetRenderer() == RENDER_PANA);
 
     if (!tmp)
         LOG_WARN("IMG_Load(%s): %s\n", params, IMG_GetError());
@@ -106,6 +114,8 @@ static int action_assign(char *params, int aSlot, pzllst_t *owner)
 
 static int action_timer(char *params, int aSlot, pzllst_t *owner)
 {
+    int delay = CUR_GAME == GAME_ZGI ? 100 : 1000;
+
     char tmp2[16];
     sscanf(params, "%s", tmp2);
 
@@ -115,13 +125,11 @@ static int action_timer(char *params, int aSlot, pzllst_t *owner)
     }
 
     action_res_t *nod = NEW(action_res_t);
-    nod->nodes.node_timer = 0;
-
     nod->slot = aSlot;
     nod->owner = owner;
     nod->node_type = NODE_TYPE_TIMER;
     nod->need_delete = false;
-    nod->nodes.node_timer = GetIntVal(PrepareString(tmp2)) * TIMER_DELAY;
+    nod->nodes.node_timer = GetIntVal(PrepareString(tmp2)) * delay;
 
     setGNode(aSlot, nod);
 
@@ -229,7 +237,7 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
     Mix_Chunk *aud = NULL;
     subtitles_t *subs = NULL;
 
-    fil = GetFilePath(file);
+    fil = Loader_GetPath(file);
 
     if (fil == NULL)
         return ACTION_NORMAL;
@@ -242,13 +250,13 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
     if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
     {
         strcpy(ext, "sub");
-        subs = sub_LoadSubtitles(file);
+        subs = Subtitles_Load(file);
     }
 
     aud = avi_get_audio(anm->av);
     if (aud != NULL)
     {
-        tmp = GetFreeChannel();
+        tmp = Sound_GetFreeChannel();
         Mix_UnregisterAllEffects(tmp);
         Mix_PlayChannel(tmp, aud, 0);
         Mix_Volume(tmp, 127);
@@ -270,7 +278,7 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
         avi_update(anm->av);
 
         if (subs != NULL)
-            sub_ProcessSub(subs, anm->av->cframe);
+            Subtitles_Process(subs, anm->av->cframe);
 
         Rend_ProcessSubs();
         Rend_ScreenFlip();
@@ -285,14 +293,12 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
 
     if (aud != NULL)
     {
-        //if (u2 == 0)
-        //   RestoreVol();
         Mix_HaltChannel(tmp);
         Mix_FreeChunk(aud);
     }
 
     if (subs != NULL)
-        sub_DeleteSub(subs);
+        Subtitles_Delete(subs);
 
     avi_close(anm->av);
     free(anm);
@@ -333,7 +339,7 @@ static int action_animplay(char *params, int aSlot, pzllst_t *owner)
         NextMList(all);
     }
 
-    action_res_t *glob = anim_CreateAnimPlayNode();
+    action_res_t *glob = Anim_CreateAnimPlayNode();
     animnode_t *nod = glob->nodes.node_anim;
 
     ScrSys_AddToActResList(glob);
@@ -359,9 +365,9 @@ static int action_animplay(char *params, int aSlot, pzllst_t *owner)
         mask2 = r | g << 8 | b << 16;
     }
 
-    anim_LoadAnim(nod, file, 0, 0, mask2, GetIntVal(framerate));
+    Anim_Load(nod, file, 0, 0, mask2, GetIntVal(framerate));
 
-    anim_PlayAnim(nod, GetIntVal(x),
+    Anim_Play(nod, GetIntVal(x),
                   GetIntVal(y),
                   GetIntVal(w) - GetIntVal(x) + 1,
                   GetIntVal(h) - GetIntVal(y) + 1,
@@ -384,7 +390,7 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
     if (getGNode(aSlot) != NULL)
         return ACTION_NORMAL;
 
-    action_res_t *nod = snd_CreateWavNode();
+    action_res_t *nod = Sound_CreateWavNode();
 
     nod->slot = aSlot;
     nod->owner = owner;
@@ -401,11 +407,11 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
             nod->nodes.node_music->universe = universe;
             nod->nodes.node_music->chunk = Mix_LoadWAV(fn);
 
-            nod->nodes.node_music->chn = GetFreeChannel();
+            nod->nodes.node_music->chn = Sound_GetFreeChannel();
             if (nod->nodes.node_music->chn == -1)
             {
                 LOG_WARN("ERROR: NO CHANNELS! %s\n", params);
-                snd_DeleteWav(nod);
+                Sound_DeleteWav(nod);
                 return ACTION_NORMAL;
             }
 
@@ -416,7 +422,7 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
             else
                 nod->nodes.node_music->volume = 100;
 
-            Mix_Volume(nod->nodes.node_music->chn, GetLogVol(nod->nodes.node_music->volume));
+            Mix_Volume(nod->nodes.node_music->chn, Sound_GetLogVol(nod->nodes.node_music->volume));
 
             if (instr == 0)
             {
@@ -429,11 +435,11 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
                 nod->nodes.node_music->looped = true;
             }
 
-            LockChan(nod->nodes.node_music->chn);
+            Sound_LockChannel(nod->nodes.node_music->chn);
         }
         else
         {
-            snd_DeleteWav(nod);
+            Sound_DeleteWav(nod);
             return ACTION_NORMAL;
         }
     }
@@ -443,43 +449,43 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
 
         char *ext = file + (strlen(file) - 3);
 
-        nod->nodes.node_music->chunk = loader_LoadChunk(file);
+        nod->nodes.node_music->chunk = Loader_LoadChunk(file);
 
         if (nod->nodes.node_music->chunk == NULL)
         {
             strcpy(ext, "raw");
-            nod->nodes.node_music->chunk = loader_LoadChunk(file);
+            nod->nodes.node_music->chunk = Loader_LoadChunk(file);
 
             if (nod->nodes.node_music->chunk == NULL)
             {
                 strcpy(ext, "ifp");
-                nod->nodes.node_music->chunk = loader_LoadChunk(file);
+                nod->nodes.node_music->chunk = Loader_LoadChunk(file);
 
                 if (nod->nodes.node_music->chunk == NULL)
                 {
                     strcpy(ext, "src");
-                    nod->nodes.node_music->chunk = loader_LoadChunk(file);
+                    nod->nodes.node_music->chunk = Loader_LoadChunk(file);
                 }
             }
         }
 
         if (nod->nodes.node_music->chunk == NULL)
         {
-            snd_DeleteWav(nod);
+            Sound_DeleteWav(nod);
             return ACTION_NORMAL;
         }
 
         if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
         {
             strcpy(ext, "sub");
-            nod->nodes.node_music->sub = sub_LoadSubtitles(file);
+            nod->nodes.node_music->sub = Subtitles_Load(file);
         }
 
-        nod->nodes.node_music->chn = GetFreeChannel();
+        nod->nodes.node_music->chn = Sound_GetFreeChannel();
         if (nod->nodes.node_music->chn == -1)
         {
             LOG_WARN("ERROR: NO CHANNELS! %s\n", params);
-            snd_DeleteWav(nod);
+            Sound_DeleteWav(nod);
             return ACTION_NORMAL;
         }
 
@@ -490,7 +496,7 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
         else
             nod->nodes.node_music->volume = 100;
 
-        Mix_Volume(nod->nodes.node_music->chn, GetLogVol(nod->nodes.node_music->volume));
+        Mix_Volume(nod->nodes.node_music->chn, Sound_GetLogVol(nod->nodes.node_music->volume));
 
         if (GetIntVal(loop) == 1)
         {
@@ -503,7 +509,7 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
             nod->nodes.node_music->looped = false;
         }
 
-        LockChan(nod->nodes.node_music->chn);
+        Sound_LockChannel(nod->nodes.node_music->chn);
     }
 
     ScrSys_AddToActResList(nod);
@@ -547,13 +553,13 @@ static int action_syncsound(char *params, int aSlot, pzllst_t *owner)
     if (getGNode(syncto) == NULL)
         return ACTION_NORMAL;
 
-    action_res_t *tmp = snd_CreateSyncNode();
+    action_res_t *tmp = Sound_CreateSyncNode();
 
     tmp->owner = owner;
     tmp->slot = -1;
     //tmp->slot  = aSlot;
 
-    tmp->nodes.node_sync->chn = GetFreeChannel();
+    tmp->nodes.node_sync->chn = Sound_GetFreeChannel();
 
     tmp->nodes.node_sync->syncto = syncto;
 
@@ -562,12 +568,12 @@ static int action_syncsound(char *params, int aSlot, pzllst_t *owner)
         getGNode(syncto)->nodes.node_animpre->framerate = FPS_DELAY; //~15fps hack
     }
 
-    tmp->nodes.node_sync->chunk = loader_LoadChunk(a3);
+    tmp->nodes.node_sync->chunk = Loader_LoadChunk(a3);
 
     if (tmp->nodes.node_sync->chn == -1 || tmp->nodes.node_sync->chunk == NULL)
     {
         LOG_WARN("ERROR: NO CHANNELS OR FILE! %s\n", params);
-        snd_DeleteSync(tmp);
+        Sound_DeleteSync(tmp);
         return ACTION_NORMAL;
     }
 
@@ -575,15 +581,15 @@ static int action_syncsound(char *params, int aSlot, pzllst_t *owner)
     strcpy(ext, "sub");
 
     if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
-        tmp->nodes.node_sync->sub = sub_LoadSubtitles(a3);
+        tmp->nodes.node_sync->sub = Subtitles_Load(a3);
 
     Mix_UnregisterAllEffects(tmp->nodes.node_sync->chn);
 
-    Mix_Volume(tmp->nodes.node_sync->chn, GetLogVol(100));
+    Mix_Volume(tmp->nodes.node_sync->chn, Sound_GetLogVol(100));
 
     Mix_PlayChannel(tmp->nodes.node_sync->chn, tmp->nodes.node_sync->chunk, 0);
 
-    LockChan(tmp->nodes.node_sync->chn);
+    Sound_LockChannel(tmp->nodes.node_sync->chn);
 
     ScrSys_AddToActResList(tmp);
 
@@ -601,14 +607,14 @@ static int action_animpreload(char *params, int aSlot, pzllst_t *owner)
     char u3[16];
     char u4[16];
 
-    action_res_t *pre = anim_CreateAnimPreNode();
+    action_res_t *pre = Anim_CreateAnimPreNode();
 
     //%s %d %d %d %f
     //name     ? ? mask framerate
     //in zgi   0 0 0
     sscanf(params, "%s %s %s %s %s", name, u1, u2, u3, u4);
 
-    anim_LoadAnim(pre->nodes.node_animpre,
+    Anim_Load(pre->nodes.node_animpre,
                   name,
                   0, 0,
                   GetIntVal(u3),
@@ -645,7 +651,7 @@ static int action_playpreload(char *params, int aSlot, pzllst_t *owner)
     if (pre->node_type != NODE_TYPE_ANIMPRE)
         return ACTION_NORMAL;
 
-    action_res_t *nod = anim_CreateAnimPlayPreNode();
+    action_res_t *nod = Anim_CreateAnimPlayPreNode();
 
     anim_preplay_node_t *tmp = nod->nodes.node_animpreplay;
 
@@ -685,7 +691,7 @@ static int action_ttytext(char *params, int aSlot, pzllst_t *owner)
     w -= x;
     h -= y;
 
-    FManNode_t *fil = FindInBinTree(chars);
+    FManNode_t *fil = Loader_FindNode(chars);
 
     if (fil == NULL)
     {
@@ -693,7 +699,7 @@ static int action_ttytext(char *params, int aSlot, pzllst_t *owner)
         return ACTION_NORMAL;
     }
 
-    action_res_t *nod = txt_CreateTTYtext();
+    action_res_t *nod = Text_CreateTTYText();
 
     nod->slot = aSlot;
     nod->owner = owner;
@@ -712,8 +718,8 @@ static int action_ttytext(char *params, int aSlot, pzllst_t *owner)
 
     mfclose(fl);
 
-    txt_get_font_style(&nod->nodes.tty_text->style, nod->nodes.tty_text->txtbuf);
-    nod->nodes.tty_text->fnt = GetFontByName(nod->nodes.tty_text->style.fontname, nod->nodes.tty_text->style.size);
+    Text_GetStyle(&nod->nodes.tty_text->style, nod->nodes.tty_text->txtbuf);
+    nod->nodes.tty_text->fnt = Loader_LoadFont(nod->nodes.tty_text->style.fontname, nod->nodes.tty_text->style.size);
     nod->nodes.tty_text->w = w;
     nod->nodes.tty_text->h = h;
     nod->nodes.tty_text->x = x;
@@ -861,28 +867,28 @@ static int action_inventory(char *params, int aSlot, pzllst_t *owner)
 
     if (str_equals(cmd, "add"))
     {
-        inv_add(item);
+        Inventory_Add(item);
     }
     else if (str_equals(cmd, "addi"))
     {
         item = GetgVarInt(item);
-        inv_add(item);
+        Inventory_Add(item);
     }
     else if (str_equals(cmd, "drop"))
     {
         if (item >= 0)
-            inv_drop(item);
+            Inventory_Drop(item);
         else
-            inv_drop(GetgVarInt(SLOT_INVENTORY_MOUSE));
+            Inventory_Drop(GetgVarInt(SLOT_INVENTORY_MOUSE));
     }
     else if (str_equals(cmd, "dropi"))
     {
         item = GetgVarInt(item);
-        inv_drop(item);
+        Inventory_Drop(item);
     }
     else if (str_equals(cmd, "cycle"))
     {
-        inv_cycle();
+        Inventory_Cycle();
     }
     else
         return ACTION_ERROR;
@@ -924,7 +930,7 @@ static int action_crossfade(char *params, int aSlot, pzllst_t *owner)
                 tnod->nodes.node_music->crossfade_params.deltavolume = ceil((GetIntVal(toVol) - tnod->nodes.node_music->volume) / (float)tnod->nodes.node_music->crossfade_params.times);
 
                 if (Mix_Playing(tnod->nodes.node_music->chn))
-                    Mix_Volume(tnod->nodes.node_music->chn, GetLogVol(tnod->nodes.node_music->volume));
+                    Mix_Volume(tnod->nodes.node_music->chn, Sound_GetLogVol(tnod->nodes.node_music->volume));
             }
     }
 
@@ -946,31 +952,16 @@ static int action_crossfade(char *params, int aSlot, pzllst_t *owner)
                 tnod->nodes.node_music->crossfade_params.deltavolume = ceil((GetIntVal(toVol2) - tnod->nodes.node_music->volume) / (float)tnod->nodes.node_music->crossfade_params.times);
 
                 if (Mix_Playing(tnod->nodes.node_music->chn))
-                    Mix_Volume(tnod->nodes.node_music->chn, GetLogVol(tnod->nodes.node_music->volume));
+                    Mix_Volume(tnod->nodes.node_music->chn, Sound_GetLogVol(tnod->nodes.node_music->volume));
             }
     }
-
-    /* MList *wavs = snd_GetWavsList();
-     StartMList(wavs);
-     while(!eofMList(wavs))
-     {
-         musicnode *nod = (musicnode *)DataMList(wavs);
-
-    //        if (nod->slot == item)
-    //            Mix_Volume(nod->chn , GetLogVol(GetIntVal(toVol)));
-
-     //       if (nod->slot == item2)
-     //           Mix_Volume(nod->chn , GetLogVol(GetIntVal(toVol2)));
-
-         NextMList(wavs);
-     }*/
 
     return ACTION_NORMAL;
 }
 
 static int action_menu_bar_enable(char *params, int aSlot, pzllst_t *owner)
 {
-    menu_SetMenuBarVal(GetIntVal(params));
+    Menu_SetVal(GetIntVal(params));
 
     return ACTION_NORMAL;
 }
@@ -994,7 +985,7 @@ static int action_pan_track(char *params, int aSlot, pzllst_t *owner)
 
     if (slot > 0)
     {
-        action_res_t *nod = snd_CreatePanTrack();
+        action_res_t *nod = Sound_CreatePanTrack();
         nod->nodes.node_pantracking = slot;
 
         nod->owner = owner;
@@ -1324,7 +1315,7 @@ static int action_display_message(char *params, int aSlot, pzllst_t *owner)
     }
     else if (sscanf(params, "%d %d", &p1, &p2) == 2)
     {
-        ctrlnode_t *ct = GetControlByID(p1);
+        ctrlnode_t *ct = Controls_GetControl(p1);
         if (ct)
             if (ct->type == CTRL_TITLER)
                 ct->node.titler->next_string = p2;
@@ -1361,7 +1352,7 @@ static int action_disable_venus(char *params, int aSlot, pzllst_t *owner)
 }
 
 
-int action_exec(const char* name, char *params, int aSlot, pzllst_t *owner)
+int Actions_Run(const char* name, char *params, int aSlot, pzllst_t *owner)
 {
     TRACE_ACTION("Running %s %s\n", name, params);
 

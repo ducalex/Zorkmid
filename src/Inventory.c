@@ -28,7 +28,7 @@ static void equip_item(int n)
     SetgVarInt(SLOT_INVENTORY_MOUSE, get_item(n));
 }
 
-void inv_drop(int item)
+void Inventory_Drop(int item)
 {
     int items_cnt = get_count();
 
@@ -60,7 +60,7 @@ void inv_drop(int item)
     }
 }
 
-void inv_add(int item)
+void Inventory_Add(int item)
 {
     int cnt = get_count();
 
@@ -93,7 +93,7 @@ void inv_add(int item)
     }
 }
 
-void inv_cycle()
+void Inventory_Cycle()
 {
     int item_cnt = get_count();
     int cur_item = get_item(0);

@@ -9,7 +9,7 @@ TARGET = Zorkmid
 OBJS =  \
 	src/Actions.c\
 	src/Anims.c\
-	src/Control.c\
+	src/Controls.c\
 	src/Game.c\
 	src/Inventory.c\
 	src/Loader.c\

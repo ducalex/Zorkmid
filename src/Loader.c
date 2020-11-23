@@ -1,5 +1,176 @@
 #include "System.h"
 
+/************************** Assets discovery **************************/
+static BinTreeNd_t *root = NULL;
+static MList *BinNodesList = NULL;
+static MList *FontList;
+
+static void AddFManNode(FManNode_t *nod)
+{
+    char buffer[255];
+    int32_t t_len = strlen(nod->name);
+
+    for (int i = 0; i < t_len; i++)
+        buffer[i] = tolower(nod->name[i]);
+
+    buffer[t_len] = 0x0;
+
+    BinTreeNd_t **treenod = &root;
+    t_len = strlen(buffer);
+    for (int j = 0; j < t_len; j++)
+        for (int i = 0; i < 8; i++)
+        {
+            int bit = ((buffer[j]) >> i) & 1;
+            if (bit)
+                treenod = &((*treenod)->one);
+            else
+                treenod = &((*treenod)->zero);
+
+            if (*treenod == NULL)
+            {
+                *treenod = NEW(BinTreeNd_t);
+                AddToMList(BinNodesList, *treenod);
+            }
+        }
+    if ((*treenod)->nod == NULL) //we don't need to reSet nodes (ADDON and patches don't work without it)
+        (*treenod)->nod = nod;
+    else if (mfsize((*treenod)->nod) < 10)
+        if (mfsize(nod) >= 10)
+            (*treenod)->nod = nod;
+}
+
+FManNode_t *Loader_FindNode(const char *chr)
+{
+    char buffer[255];
+    int32_t t_len = strlen(chr);
+    for (int i = 0; i < t_len; i++)
+        buffer[i] = tolower(chr[i]);
+
+    buffer[t_len] = 0x0;
+
+    BinTreeNd_t *treenod = root;
+
+    t_len = strlen(buffer);
+    for (int j = 0; j < t_len; j++)
+        for (int i = 0; i < 8; i++)
+        {
+            int bit = ((buffer[j]) >> i) & 1;
+            if (bit)
+                treenod = treenod->one;
+            else
+                treenod = treenod->zero;
+
+            if (treenod == NULL)
+                return NULL;
+        }
+
+    return treenod->nod;
+}
+
+static void FindAssets(const char *dir)
+{
+    char path[PATHBUFSIZ];
+    int len = strlen(dir);
+
+    strcpy(path, dir);
+
+    while (path[len - 1] == '/' || path[len - 1] == '\\')
+    {
+        path[len - 1] = 0;
+        len--;
+    }
+
+    TRACE_LOADER("Listing dir: %s\n", path);
+
+    DIR *dr = opendir(path);
+    struct dirent *de;
+
+    if (!dr)
+        return;
+
+    while ((de = readdir(dr)))
+    {
+        if (strlen(de->d_name) < 3)
+            continue;
+
+        sprintf(path + len, "/%s", de->d_name);
+
+        if (isDirectory(path))
+        {
+            FindAssets(path);
+        }
+        else if (str_ends_with(path, ".ZFS"))
+        {
+            Loader_OpenZFS(path);
+        }
+        else if (str_ends_with(path, ".TTF"))
+        {
+            TRACE_LOADER("Adding font : %s\n", path);
+            TTF_Font *fnt = TTF_OpenFont(path, 10);
+            if (fnt != NULL)
+            {
+                graph_font_t *tmpfnt = NEW(graph_font_t);
+                strncpy(tmpfnt->Name, TTF_FontFaceFamilyName(fnt), 63);
+                strncpy(tmpfnt->path, path, 255);
+                AddToMList(FontList, tmpfnt);
+                TTF_CloseFont(fnt);
+            }
+        }
+        else
+        {
+            TRACE_LOADER("Adding game file : %s\n", path);
+            FManNode_t *nod = NEW(FManNode_t);
+            nod->path = strdup(path);
+            nod->name = nod->path + len + 1;
+            nod->zfs = NULL;
+            AddFManNode(nod);
+        }
+    }
+    closedir(dr);
+}
+
+void Loader_Init(const char *dir)
+{
+    FontList = CreateMList();
+    BinNodesList = CreateMList();
+    root = NEW(BinTreeNd_t);
+    AddToMList(BinNodesList, root);
+    FindAssets(GetGamePath());
+}
+
+const char *Loader_GetPath(const char *chr)
+{
+    FManNode_t *nod = Loader_FindNode(chr);
+
+    if (nod && nod->zfs == NULL)
+        return nod->path;
+
+    LOG_WARN("Can't find file '%s'\n", chr);
+    return NULL;
+}
+
+TTF_Font *Loader_LoadFont(char *name, int size)
+{
+    graph_font_t *fnt = NULL;
+
+    StartMList(FontList);
+    while (!eofMList(FontList))
+    {
+        fnt = (graph_font_t *)DataMList(FontList);
+        if (str_equals(fnt->Name, name)) // str_starts_with
+            break;
+
+        NextMList(FontList);
+    }
+
+    if (fnt == NULL)
+        return NULL;
+
+    return TTF_OpenFont(fnt->path, size);
+}
+/************************ End Assets discovery ************************/
+
+
 /*********************************** adpcm_Support *******************************/
 static const uint8_t wavHeader[0x2C] =
     {
@@ -269,37 +440,24 @@ static Mix_Chunk *Load_ZNEM(FManNode_t *file, char type)
     return Mix_LoadWAV_RW(SDL_RWFromMem(raw_w, size2), 1);
 }
 
-Mix_Chunk *loader_LoadChunk(const char *file)
+Mix_Chunk *Loader_LoadChunk(const char *file)
 {
-    FManNode_t *mfil = FindInBinTree(file);
-    const char *fil = NULL;
-
-    if (!mfil)
-        fil = GetFilePath(file);
-    else
-        fil = mfil->name;
-
-    if (!fil)
+    FManNode_t *mfp = Loader_FindNode(file);
+    if (!mfp)
+    {
+        LOG_WARN("File '%s' not found\n", file);
         return NULL;
+    }
 
-    if (mfsize(mfil) < 10)
-        return NULL;
-
-    Mix_Chunk *chunk = NULL;
-
-    if ((str_ends_with(fil, "src") || str_ends_with(fil, "raw") || str_ends_with(fil, "ifp")) && (mfil != NULL))
+    if (str_ends_with(mfp->name, "src") || str_ends_with(mfp->name, "raw") || str_ends_with(mfp->name, "ifp"))
     {
         if (CUR_GAME == GAME_ZGI)
-            chunk = Load_ZGI(mfil, fil[strlen(fil) - 5]);
+            return Load_ZGI(mfp, mfp->name[strlen(mfp->name) - 5]);
         else
-            chunk = Load_ZNEM(mfil, fil[strlen(fil) - 6]);
-    }
-    else if (!mfil)
-    {
-        chunk = Mix_LoadWAV(fil);
+            return Load_ZNEM(mfp, mfp->name[strlen(mfp->name) - 6]);
     }
 
-    return chunk;
+    return Mix_LoadWAV(file);
 }
 /*********************************** END adpcm_Support *******************************/
 
@@ -551,7 +709,7 @@ static SDL_Surface *Load_gfx_File(const char *file, int8_t transpose, int8_t key
 {
     TRACE_LOADER("Load GFX file '%s'\n", file);
 
-    FManNode_t *mfil = FindInBinTree(file);
+    FManNode_t *mfil = Loader_FindNode(file);
 
     if (!mfil)
     {
@@ -617,12 +775,12 @@ static SDL_Surface *Load_gfx_File(const char *file, int8_t transpose, int8_t key
     return srf;
 }
 
-SDL_Surface *loader_LoadFile(const char *file, int8_t transpose)
+SDL_Surface *Loader_LoadFile(const char *file, int8_t transpose)
 {
     return Load_gfx_File(file, transpose, 0, 0);
 }
 
-SDL_Surface *loader_LoadFile_key(const char *file, int8_t transpose, uint32_t key)
+SDL_Surface *Loader_LoadFile_key(const char *file, int8_t transpose, uint32_t key)
 {
     return Load_gfx_File(file, transpose, 1, key);
 }
@@ -775,11 +933,11 @@ static void HRLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
     }
 }
 
-anim_surf_t *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask)
+anim_surf_t *Loader_LoadRLF(const char *file, int8_t transpose, int32_t mask)
 {
     TRACE_LOADER("Load RLF file '%s'\n", file);
 
-    FManNode_t *fil = FindInBinTree(file);
+    FManNode_t *fil = Loader_FindNode(file);
     if (!fil)
         Z_PANIC("File %s not found\n", file);
 
@@ -852,11 +1010,11 @@ anim_surf_t *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask)
 
 
 /******************** ZCR ************************/
-void loader_LoadZcr(const char *file, Cursor_t *cur)
+void Loader_LoadZCR(const char *file, Cursor_t *cur)
 {
     TRACE_LOADER("Load ZCR file '%s'\n", file);
 
-    FManNode_t *fl = FindInBinTree(file);
+    FManNode_t *fl = Loader_FindNode(file);
 
     if (fl == NULL)
     {
@@ -865,7 +1023,7 @@ void loader_LoadZcr(const char *file, Cursor_t *cur)
         strcpy(tmp, file);
         int len = strlen(tmp);
 
-        cur->img = loader_LoadFile_key(tmp, 0, Rend_MapScreenRGB(0, 0, 0));
+        cur->img = Loader_LoadFile_key(tmp, 0, Rend_MapScreenRGB(0, 0, 0));
 
         if (cur->img == NULL)
             return;
@@ -877,7 +1035,7 @@ void loader_LoadZcr(const char *file, Cursor_t *cur)
         tmp[len + 1] = 't';
         tmp[len + 2] = 0x0;
 
-        const char *tmp2 = GetFilePath(tmp);
+        const char *tmp2 = Loader_GetPath(tmp);
         if (tmp2 == NULL)
             return;
 
@@ -948,7 +1106,7 @@ typedef struct
 
 static MList *zfs_arch_list = NULL;
 
-void loader_openzfs(const char *file, MList *list)
+void Loader_OpenZFS(const char *file)
 {
     TRACE_LOADER("Loading ZFS : %s\n", file);
 
@@ -998,8 +1156,7 @@ void loader_openzfs(const char *file, MList *list)
                 nod->zfs->archive = tmp;
                 nod->zfs->offset = fil.offset;
                 nod->zfs->size = fil.size;
-                AddToMList(list, nod);
-                AddToBinTree(nod);
+                AddFManNode(nod);
             }
         }
     }
@@ -1008,7 +1165,7 @@ void loader_openzfs(const char *file, MList *list)
 
 
 /******************* STRINGS *****************/
-char **loader_loadStr_m(mfile_t *mfp)
+char **Loader_LoadSTR_m(mfile_t *mfp)
 {
     char buffer[STRBUFSIZE];
     int lines = 1;
@@ -1039,14 +1196,14 @@ char **loader_loadStr_m(mfile_t *mfp)
     return strings;
 }
 
-char **loader_loadStr(const char *path)
+char **Loader_LoadSTR(const char *path)
 {
     FManNode_t file = {
         .name = (char*)path,
         .path = (char*)path,
         .zfs = NULL
     };
-    return loader_loadStr_m(mfopen(&file));
+    return Loader_LoadSTR_m(mfopen(&file));
 }
 /***************** STRINGS END ***************/
 

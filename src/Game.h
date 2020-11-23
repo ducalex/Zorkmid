@@ -28,6 +28,11 @@ void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X);
 void SetGamePath(const char *path);
 const char *GetGamePath();
 const char *GetGameTitle();
+const char *GetGameString(int32_t indx);
+
+float GetFps();
+bool GetBeat();
+uint32_t GetDTime();
 
 void game_timed_debug_message(int32_t milsecs, const char *str);
 void game_timed_message(int32_t milsecs, const char *str);

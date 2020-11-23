@@ -61,17 +61,17 @@ static int16_t lastbut_znem = -1;
 
 static int32_t znem_but_anim = menu_znemesis_butanim;
 
-void menu_SetMenuBarVal(uint16_t val)
+void Menu_SetVal(uint16_t val)
 {
     menu_bar_flag = val;
 }
 
-uint16_t menu_GetMenuBarVal()
+uint16_t Menu_GetVal()
 {
     return menu_bar_flag;
 }
 
-void menu_LoadGraphics()
+void Menu_LoadGraphics()
 {
     char buf[MINIBUFSZ];
 
@@ -80,16 +80,16 @@ void menu_LoadGraphics()
         for (int i = 1; i < 4; i++)
         {
             sprintf(buf, "gmzau%2.2x1.tga", i);
-            menuback[i - 1][0] = loader_LoadFile(buf, 0);
+            menuback[i - 1][0] = Loader_LoadFile(buf, 0);
             sprintf(buf, "gmzau%2.2x1.tga", i + 0x10);
-            menuback[i - 1][1] = loader_LoadFile(buf, 0);
+            menuback[i - 1][1] = Loader_LoadFile(buf, 0);
         }
         for (int i = 0; i < 4; i++)
         {
             sprintf(buf, "gmzmu%2.2x1.tga", i);
-            menubar[i][0] = loader_LoadFile(buf, 0);
+            menubar[i][0] = Loader_LoadFile(buf, 0);
             sprintf(buf, "gmznu%2.2x1.tga", i);
-            menubar[i][1] = loader_LoadFile(buf, 0);
+            menubar[i][1] = Loader_LoadFile(buf, 0);
         }
 
         memset(menupicto, 0, sizeof(menupicto));
@@ -100,13 +100,13 @@ void menu_LoadGraphics()
             for (int i = 0; i < menu_znemesis_but_frames; i++)
             {
                 sprintf(buf, "butfrm%d%d.tga", j, i);
-                menubut_znem[j - 1][i] = loader_LoadFile(buf, 0);
+                menubut_znem[j - 1][i] = Loader_LoadFile(buf, 0);
             }
-        menubar_znem = loader_LoadFile("bar.tga", 0);
+        menubar_znem = Loader_LoadFile("bar.tga", 0);
     }
 }
 
-void menu_UpdateMenuBar()
+void Menu_Update()
 {
     if (CUR_GAME == GAME_ZGI)
     {
@@ -120,13 +120,13 @@ void menu_UpdateMenuBar()
             switch (menu_mousefocus)
             {
             case menu_ITEM:
-                if (menu_bar_flag & menu_BAR_ITEM)
+                if (menu_bar_flag & MENU_BAR_ITEM)
                 {
                     SetgVarInt(SLOT_MENU_STATE, 1);
 
                     if (!menu_Scrolled[menu_ITEM])
                     {
-                        float scrl = (menu_zgi_inv_w / (float)(GetFps())) / menu_SCROLL_TIME_INV;
+                        float scrl = (menu_zgi_inv_w / GetFps()) / menu_SCROLL_TIME_INV;
 
                         if (scrl == 0)
                             scrl = 1.0;
@@ -157,8 +157,8 @@ void menu_UpdateMenuBar()
                                 int32_t mouse_item = GetgVarInt(SLOT_INVENTORY_MOUSE);
                                 if (mouse_item >= 0 && mouse_item < 0xE0)
                                 {
-                                    inv_drop(mouse_item);
-                                    inv_add(GetgVarInt(SLOT_START_SLOT + i));
+                                    Inventory_Drop(mouse_item);
+                                    Inventory_Add(GetgVarInt(SLOT_START_SLOT + i));
                                     SetgVarInt(SLOT_START_SLOT + i, mouse_item);
                                 }
                             }
@@ -168,13 +168,13 @@ void menu_UpdateMenuBar()
                 break;
 
             case menu_MAGIC:
-                if (menu_bar_flag & menu_BAR_MAGIC)
+                if (menu_bar_flag & MENU_BAR_MAGIC)
                 {
                     SetgVarInt(SLOT_MENU_STATE, 3);
 
                     if (!menu_Scrolled[menu_MAGIC])
                     {
-                        float scrl = (menu_zgi_inv_w / (float)(GetFps())) / menu_SCROLL_TIME_INV;
+                        float scrl = (menu_zgi_inv_w / GetFps()) / menu_SCROLL_TIME_INV;
 
                         if (scrl == 0)
                             scrl = 1.0;
@@ -215,7 +215,7 @@ void menu_UpdateMenuBar()
 
                 if (!menu_Scrolled[menu_MAIN])
                 {
-                    float scrl = (menu_MAIN_EL_H / (float)(GetFps())) / menu_SCROLL_TIME;
+                    float scrl = (menu_MAIN_EL_H / GetFps()) / menu_SCROLL_TIME;
 
                     if (scrl == 0)
                         scrl = 1.0;
@@ -230,7 +230,7 @@ void menu_UpdateMenuBar()
                 }
 
                 //EXIT
-                if (menu_bar_flag & menu_BAR_EXIT)
+                if (menu_bar_flag & MENU_BAR_EXIT)
                     if (Mouse_InRect(menu_MAIN_CENTER + menu_MAIN_EL_W,
                                      menu_ScrollPos[menu_MAIN],
                                      menu_MAIN_EL_W,
@@ -242,7 +242,7 @@ void menu_UpdateMenuBar()
                     }
 
                 //SETTINGS
-                if (menu_bar_flag & menu_BAR_SETTINGS)
+                if (menu_bar_flag & MENU_BAR_SETTINGS)
                     if (Mouse_InRect(menu_MAIN_CENTER,
                                      menu_ScrollPos[menu_MAIN],
                                      menu_MAIN_EL_W,
@@ -254,7 +254,7 @@ void menu_UpdateMenuBar()
                     }
 
                 //LOAD
-                if (menu_bar_flag & menu_BAR_RESTORE)
+                if (menu_bar_flag & MENU_BAR_RESTORE)
                     if (Mouse_InRect(menu_MAIN_CENTER - menu_MAIN_EL_W,
                                      menu_ScrollPos[menu_MAIN],
                                      menu_MAIN_EL_W,
@@ -266,7 +266,7 @@ void menu_UpdateMenuBar()
                     }
 
                 //SAVE
-                if (menu_bar_flag & menu_BAR_SAVE)
+                if (menu_bar_flag & MENU_BAR_SAVE)
                     if (Mouse_InRect(menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
                                      menu_ScrollPos[menu_MAIN],
                                      menu_MAIN_EL_W,
@@ -290,7 +290,7 @@ void menu_UpdateMenuBar()
                     menu_ScrollPos[menu_MAIN] = menuback[menu_MAIN][1]->h - menuback[menu_MAIN][0]->h;
                 }
 
-                if (menu_bar_flag & menu_BAR_MAGIC)
+                if (menu_bar_flag & MENU_BAR_MAGIC)
                     if (Mouse_InRect(GAME_W - menu_zgi_inv_hot_w, 0, menu_zgi_inv_hot_w, menu_zgi_inv_h))
                     {
                         menu_mousefocus = menu_MAGIC;
@@ -298,7 +298,7 @@ void menu_UpdateMenuBar()
                         menu_ScrollPos[menu_MAGIC] = menu_zgi_inv_hot_w;
                     }
 
-                if (menu_bar_flag & menu_BAR_ITEM)
+                if (menu_bar_flag & MENU_BAR_ITEM)
                     if (Mouse_InRect(0, 0, menu_zgi_inv_hot_w, menu_zgi_inv_h))
                     {
                         menu_mousefocus = menu_ITEM;
@@ -327,7 +327,7 @@ void menu_UpdateMenuBar()
 
             if (!scrolled_znem)
             {
-                float scrl = (menubar_znem->h / (float)(GetFps())) / menu_SCROLL_TIME;
+                float scrl = (menubar_znem->h / GetFps()) / menu_SCROLL_TIME;
 
                 if (scrl == 0)
                     scrl = 1.0;
@@ -342,7 +342,7 @@ void menu_UpdateMenuBar()
             }
 
             //EXIT
-            if (menu_bar_flag & menu_BAR_EXIT)
+            if (menu_bar_flag & MENU_BAR_EXIT)
                 if (Mouse_InRect(menu_MAIN_X + znem_but4_x,
                                  menu_ScrollPos[menu_MAIN],
                                  znem_but4_w,
@@ -357,7 +357,7 @@ void menu_UpdateMenuBar()
                 }
 
             //SETTINGS
-            if (menu_bar_flag & menu_BAR_SETTINGS)
+            if (menu_bar_flag & MENU_BAR_SETTINGS)
                 if (Mouse_InRect(menu_MAIN_X + znem_but3_x,
                                  menu_ScrollPos[menu_MAIN],
                                  znem_but3_w,
@@ -372,7 +372,7 @@ void menu_UpdateMenuBar()
                 }
 
             //LOAD
-            if (menu_bar_flag & menu_BAR_RESTORE)
+            if (menu_bar_flag & MENU_BAR_RESTORE)
                 if (Mouse_InRect(menu_MAIN_X + znem_but2_x,
                                  menu_ScrollPos[menu_MAIN],
                                  znem_but2_w,
@@ -387,7 +387,7 @@ void menu_UpdateMenuBar()
                 }
 
             //SAVE
-            if (menu_bar_flag & menu_BAR_SAVE)
+            if (menu_bar_flag & MENU_BAR_SAVE)
                 if (Mouse_InRect(menu_MAIN_X + znem_but1_x,
                                  menu_ScrollPos[menu_MAIN],
                                  znem_but1_w,
@@ -433,7 +433,7 @@ void menu_UpdateMenuBar()
 
             if (scrollpos_znem > -menubar_znem->h)
             {
-                float scrl = (menubar_znem->h / (float)(GetFps())) / menu_SCROLL_TIME;
+                float scrl = (menubar_znem->h / GetFps()) / menu_SCROLL_TIME;
 
                 if (scrl == 0)
                     scrl = 1.0;
@@ -446,7 +446,7 @@ void menu_UpdateMenuBar()
     }
 }
 
-void menu_DrawMenuBar()
+void Menu_Draw()
 {
     if (CUR_GAME == GAME_ZGI)
     {
@@ -458,7 +458,7 @@ void menu_DrawMenuBar()
             switch (menu_mousefocus)
             {
             case menu_ITEM:
-                if (menu_bar_flag & menu_BAR_ITEM)
+                if (menu_bar_flag & MENU_BAR_ITEM)
                 {
                     DrawImage(menuback[menu_ITEM][0], menu_ScrollPos[menu_ITEM], 0);
 
@@ -482,12 +482,12 @@ void menu_DrawMenuBar()
                             if (menupicto[itemnum][0] == NULL)
                             {
                                 sprintf(buf, "gmzwu%2.2x1.tga", itemnum);
-                                menupicto[itemnum][0] = loader_LoadFile_key(buf, 0, 0);
+                                menupicto[itemnum][0] = Loader_LoadFile_key(buf, 0, 0);
                             }
                             if (menupicto[itemnum][1] == NULL)
                             {
                                 sprintf(buf, "gmzxu%2.2x1.tga", itemnum);
-                                menupicto[itemnum][1] = loader_LoadFile_key(buf, 0, 0);
+                                menupicto[itemnum][1] = Loader_LoadFile_key(buf, 0, 0);
                             }
                             if (inrect)
                                 DrawImage(menupicto[itemnum][1], menu_ScrollPos[menu_ITEM] + itemspace * i, 0);
@@ -499,7 +499,7 @@ void menu_DrawMenuBar()
                 break;
 
             case menu_MAGIC:
-                if (menu_bar_flag & menu_BAR_MAGIC)
+                if (menu_bar_flag & MENU_BAR_MAGIC)
                 {
                     DrawImage(menuback[menu_MAGIC][0], GAME_W - menu_ScrollPos[menu_MAGIC], 0);
 
@@ -521,12 +521,12 @@ void menu_DrawMenuBar()
                             if (menupicto[itemnum][0] == NULL)
                             {
                                 sprintf(buf, "gmzwu%2.2x1.tga", itemnum);
-                                menupicto[itemnum][0] = loader_LoadFile_key(buf, 0, 0);
+                                menupicto[itemnum][0] = Loader_LoadFile_key(buf, 0, 0);
                             }
                             if (menupicto[itemnum][1] == NULL)
                             {
                                 sprintf(buf, "gmzxu%2.2x1.tga", itemnum);
-                                menupicto[itemnum][1] = loader_LoadFile_key(buf, 0, 0);
+                                menupicto[itemnum][1] = Loader_LoadFile_key(buf, 0, 0);
                             }
                             if (inrect)
                                 DrawImage(menupicto[itemnum][1], GAME_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0);
@@ -542,7 +542,7 @@ void menu_DrawMenuBar()
                 DrawImage(menuback[menu_MAIN][0], menu_MAIN_X, menu_ScrollPos[menu_MAIN]);
 
                 //EXIT
-                if (menu_bar_flag & menu_BAR_EXIT)
+                if (menu_bar_flag & MENU_BAR_EXIT)
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_EXIT)
                         DrawImage(menubar[menu_MAIN_IMAGE_EXIT][1], menu_MAIN_CENTER + menu_MAIN_EL_W,
@@ -553,7 +553,7 @@ void menu_DrawMenuBar()
                 }
 
                 //SETTINGS
-                if (menu_bar_flag & menu_BAR_SETTINGS)
+                if (menu_bar_flag & MENU_BAR_SETTINGS)
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_PREF)
                         DrawImage(menubar[menu_MAIN_IMAGE_PREF][1], menu_MAIN_CENTER,
@@ -564,7 +564,7 @@ void menu_DrawMenuBar()
                 }
 
                 //LOAD
-                if (menu_bar_flag & menu_BAR_RESTORE)
+                if (menu_bar_flag & MENU_BAR_RESTORE)
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_REST)
                         DrawImage(menubar[menu_MAIN_IMAGE_REST][1], menu_MAIN_CENTER - menu_MAIN_EL_W,
@@ -575,7 +575,7 @@ void menu_DrawMenuBar()
                 }
 
                 //SAVE
-                if (menu_bar_flag & menu_BAR_SAVE)
+                if (menu_bar_flag & MENU_BAR_SAVE)
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_SAVE)
                         DrawImage(menubar[menu_MAIN_IMAGE_SAVE][1], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
@@ -590,10 +590,10 @@ void menu_DrawMenuBar()
             default:
                 DrawImage(menuback[menu_MAIN][1], menu_MAIN_X, 0);
 
-                if (menu_bar_flag & menu_BAR_ITEM)
+                if (menu_bar_flag & MENU_BAR_ITEM)
                     DrawImage(menuback[menu_ITEM][1], 0, 0);
 
-                if (menu_bar_flag & menu_BAR_MAGIC)
+                if (menu_bar_flag & MENU_BAR_MAGIC)
                     DrawImage(menuback[menu_MAGIC][1], GAME_W - menu_zgi_inv_hot_w, 0);
             }
         }
@@ -606,7 +606,7 @@ void menu_DrawMenuBar()
             DrawImage(menubar_znem, menu_MAIN_X, scrollpos_znem);
 
             //EXIT
-            if (menu_bar_flag & menu_BAR_EXIT)
+            if (menu_bar_flag & MENU_BAR_EXIT)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_EXIT)
                     DrawImage(menubut_znem[menu_MAIN_IMAGE_EXIT][butframe_znem[menu_MAIN_IMAGE_EXIT]], menu_MAIN_X + znem_but4_x,
@@ -614,7 +614,7 @@ void menu_DrawMenuBar()
             }
 
             //SETTINGS
-            if (menu_bar_flag & menu_BAR_SETTINGS)
+            if (menu_bar_flag & MENU_BAR_SETTINGS)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_PREF)
                     DrawImage(menubut_znem[menu_MAIN_IMAGE_PREF][butframe_znem[menu_MAIN_IMAGE_PREF]], menu_MAIN_X + znem_but3_x,
@@ -622,7 +622,7 @@ void menu_DrawMenuBar()
             }
 
             //LOAD
-            if (menu_bar_flag & menu_BAR_RESTORE)
+            if (menu_bar_flag & MENU_BAR_RESTORE)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_REST)
                     DrawImage(menubut_znem[menu_MAIN_IMAGE_REST][butframe_znem[menu_MAIN_IMAGE_REST]], menu_MAIN_X + znem_but2_x,
@@ -630,7 +630,7 @@ void menu_DrawMenuBar()
             }
 
             //SAVE
-            if (menu_bar_flag & menu_BAR_SAVE)
+            if (menu_bar_flag & MENU_BAR_SAVE)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_SAVE)
                     DrawImage(menubut_znem[menu_MAIN_IMAGE_SAVE][butframe_znem[menu_MAIN_IMAGE_SAVE]], menu_MAIN_X + znem_but1_x,
