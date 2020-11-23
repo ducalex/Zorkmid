@@ -110,7 +110,7 @@ void Mouse_DrawCursor(int x, int y)
 int Mouse_GetCursorIndex(char *name)
 {
     for (int i = 0; i < NUM_CURSORS; i++)
-        if (strcasecmp(name, CurNames[i]) == 0)
+        if (str_equals(name, CurNames[i]))
             return i;
 
     return CURSOR_IDLE;

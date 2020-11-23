@@ -1,55 +1,5 @@
 #include "System.h"
 
-typedef struct
-{
-    const char *key;
-    int (*func)(char *, int, pzllst_t *);
-} action_t;
-
-static const action_t actions[] = {
-    {"set_screen", action_set_screen},
-    {"debug", action_debug},
-    {"assign", action_assign},
-    {"timer", action_timer},
-    {"set_partial_screen", action_set_partial_screen},
-    {"change_location", action_change_location},
-    {"dissolve", action_dissolve},
-    {"disable_control", action_disable_control},
-    {"enable_control", action_enable_control},
-    {"add", action_add},
-    {"random", action_random},
-    {"animplay", action_animplay},
-    {"universe_music", action_universe_music},
-    {"music", action_music},
-    {"kill", action_kill},
-    {"stop", action_stop},
-    {"inventory", action_inventory},
-    {"crossfade", action_crossfade},
-    {"streamvideo", action_streamvideo},
-    {"animpreload", action_animpreload},
-    {"playpreload", action_playpreload},
-    {"syncsound", action_syncsound},
-    {"menu_bar_enable", action_menu_bar_enable},
-    {"delay_render", action_delay_render},
-    {"ttytext", action_ttytext},
-    {"cursor", action_cursor}, // ?
-    {"attenuate", action_attenuate},
-    {"pan_track", action_pan_track},
-    {"animunload", action_animunload},
-    {"flush_mouse_events", action_flush_mouse_events},
-    {"save_game", action_save_game},
-    {"restore_game", action_restore_game},
-    {"quit", action_quit},
-    {"rotate_to", action_rotate_to},
-    {"distort", action_distort},
-    {"preferences", action_preferences},
-    {"region", action_region},
-    {"display_message", action_display_message},
-    {"set_venus", action_set_venus},
-    {"disable_venus", action_disable_venus},
-    {NULL, NULL},
-};
-
 pzllst_t *CreatePuzzleList(const char *name)
 {
     pzllst_t *tmp = NEW(pzllst_t);
@@ -130,21 +80,11 @@ static void Parse_Puzzle_Results_Action(char *str, MList *lst)
         }
     }
 
-    const action_t *action = &actions[0];
-
-    while (action->key != NULL)
-    {
-        if (strCMP(buf, action->key) == 0)
-        {
-            func_node_t *nod = NEW(func_node_t);
-            AddToMList(lst, nod);
-            nod->param = strdup(params);
-            nod->slot = slot;
-            nod->func = action->func;
-            return;
-        }
-        action++;
-    }
+    func_node_t *nod = NEW(func_node_t);
+    AddToMList(lst, nod);
+    nod->param = strdup(params);
+    nod->slot = slot;
+    strcpy(nod->action, buf);
 }
 
 static int Parse_Puzzle_Flags(puzzlenode_t *pzl, mfile_t *fl)
@@ -161,15 +101,15 @@ static int Parse_Puzzle_Flags(puzzlenode_t *pzl, mfile_t *fl)
         {
             return 1;
         }
-        else if (strCMP(str, "once_per_inst") == 0)
+        else if (str_starts_with(str, "once_per_inst"))
         {
             ScrSys_SetFlag(pzl->slot, ScrSys_GetFlag(pzl->slot) | FLAG_ONCE_PER_I);
         }
-        else if (strCMP(str, "do_me_now") == 0)
+        else if (str_starts_with(str, "do_me_now"))
         {
             ScrSys_SetFlag(pzl->slot, ScrSys_GetFlag(pzl->slot) | FLAG_DO_ME_NOW);
         }
-        else if (strCMP(str, "disabled") == 0)
+        else if (str_starts_with(str, "disabled"))
         {
             ScrSys_SetFlag(pzl->slot, ScrSys_GetFlag(pzl->slot) | FLAG_DISABLED);
         }
@@ -247,7 +187,7 @@ static int Parse_Puzzle_Criteria(puzzlenode_t *pzl, mfile_t *fl)
         }
         else
         {
-            printf("Warning!!! %s\n", str);
+            LOG_WARN("Warning!!! %s\n", str);
         }
     }
 
@@ -268,15 +208,13 @@ static int Parse_Puzzle_Results(puzzlenode_t *pzl, mfile_t *fl)
         {
             return 1;
         }
-        else if (strlen(str) > 0)
+        else if (!str_empty(str))
         {
             char *str2 = strchr(str, ':'); //action: background: event: other
-            if (str2 != NULL)
+            if (str2)
                 Parse_Puzzle_Results_Action(str2 + 1, pzl->ResList);
-#ifdef TRACE
             else
-                printf("Unknown result action: %s\n", str);
-#endif
+                LOG_WARN("Unknown result action: %s\n", str);
         }
     }
 
@@ -314,17 +252,17 @@ int Puzzle_Parse(pzllst_t *lst, mfile_t *fl, char *ctstr)
             good = 1;
             break;
         }
-        else if (strCMP(str, "criteria") == 0) //PARSE CRITERIA
+        else if (str_starts_with(str, "criteria")) //PARSE CRITERIA
         {
             TRACE_PUZZLE("Creating criteria\n");
             Parse_Puzzle_Criteria(pzl, fl);
         }
-        else if (strCMP(str, "results") == 0) //RESULTS
+        else if (str_starts_with(str, "results")) //RESULTS
         {
             TRACE_PUZZLE("Creating results\n");
             Parse_Puzzle_Results(pzl, fl);
         }
-        else if (strCMP(str, "flags") == 0) // FLAGS
+        else if (str_starts_with(str, "flags")) // FLAGS
         {
             TRACE_PUZZLE("Reading flags\n");
             Parse_Puzzle_Flags(pzl, fl);
@@ -425,7 +363,7 @@ int Puzzle_TryExec(puzzlenode_t *pzlnod) //, pzllst_t *owner)
     while (!eofMList(pzlnod->ResList))
     {
         func_node_t *fun = (func_node_t *)DataMList(pzlnod->ResList);
-        if (fun->func(fun->param, fun->slot, pzlnod->owner) == ACTION_BREAK)
+        if (action_exec(fun->action, fun->param, fun->slot, pzlnod->owner) == ACTION_BREAK)
         {
             return ACTION_BREAK;
         }

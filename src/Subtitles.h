@@ -16,9 +16,8 @@ typedef struct
 
 typedef struct
 {
+    char **subs;
     int count;
-    char *buffer; //for all subs
-    char **subs;  //for access to subs
 } sub_textfile_t;
 
 typedef struct

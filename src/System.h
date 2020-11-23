@@ -5,19 +5,12 @@
 #define CUR_GAME GAME_ZGI
 // extern int CUR_GAME;
 
-#define TRACE_ACTION() printf("[ACTION] %s(%s)\n", __func__, params);
-//#define TRACE_ACTION()
-#define TRACE_LOADER(x...) printf("[LOADER] " x);
-//#define TRACE_LOADER(x...)
-#define TRACE_PUZZLE(x...) printf(x)
-// #define TRACE_PUZZLE(x...)
 
-//if you plan to build engine with smpeg support
-//#define SMPEG_SUPPORT
+#define TRACE(x...) printf(x)
+// #define TRACE(x...)
 
 #define SFTYPE SDL_SWSURFACE // SDL_HWSURFACE
 
-#define SYS_STRINGS_FILE (CUR_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR")
 #define CTRL_SAVE_FILE (CUR_GAME == GAME_ZGI ? "inquis.sav" : "nemesis.sav")
 #define CTRL_SAVE_SAVES (CUR_GAME == GAME_ZGI ? "inqsav%d.sav" : "nemsav%d.sav")
 #define TIMER_DELAY (CUR_GAME == GAME_ZGI ? 100 : 1000)
@@ -29,6 +22,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <strings.h>
 #include <ctype.h>
 #include <errno.h>
 #include <math.h>
@@ -85,11 +79,13 @@
         exit(-1);                                               \
     }
 
-char *findstr(const char *h, const char *n);
+#define TRACE_LOADER(x...) TRACE("[LOADER] " x)
+#define TRACE_PUZZLE(x...) TRACE("[PUZZLE] " x)
+#define TRACE_ACTION(x...) TRACE("[ACTION] " x)
+#define TRACE_CONTROL(x...) TRACE("[CONTROL] " x)
 
-#ifdef SMPEG_SUPPORT
-#include <smpeg/smpeg.h>
-#endif
+#define LOG_INFO(f, x...) printf("[INFO] %s : " f, __func__, x)
+#define LOG_WARN(f, x...) fprintf(stderr, "[WARNING] %s : " f, __func__, x)
 
 #include "avi_duck/simple_avi.h"
 
@@ -120,7 +116,7 @@ void TimerInit(float fps);
 void TimerTick();
 int32_t GetFps();
 bool GetBeat();
-void Delay(uint32_t ms);
+uint32_t GetDTime();
 
 //Keyboard functions
 void FlushKeybKey(SDLKey key);
@@ -145,35 +141,31 @@ SDLKey GetLastKey();
 
 void InitFileManager(const char *dir);
 const char *GetFilePath(const char *chr);
-const char *GetExactFilePath(const char *chr);
 TTF_Font *GetFontByName(char *name, int size);
-const char *GetSystemString(int32_t indx);
 
 int GetKeyBuffered(int indx);
 bool CheckKeyboardMessage(const char *msg, int len);
 
 void FindAssets(const char *dir);
 bool isDirectory(const char *);
-bool FileExist(const char *);
-int32_t FileSize(const char *);
-
-uint32_t GetDTime();
+bool FileExists(const char *);
 
 char *PrepareString(char *buf);
-char *TrimLeft(char *buf);
-char *TrimRight(char *buf);
 char *GetParams(char *str);
 int GetIntVal(char *chr);
-
-#define strCMP(X, Y) strncasecmp(X, Y, strlen(Y))
 
 void AddToBinTree(FManNode_t *nod);
 FManNode_t *FindInBinTree(const char *chr);
 
 double round(double r);
 
-void SetGamePath(const char *pth);
-const char *GetGamePath();
-const char *GetGameTitle();
+const char *str_find(const char *haystack, const char *needle);
+bool str_starts_with(const char *haystack, const char *needle);
+bool str_ends_with(const char *haystack, const char *needle);
+bool str_equals(const char *str1, const char *str2);
+bool str_empty(const char *str);
+const char *str_ltrim(const char *str);
+char *str_trim(const char *str);
+char **str_split(const char *str, const char *delim);
 
 #endif // SYSTEM_H_INCLUDED

@@ -31,67 +31,36 @@ void anim_LoadAnim(animnode_t *nod, char *filename, int u1, int u2, int32_t mask
     nod->nexttick = 0;
     nod->loops = 0;
 
-    if (findstr(filename, ".avi"))
+    if (str_ends_with(filename, ".avi")) // AVI
     {
-        nod->anim.avi = NEW(anim_avi_t);
-        nod->vid = 1;
+        nod->anim_avi = NEW(anim_avi_t);
+        nod->anim_avi->av = avi_openfile(GetFilePath(filename), Rend_GetRenderer() == RENDER_PANA);
+        nod->anim_avi->lastfrm = -1;
 
-        nod->anim.avi->av = avi_openfile(GetFilePath(filename), Rend_GetRenderer() == RENDER_PANA);
-        int16_t w, h;
+        int w = nod->anim_avi->av->w;
+        int h = nod->anim_avi->av->h;
 
-        w = nod->anim.avi->av->w;
-        h = nod->anim.avi->av->h;
-
-        nod->anim.avi->img = CreateSurface(w, h);
-
-        nod->anim.avi->lastfrm = -1;
+        nod->anim_avi->img = CreateSurface(w, h);
 
         if (nod->framerate == 0)
-            nod->framerate = nod->anim.avi->av->header.mcrSecPframe / 1000; //~15fps
+            nod->framerate = nod->anim_avi->av->header.mcrSecPframe / 1000; //~15fps
 
         nod->rel_h = h;
         nod->rel_w = w;
     }
-#ifdef SMPEG_SUPPORT
-    else if (findstr(filename, ".mpg"))
+    else if (str_ends_with(filename, ".rlf"))
     {
-        nod->anim.mpg = NEW(anim_mpg);
-        nod->vid = 2;
-
-        nod->anim.mpg->mpg = SMPEG_new(GetFilePath(filename), &nod->anim.mpg->inf, 0);
-        int16_t w, h;
-
-        w = nod->anim.mpg->inf.width;
-        h = nod->anim.mpg->inf.height;
-
-        nod->anim.mpg->img = CreateSurface(w, h);
-
-        SMPEG_setdisplay(nod->anim.mpg->mpg, nod->anim.mpg->img, 0, 0);
-        SMPEG_setdisplayregion(nod->anim.mpg->mpg, 0, 0, nod->anim.mpg->inf.width, nod->anim.mpg->inf.height);
-
-        nod->anim.mpg->lastfrm = -1;
+        nod->anim_rlf = loader_LoadRlf(filename, Rend_GetRenderer() == RENDER_PANA, mask);
 
         if (nod->framerate == 0)
-            nod->framerate = FPS_DELAY; //~15fps
+            nod->framerate = nod->anim_rlf->info.time;
 
-        nod->rel_h = h;
-        nod->rel_w = w;
+        nod->rel_h = nod->anim_rlf->info.h;
+        nod->rel_w = nod->anim_rlf->info.w;
     }
-#endif
     else
     {
-        if (findstr(filename, ".rlf"))
-            nod->anim.rlf = loader_LoadRlf(filename, Rend_GetRenderer() == RENDER_PANA, mask);
-        else
-            nod->anim.rlf = LoadAnimImage(filename, mask);
-
-        nod->vid = 0;
-
-        if (nod->framerate == 0)
-            nod->framerate = nod->anim.rlf->info.time;
-
-        nod->rel_h = nod->anim.rlf->info.h;
-        nod->rel_w = nod->anim.rlf->info.w;
+        Z_PANIC("Unknown animation format '%s'", filename);
     }
 }
 
@@ -106,28 +75,18 @@ void anim_ProcessAnim(animnode_t *mnod)
     {
         mnod->nexttick = mnod->framerate;
 
-        if (mnod->vid == 1)
+        if (mnod->anim_avi)
         {
-            avi_renderframe(mnod->anim.avi->av, mnod->CurFr);
-            avi_to_surf(mnod->anim.avi->av, mnod->anim.avi->img);
+            avi_renderframe(mnod->anim_avi->av, mnod->CurFr);
+            avi_to_surf(mnod->anim_avi->av, mnod->anim_avi->img);
             Rend_DrawScalerToGamescr(mnod->scal,
                                      mnod->x,
                                      mnod->y);
         }
-#ifdef SMPEG_SUPPORT
-        else if (mnod->vid == 2)
+        else if (mnod->anim_rlf)
         {
-            SMPEG_renderFrame(mnod->anim.mpg->mpg,
-                              mnod->CurFr + 1);
-
-            Rend_DrawScalerToGamescr(mnod->scal,
-                                     mnod->x,
-                                     mnod->y);
-            mnod->CurFr++;
+            Rend_DrawAnimImageToGamescr(mnod->anim_rlf, mnod->x, mnod->y, mnod->CurFr);
         }
-#endif
-        else
-            Rend_DrawAnimImageToGamescr(mnod->anim.rlf, mnod->x, mnod->y, mnod->CurFr);
 
         mnod->CurFr++;
 
@@ -218,37 +177,18 @@ int anim_PlayAnim(animnode_t *nod, int x, int y, int w, int h, int start, int en
     nod->x = x;
     nod->y = y;
 
-    if (nod->vid == 1)
+    nod->start = start;
+    nod->end = end;
+
+    if (nod->anim_avi)
     {
         if (nod->scal != NULL)
             DeleteScaler(nod->scal);
 
-        nod->scal = CreateScaler(nod->anim.avi->img, nod->w, nod->h);
+        nod->scal = CreateScaler(nod->anim_avi->img, nod->w, nod->h);
 
-        nod->start = start;
-        nod->end = end;
-
-        avi_renderframe(nod->anim.avi->av, nod->start);
-        avi_to_surf(nod->anim.avi->av, nod->anim.avi->img);
-    }
-    else if (nod->vid == 2)
-    {
-#ifdef SMPEG_SUPPORT
-        if (nod->scal != NULL)
-            DeleteScaler(nod->scal);
-
-        nod->scal = CreateScaler(nod->anim.mpg->img, nod->w, nod->h);
-
-        nod->start = (start + 1) * 2;
-        nod->end = (end + 1) * 2;
-
-        SMPEG_renderFrame(nod->anim.mpg->mpg, nod->start);
-#endif
-    }
-    else
-    {
-        nod->start = start;
-        nod->end = end;
+        avi_renderframe(nod->anim_avi->av, nod->start);
+        avi_to_surf(nod->anim_avi->av, nod->anim_avi->img);
     }
 
     nod->CurFr = nod->start;
@@ -262,93 +202,54 @@ void anim_RenderAnimFrame(animnode_t *mnod, int16_t x, int16_t y, int16_t w, int
     if (!mnod)
         return;
 
-    if (mnod->vid == 1)
+    if (mnod->anim_avi)
     {
-        if (mnod->anim.avi != NULL)
+        if (mnod->anim_avi->lastfrm != frame)
         {
-            if (mnod->anim.avi->lastfrm != frame)
+            avi_renderframe(mnod->anim_avi->av, frame);
+            avi_to_surf(mnod->anim_avi->av, mnod->anim_avi->img);
+        }
+
+        mnod->anim_avi->lastfrm = frame;
+
+        if (mnod->scal)
+            if (mnod->scal->w != w || mnod->scal->h != h)
             {
-                avi_renderframe(mnod->anim.avi->av, frame);
-                avi_to_surf(mnod->anim.avi->av, mnod->anim.avi->img);
+                DeleteScaler(mnod->scal);
+                mnod->scal = NULL;
             }
 
-            mnod->anim.avi->lastfrm = frame;
+        if (!mnod->scal)
+            mnod->scal = CreateScaler(mnod->anim_avi->img, w, h);
 
-            if (mnod->scal)
-                if (mnod->scal->w != w || mnod->scal->h != h)
-                {
-                    DeleteScaler(mnod->scal);
-                    mnod->scal = NULL;
-                }
-
-            if (!mnod->scal)
-                mnod->scal = CreateScaler(mnod->anim.avi->img, w, h);
-
-            Rend_DrawScalerToGamescr(mnod->scal, x, y);
-        }
+        Rend_DrawScalerToGamescr(mnod->scal, x, y);
     }
-    else if (mnod->vid == 2)
+    else if (mnod->anim_rlf)
     {
-#ifdef SMPEG_SUPPORT
-        if (mnod->anim.mpg != NULL)
-        {
-            if (mnod->anim.mpg->lastfrm != frame)
-            {
-                SMPEG_renderFrame(mnod->anim.mpg->mpg, frame * 2);
-                SMPEG_renderFrame(mnod->anim.mpg->mpg, frame * 2 + 1);
-                if (mnod->anim.mpg->lastfrm > frame)
-                    SMPEG_renderFinal(mnod->anim.mpg->mpg, mnod->anim.mpg->img, 0, 0);
-            }
-
-            mnod->anim.mpg->lastfrm = frame;
-
-            if (mnod->scal)
-                if (mnod->scal->w != w || mnod->scal->h != h)
-                {
-                    DeleteScaler(mnod->scal);
-                    mnod->scal = NULL;
-                }
-
-            if (!mnod->scal)
-                mnod->scal = CreateScaler(mnod->anim.mpg->img, w, h);
-
-            Rend_DrawScalerToGamescr(mnod->scal, x, y);
-
-            //Rend_DrawImageToGamescr(mnod->anim.mpg->img, x, y);
-        }
-#endif
-    }
-    else if (mnod->anim.rlf)
-    {
-        Rend_DrawAnimImageToGamescr(mnod->anim.rlf, x, y, frame);
+        Rend_DrawAnimImageToGamescr(mnod->anim_rlf, x, y, frame);
     }
 }
 
 void anim_DeleteAnim(animnode_t *nod)
 {
-    if (nod->scal != NULL)
+    if (nod->scal)
+    {
         DeleteScaler(nod->scal);
-
-    if (nod->vid == 1)
-    {
-        if (nod->anim.avi->img)
-            SDL_FreeSurface(nod->anim.avi->img);
-
-        avi_close(nod->anim.avi->av);
-        free(nod->anim.avi);
     }
-    else if (nod->vid == 2)
+
+    if (nod->anim_avi)
     {
-#ifdef SMPEG_SUPPORT
-        if (nod->anim.mpg->img)
-            SDL_FreeSurface(nod->anim.mpg->img);
-        SMPEG_stop(nod->anim.mpg->mpg);
-        SMPEG_delete(nod->anim.mpg->mpg);
-        free(nod->anim.mpg);
-#endif
+        if (nod->anim_avi->img)
+            SDL_FreeSurface(nod->anim_avi->img);
+
+        avi_close(nod->anim_avi->av);
+        free(nod->anim_avi);
     }
-    else
-        FreeAnimImage(nod->anim.rlf);
+
+    if (nod->anim_rlf)
+    {
+        FreeAnimImage(nod->anim_rlf);
+    }
 
     free(nod);
 }

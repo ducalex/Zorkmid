@@ -1,76 +1,5 @@
 #include "System.h"
 
-static sub_textfile_t *sub_LoadTextFile(FManNode_t *file)
-{
-    mfile_t *f = mfopen(file);
-    if (!f)
-        return NULL;
-
-    m_wide_to_utf8(f);
-
-    int sz = f->size;
-
-    sub_textfile_t *tmp = NEW(sub_textfile_t);
-
-    tmp->buffer = (char *)calloc(sz + 1, 1);
-
-    memcpy(tmp->buffer, f->buf, f->size);
-    mfclose(f);
-
-    int linescount = 1;
-
-    for (int i = 0; i < sz; i++)
-        if (tmp->buffer[i] == 0x0A)
-            linescount++;
-
-    tmp->count = linescount;
-
-    tmp->subs = NEW_ARRAY(char *, linescount);
-
-    linescount = 0;
-    int i = 0;
-    char *curline = NULL;
-
-    while (i < sz)
-    {
-        curline = tmp->buffer + i;
-
-        while (i < sz)
-        {
-            if (tmp->buffer[i] == 0xA || tmp->buffer[i] == 0xD)
-                break;
-            i++;
-        }
-
-        if (tmp->buffer[i] == 0xD)
-        {
-            if (tmp->buffer[i + 1] == 0xA) //windows
-            {
-                tmp->buffer[i] = 0;
-                tmp->buffer[i + 1] = 0;
-                i += 2;
-            }
-            else //macOS
-            {
-                tmp->buffer[i] = 0;
-                i++;
-            }
-        }
-        else if (tmp->buffer[i] == 0xA) //unix
-        {
-            tmp->buffer[i] = 0;
-            i++;
-        }
-
-        if (linescount < tmp->count)
-            tmp->subs[linescount] = curline;
-
-        linescount++;
-    }
-
-    return tmp;
-}
-
 subtitles_t *sub_LoadSubtitles(char *filename)
 {
     char buf[STRBUFSIZE];
@@ -95,8 +24,8 @@ subtitles_t *sub_LoadSubtitles(char *filename)
     while (!mfeof(f))
     {
         mfgets(buf, STRBUFSIZE, f);
-        str1 = TrimLeft(buf);
 
+        str1 = (char*)str_ltrim(buf);
         str2 = NULL;
 
         int32_t t_len = strlen(str1);
@@ -109,53 +38,58 @@ subtitles_t *sub_LoadSubtitles(char *filename)
                 break;
             }
 
-        if (str2 != NULL)
+        if (str_empty(str2))
+            continue;
+
+        for (int i = strlen(str2) - 1; i >= 0; i--)
+            if (str2[i] == '~' || str2[i] == 0x0A || str2[i] == 0x0D)
+                str2[i] = 0x0;
+
+        if (str_starts_with(str1, "Initialization"))
         {
-            for (int i = strlen(str2) - 1; i >= 0; i--)
-                if (str2[i] == '~' || str2[i] == 0x0A || str2[i] == 0x0D)
-                    str2[i] = 0x0;
+            ;
+        }
+        else if (str_starts_with(str1, "Rectangle"))
+        {
+            int x, y, x2, y2;
+            sscanf(str2, "%d %d %d %d", &x, &y, &x2, &y2);
+            tmp->SubRect = Rend_CreateSubRect(x + GAMESCREEN_X + SUB_CORRECT_HORIZ + GAMESCREEN_FLAT_X,
+                                                y + GAMESCREEN_Y + SUB_CORRECT_VERT,
+                                                x2 - x + 1,
+                                                y2 - y + 1);
+        }
+        else if (str_starts_with(str1, "TextFile"))
+        {
+            FManNode_t *fil2 = FindInBinTree(str2);
+            if (fil2 == NULL)
+            {
+                free(tmp);
+                return NULL;
+            }
 
-            if (strCMP(str1, "Initialization") == 0)
+            tmp->txt = NEW(sub_textfile_t);
+            tmp->txt->subs = loader_loadStr_m(mfopen(fil2));
+            while (tmp->txt->subs[tmp->txt->count] != NULL)
             {
-                ;
+                tmp->txt->count++;
             }
-            else if (strCMP(str1, "Rectangle") == 0)
+            tmp->subs = NEW_ARRAY(one_subtitle_t, tmp->txt->count);
+            subscount = tmp->txt->count;
+        }
+        else //it's must be sub info
+        {
+            int st, en, sb;
+            if (sscanf(str2, "(%d,%d)=%d", &st, &en, &sb) == 3)
             {
-                int x, y, x2, y2;
-                sscanf(str2, "%d %d %d %d", &x, &y, &x2, &y2);
-                tmp->SubRect = Rend_CreateSubRect(x + GAMESCREEN_X + SUB_CORRECT_HORIZ + GAMESCREEN_FLAT_X,
-                                                  y + GAMESCREEN_Y + SUB_CORRECT_VERT,
-                                                  x2 - x + 1,
-                                                  y2 - y + 1);
-            }
-            else if (strCMP(str1, "TextFile") == 0)
-            {
-                FManNode_t *fil2 = FindInBinTree(str2);
-                if (fil2 == NULL)
+                if (subscount == 0 || sb > subscount)
                 {
-                    free(tmp);
-                    return NULL;
+                    Z_PANIC("Error in subs %s\n", filename);
                 }
+                tmp->subs[tmp->subscount].start = st;
+                tmp->subs[tmp->subscount].stop = en;
+                tmp->subs[tmp->subscount].sub = sb;
 
-                tmp->txt = sub_LoadTextFile(fil2);
-                tmp->subs = NEW_ARRAY(one_subtitle_t, tmp->txt->count);
-                subscount = tmp->txt->count;
-            }
-            else //it's must be sub info
-            {
-                int st, en, sb;
-                if (sscanf(str2, "(%d,%d)=%d", &st, &en, &sb) == 3)
-                {
-                    if (subscount == 0 || sb > subscount)
-                    {
-                        Z_PANIC("Error in subs %s\n", filename);
-                    }
-                    tmp->subs[tmp->subscount].start = st;
-                    tmp->subs[tmp->subscount].stop = en;
-                    tmp->subs[tmp->subscount].sub = sb;
-
-                    tmp->subscount++;
-                }
+                tmp->subscount++;
             }
         }
     }
@@ -183,7 +117,7 @@ void sub_ProcessSub(subtitles_t *sub, int subtime)
     if (j != -1 && j != sub->currentsub)
     {
         char *sss = sub->txt->subs[sub->subs[j].sub];
-        if (sss != NULL && strlen(sss) > 0)
+        if (!str_empty(sss))
         {
             SDL_FillRect(sub->SubRect->img, NULL, SDL_MapRGBA(sub->SubRect->img->format, 0, 0, 0, 255));
             txt_DrawTxtInOneLine(sss, sub->SubRect->img);
@@ -195,7 +129,6 @@ void sub_ProcessSub(subtitles_t *sub, int subtime)
 void sub_DeleteSub(subtitles_t *sub)
 {
     Rend_DeleteSubRect(sub->SubRect);
-    free(sub->txt->buffer);
     free(sub->txt->subs);
     free(sub->txt);
     free(sub->subs);

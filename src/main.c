@@ -8,19 +8,19 @@ int main(int argc, char **argv)
 
     for (int i = 1; i < argc; i++)
     {
-        if (strcasecmp(argv[i], "-f") == 0)
+        if (str_equals(argv[i], "-f"))
         {
             fullscreen = true;
         }
-        else if (strcasecmp(argv[i], "-w") == 0)
+        else if (str_equals(argv[i], "-w"))
         {
             widescreen = true;
         }
-        else if (strcasecmp(argv[i], "-zgi") == 0)
+        else if (str_equals(argv[i], "-zgi"))
         {
             // CUR_GAME = GAME_ZGI;
         }
-        else if (strcasecmp(argv[i], "-nem") == 0)
+        else if (str_equals(argv[i], "-nem"))
         {
             // CUR_GAME = GAME_NEM;
         }
@@ -32,11 +32,8 @@ int main(int argc, char **argv)
 
     Rend_InitGraphics(fullscreen, widescreen);
     InitSound();
-    InitFileManager(path);
-    Mouse_LoadCursors();
-    menu_LoadGraphics();
     InitVkKeys();
-    GameInit();
+    GameInit(path);
 
     while (true)
     {

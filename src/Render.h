@@ -79,18 +79,6 @@ typedef struct
     } info;
 } anim_surf_t;
 
-#ifdef SMPEG_SUPPORT
-struct anim_mpg
-{
-    SDL_Surface *img;
-    SMPEG *mpg;
-    SMPEG_Info inf;
-    bool pld;
-    bool loop;
-    int32_t lastfrm;
-};
-#endif
-
 typedef struct
 {
     SDL_Surface *img;
@@ -170,7 +158,6 @@ void DrawImage(SDL_Surface *surf, int16_t x, int16_t y);
 void DrawImageToSurf(SDL_Surface *surf, int16_t x, int16_t y, SDL_Surface *dest);
 void SetColorKey(SDL_Surface *surf, int8_t r, int8_t g, int8_t b);
 void DrawAnimImageToSurf(anim_surf_t *anim, int x, int y, int frame, SDL_Surface *surf);
-anim_surf_t *LoadAnimImage(const char *file, int32_t mask);
 void FreeAnimImage(anim_surf_t *anim);
 scaler_t *CreateScaler(SDL_Surface *src, uint16_t w, uint16_t h);
 void DeleteScaler(scaler_t *scal);

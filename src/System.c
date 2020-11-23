@@ -14,11 +14,10 @@ static int32_t Mx, My, LMx, LMy;
 static uint8_t LMstate, Mstate;
 static int32_t M_dbl_time;
 static bool M_dbl_clk = false;
-static char *GamePath;
 
 static MList *FMan;
 static MList *FontList;
-static char *SystemStrings[0xFF];
+static char **SystemStrings;
 
 static uint32_t CurrentTime = 0;
 static uint32_t DeltaTime = 0;
@@ -333,27 +332,10 @@ uint32_t GetDTime()
 
 void LoadSystemStrings(void)
 {
-    char buffer[STRBUFSIZE];
-    sprintf(buffer, "%s/%s", GetGamePath(), SYS_STRINGS_FILE);
-
-    mfile_t *fl = mfopen_path(buffer);
-
-    if (!fl)
-        Z_PANIC("File %s not found\n", buffer);
-
-    m_wide_to_utf8(fl);
-
-    for (int i = 0; i < 0xFF; i++)
-    {
-        if (!mfeof(fl)) {
-            mfgets(buffer, STRBUFSIZE, fl);
-            SystemStrings[i] = strdup(TrimRight(buffer));
-        } else {
-            SystemStrings[i] = NULL;
-        }
-    }
-
-    mfclose(fl);
+    const char *file = (CUR_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR");
+    char filename[PATHBUFSIZ];
+    sprintf(filename, "%s/%s", GetGamePath(), file);
+    SystemStrings = loader_loadStr(filename);
 }
 
 const char *GetSystemString(int32_t indx)
@@ -369,18 +351,10 @@ bool isDirectory(const char *path)
     return S_ISDIR(statbuf.st_mode);
 }
 
-bool FileExist(const char *path)
+bool FileExists(const char *path)
 {
     struct stat statbuf;
     return stat(path, &statbuf) == 0;
-}
-
-int32_t FileSize(const char *path)
-{
-    struct stat statbuf;
-    if (stat(path, &statbuf) != 0)
-        return -1;
-    return statbuf.st_size;
 }
 
 void FindAssets(const char *dir)
@@ -415,11 +389,11 @@ void FindAssets(const char *dir)
         {
             FindAssets(path);
         }
-        else if (findstr(path, ".ZFS"))
+        else if (str_ends_with(path, ".ZFS"))
         {
             loader_openzfs(path, FMan);
         }
-        else if (findstr(path, ".TTF"))
+        else if (str_ends_with(path, ".TTF"))
         {
             TRACE_LOADER("Adding font : %s\n", path);
             TTF_Font *fnt = TTF_OpenFont(path, 10);
@@ -436,8 +410,8 @@ void FindAssets(const char *dir)
         {
             TRACE_LOADER("Adding game file : %s\n", path);
             FManNode_t *nod = NEW(FManNode_t);
-            nod->Path = strdup(path);
-            nod->File = nod->Path + len + 1;
+            nod->path = strdup(path);
+            nod->name = nod->path + len + 1;
             nod->zfs = NULL;
             AddToMList(FMan, nod);
             AddToBinTree(nod);
@@ -450,7 +424,7 @@ void InitFileManager(const char *dir)
 {
     FMan = CreateMList();
     FontList = CreateMList();
-    SetGamePath(dir);
+    BinNodesList = CreateMList();
     FindAssets(GetGamePath());
     LoadSystemStrings();
 }
@@ -463,7 +437,7 @@ TTF_Font *GetFontByName(char *name, int size)
     while (!eofMList(FontList))
     {
         fnt = (graph_font_t *)DataMList(FontList);
-        if (strCMP(fnt->Name, name) == 0)
+        if (str_equals(fnt->Name, name)) // str_starts_with
             break;
 
         NextMList(FontList);
@@ -475,62 +449,19 @@ TTF_Font *GetFontByName(char *name, int size)
     return TTF_OpenFont(fnt->path, size);
 }
 
-char *TrimLeft(char *buf)
-{
-    if (buf == NULL)
-        return NULL;
-
-    int len = strlen(buf);
-
-    char *str = buf;
-
-    for (int i = 0; i < len; i++)
-        if (buf[i] != 0x20 && buf[i] != 0x09)
-        {
-            str = buf + i;
-            break;
-        }
-    return str;
-}
-
-char *TrimRight(char *buf)
-{
-    if (buf == NULL)
-        return NULL;
-    int len = strlen(buf);
-
-    char *str = buf;
-
-    for (int i = len - 1; i >= 0; i--)
-        if (buf[i] == 0x20 || buf[i] == 0x09 || buf[i] == 0x0A || buf[i] == 0x0D)
-            buf[i] = 0x0;
-        else
-            break;
-    return str;
-}
-
 char *PrepareString(char *buf)
 {
-    int len = strlen(buf);
+    char *str = (char *)str_ltrim(buf);
+    char *tmp;
 
-    for (int i = len - 1; i > -1; i--)
-        if (buf[i] == 0x0A || buf[i] == 0x0D || buf[i] == '#')
-            buf[i] = 0x00;
+    // Cut at newline or comment
+    if ((tmp = strchr(str, 0x0A))) *tmp = 0;
+    if ((tmp = strchr(str, 0x0D))) *tmp = 0;
+    if ((tmp = strchr(str, '#'))) *tmp = 0;
 
-    char *str = buf;
-    len = strlen(buf);
-
-    for (int i = 0; i < len; i++)
-        if (buf[i] != 0x20 && buf[i] != 0x09)
-        {
-            str = buf + i;
-            break;
-        }
-
-    len = strlen(str);
-
-    for (int i = 0; i < len; i++)
+    for (int i = 0, len = strlen(str); i < len; i++)
         str[i] = tolower(str[i]);
+
     return str;
 }
 
@@ -553,35 +484,26 @@ char *GetParams(char *str)
 int GetIntVal(char *chr)
 {
     if (chr[0] == '[')
-    {
         return GetgVarInt(atoi(chr + 1));
-    }
     else
         return atoi(chr);
-}
-
-BinTreeNd_t *CreateBinTreeNd()
-{
-    if (BinNodesList == NULL)
-        BinNodesList = CreateMList();
-
-    BinTreeNd_t *tmp = NEW(BinTreeNd_t);
-    AddToMList(BinNodesList, tmp);
-    return tmp;
 }
 
 void AddToBinTree(FManNode_t *nod)
 {
     char buffer[255];
-    int32_t t_len = strlen(nod->File);
+    int32_t t_len = strlen(nod->name);
 
     for (int i = 0; i < t_len; i++)
-        buffer[i] = tolower(nod->File[i]);
+        buffer[i] = tolower(nod->name[i]);
 
     buffer[t_len] = 0x0;
 
     if (root == NULL)
-        root = CreateBinTreeNd();
+    {
+        root = NEW(BinTreeNd_t);
+        AddToMList(BinNodesList, root);
+    }
 
     BinTreeNd_t **treenod = &root;
     t_len = strlen(buffer);
@@ -595,7 +517,10 @@ void AddToBinTree(FManNode_t *nod)
                 treenod = &((*treenod)->zero);
 
             if (*treenod == NULL)
-                *treenod = CreateBinTreeNd();
+            {
+                *treenod = NEW(BinTreeNd_t);
+                AddToMList(BinNodesList, *treenod);
+            }
         }
     if ((*treenod)->nod == NULL) //we don't need to reSet nodes (ADDON and patches don't work without it)
         (*treenod)->nod = nod;
@@ -632,89 +557,33 @@ FManNode_t *FindInBinTree(const char *chr)
     return treenod->nod;
 }
 
-void DeleteBinTree()
-{
-    StartMList(BinNodesList);
-    while (!eofMList(BinNodesList))
-    {
-        free(DataMList(BinNodesList));
-        NextMList(BinNodesList);
-    }
-    DeleteMList(BinNodesList);
-
-    BinNodesList = NULL;
-    root = NULL;
-}
-
 const char *GetFilePath(const char *chr)
 {
-    char *path = strdup(chr);
-
-    // if (findstr(path, ".AVI")) strcpy(tmp, ".MPG");
-
-    FManNode_t *nod = FindInBinTree(path);
-
-    free(path);
-
-    if (nod && nod->zfs == NULL)
-        return nod->Path;
-
-#ifdef TRACE
-    printf("Can't find %s\n", chr);
-#endif
-    return NULL;
-}
-
-const char *GetExactFilePath(const char *chr)
-{
     FManNode_t *nod = FindInBinTree(chr);
-    if (nod && nod->zfs == NULL)
-        return nod->Path;
 
-#ifdef TRACE
-    printf("Can't find %s\n", chr);
-#endif
+    if (nod && nod->zfs == NULL)
+        return nod->path;
+
+    LOG_WARN("Can't find file '%s'\n", chr);
     return NULL;
 }
 
-void SetGamePath(const char *path)
+const char *str_find(const char *haystack, const char *needle)
 {
-    GamePath = strdup(path);
-    while (GamePath[strlen(GamePath - 1)] == '/' || GamePath[strlen(GamePath - 1)] == '\\')
-        GamePath[strlen(GamePath - 1)] = 0;
-}
+    if (!haystack || !needle)
+        return NULL;
 
-const char *GetGamePath()
-{
-    if (!GamePath)
-        return "";
-    else
-        return GamePath;
-}
+    size_t h_len = strlen(haystack);
+    size_t n_len = strlen(needle);
 
-const char *GetGameTitle()
-{
-    switch (CUR_GAME)
-    {
-    case GAME_ZGI:
-        return "Zork: Grand Inquisitor";
-    case GAME_NEM:
-        return "Zork: Nemesis";
-    default:
-        return "Unknown";
-    }
-}
+    if (n_len > h_len)
+        return NULL;
 
-char *findstr(const char *haystack, const char *needle)
-{
     const char *a = haystack, *e = needle;
-
-    if (!haystack || !*haystack || !needle || !*needle)
-        return 0;
 
     while (*a && *e)
     {
-        if ((toupper(((unsigned char)(*a)))) != (toupper(((unsigned char)(*e)))))
+        if (toupper((unsigned char)(*a)) != toupper((unsigned char)(*e)))
         {
             ++haystack;
             a = haystack;
@@ -726,5 +595,72 @@ char *findstr(const char *haystack, const char *needle)
             ++e;
         }
     }
-    return (char *)(*e ? 0 : haystack);
+
+    return *e ? NULL : haystack;
+}
+
+bool str_starts_with(const char *haystack, const char *needle)
+{
+    return str_find(haystack, needle) == haystack;
+}
+
+bool str_ends_with(const char *haystack, const char *needle)
+{
+    if (!haystack || !needle)
+        return false;
+
+    size_t h_len = strlen(haystack);
+    size_t n_len = strlen(needle);
+
+    if (n_len > h_len)
+        return false;
+
+    return str_find(haystack + h_len - n_len, needle) != NULL;
+}
+
+bool str_equals(const char *str1, const char *str2)
+{
+    return str1 && str2 && strcasecmp(str1, str2) == 0;
+}
+
+bool str_empty(const char *str)
+{
+    return str == NULL || str[0] == 0;
+}
+
+const char *str_ltrim(const char *str)
+{
+    if (!str_empty(str))
+    {
+        while (*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n')
+            str++;
+    }
+    return str;
+}
+
+char *str_trim(const char *buffer)
+{
+    if (!str_empty(buffer))
+    {
+        const char *str = str_ltrim(buffer);
+        const char *tmp = str + strlen(str) - 1;
+        size_t trim = 0;
+
+        while (*tmp == ' ' || *tmp == '\t' || *tmp == '\r' || *tmp == '\n')
+        {
+            tmp--;
+            trim++;
+        }
+
+        int new_len = strlen(str) - trim;
+
+        if (new_len > 0) {
+            char *out = (char *)malloc(new_len + 1);
+            memcpy(out, str, new_len);
+            out[new_len] = 0;
+            return out;
+        }
+    }
+
+    return strdup("");
 }

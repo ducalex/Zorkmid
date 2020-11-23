@@ -22,8 +22,12 @@ typedef struct
 void GameLoop();
 void GameUpdate();
 void GameQuit();
-void GameInit();
+void GameInit(const char *path);
 void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X);
+
+void SetGamePath(const char *path);
+const char *GetGamePath();
+const char *GetGameTitle();
 
 void game_timed_debug_message(int32_t milsecs, const char *str);
 void game_timed_message(int32_t milsecs, const char *str);

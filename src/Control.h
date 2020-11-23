@@ -258,9 +258,9 @@ typedef struct ctrlnode
     void (*func)(ctrlnode_t *);
 } ctrlnode_t;
 
-int Parse_Control(MList *controlst, mfile_t *fl, char *ctstr);
+void Parse_Control(MList *controlst, mfile_t *fl, char *ctstr);
 void ProcessControls(MList *ctrlst);
-void Ctrl_DrawControls();
+void DrawControls();
 void FlushControlList(MList *lst);
 ctrlnode_t *GetControlByID(int32_t id);
 

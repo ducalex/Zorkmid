@@ -6,7 +6,7 @@ static action_res_t *gNodes[30000];
 static uint8_t Flags[30000];
 static StateBoxEnt_t *StateBox[30000];
 
-static char PreferencesFile[128];
+static const char *PreferencesFile = "prefs.ini";
 
 static bool BreakExecute = false;
 
@@ -18,7 +18,7 @@ static pzllst_t *view = NULL;  //view script
 static MList *ctrl = NULL;   //contorls
 static MList *actres = NULL; //sounds, animations, ttytexts and other.
 
-static uint8_t *SaveBuffer = NULL;
+static uint8_t SaveBuffer[512 * 1024];
 static uint32_t SaveCurrentSize = 0;
 
 void FillStateBoxFromList(pzllst_t *lst);
@@ -160,17 +160,15 @@ void setGNode(int32_t indx, action_res_t *data)
 
 void InitScriptsEngine()
 {
-    SaveBuffer = (uint8_t *)malloc(512 * 1024);
-
     if (CUR_GAME == GAME_ZGI)
     {
+        PreferencesFile = "prefs_zgi.ini";
         VAR_SLOTS_MAX = 20000;
-        strcpy(PreferencesFile, "prefs_zgi.ini");
     }
     else
     {
+        PreferencesFile = "prefs_znem.ini";
         VAR_SLOTS_MAX = 30000;
-        strcpy(PreferencesFile, "prefs_znem.ini");
     }
 
     memset(StateBox, 0x0, sizeof(StateBox));
@@ -195,22 +193,17 @@ void InitScriptsEngine()
 
 void LoadScriptFile(pzllst_t *lst, FManNode_t *filename, bool control, MList *controlst)
 {
+    if (!filename)
+        Z_PANIC("filename is NULL\n");
+
 #ifdef TRACE
-    printf("Loading script file %s\n", filename->File);
+    printf("Loading script file %s\n", filename->name);
 #endif
 
     if (control)
-    {
         Rend_SetRenderer(RENDER_FLAT);
-    }
 
     mfile_t *fl = mfopen(filename);
-    if (fl == NULL)
-    {
-        Z_PANIC("Error opening file %s\n", filename->File);
-        return;
-    }
-
     char buf[STRBUFSIZE];
 
     while (!mfeof(fl))
@@ -219,11 +212,11 @@ void LoadScriptFile(pzllst_t *lst, FManNode_t *filename, bool control, MList *co
 
         char *str = PrepareString(buf);
 
-        if (strCMP(str, "puzzle") == 0)
+        if (str_starts_with(str, "puzzle"))
         {
             Puzzle_Parse(lst, fl, str);
         }
-        else if (strCMP(str, "control") == 0 && control)
+        else if (str_starts_with(str, "control") && control)
         {
             Parse_Control(controlst, fl, str);
         }
@@ -413,7 +406,7 @@ void ScrSys_LoadGame(char *file)
         fread(&time, 4, 1, f);
 
         sprintf(buf, "%d", time / 100);
-        action_timer(buf, slot, view);
+        action_exec("timer", buf, slot, view);
     }
 
     fread(&tmp, 4, 1, f);
@@ -641,9 +634,7 @@ void AddStateBoxToStk(puzzlenode_t *pzl)
     }
     else
     {
-#ifdef TRACE
-        printf("Can't add pzl# %d to Stack\n", pzl->slot);
-#endif
+        LOG_WARN("Can't add pzl# %d to Stack\n", pzl->slot);
     }
 }
 
@@ -907,33 +898,30 @@ static const struct
 
 void ScrSys_LoadPreferences()
 {
-    FILE *fl = fopen(PreferencesFile, "rb");
-    if (!fl)
-        return;
+    char **rows = loader_loadStr(PreferencesFile);
+    const char *par;
+    int pos = 0;
 
-    char buffer[128];
-    char *str;
-
-    while (!feof(fl))
+    while (rows[pos] != NULL)
     {
-        fgets(buffer, 128, fl);
-        str = TrimLeft(TrimRight(buffer));
-        if (str != NULL && strlen(str) > 0)
-            for (int i = 0; prefs[i].name != NULL; i++)
-                if (strCMP(str, prefs[i].name) == 0)
+        if (!str_empty(rows[pos]) && (par = strchr(rows[pos], '=')))
+        {
+            par = str_ltrim(par + 1);
+            for (int j = 0; prefs[j].name != NULL; j++)
+            {
+                if (str_starts_with(rows[pos], prefs[j].name))
                 {
-                    str = strstr(str, "=");
-                    if (str != NULL)
-                    {
-                        str++;
-                        str = TrimLeft(str);
-                        SetDirectgVarInt(prefs[i].slot, atoi(str));
-                    }
+                    LOG_INFO("'%s' = '%d'\n", prefs[j].name, atoi(par));
+                    SetDirectgVarInt(prefs[j].slot, atoi(par));
                     break;
                 }
+            }
+        }
+        free(rows[pos]);
+        pos++;
     }
 
-    fclose(fl);
+    free(rows);
 }
 
 void ScrSys_SavePreferences()

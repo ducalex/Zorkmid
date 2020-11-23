@@ -15,8 +15,8 @@ static const uint8_t wavHeader[0x2C] =
         'd', 'a', 't', 'a',
         0, 0, 0, 0};
 
-const int32_t t1[] = {-1, -1, -1, 1, 4, 7, 10, 12};
-const int32_t t2[] = {0x0007, 0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E,
+static const int32_t t1[] = {-1, -1, -1, 1, 4, 7, 10, 12};
+static const int32_t t2[] = {0x0007, 0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E,
                       0x0010, 0x0011, 0x0013, 0x0015, 0x0017, 0x0019, 0x001C, 0x001F,
                       0x0022, 0x0025, 0x0029, 0x002D, 0x0032, 0x0037, 0x003C, 0x0042,
                       0x0049, 0x0050, 0x0058, 0x0061, 0x006B, 0x0076, 0x0082, 0x008F,
@@ -136,14 +136,13 @@ void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_
     }
 }
 
-Mix_Chunk *Load_ZGI(FManNode_t *file, char type)
+static Mix_Chunk *Load_ZGI(FManNode_t *file, char type)
 {
     int32_t freq;
     int32_t bits;
     int32_t stereo;
     int32_t pkd;
-
-    int32_t size, size2;
+    int32_t size2;
 
     int32_t indx = -1;
 
@@ -165,14 +164,11 @@ Mix_Chunk *Load_ZGI(FManNode_t *file, char type)
         return NULL;
 
     mfile_t *f = mfopen(file);
-    size = f->size;
-
-    void *fil = f->buf;
 
     if (pkd == 1)
-        size2 = size * 2 + 0x2C;
+        size2 = f->size * 2 + 0x2C;
     else
-        size2 = size + 0x2C;
+        size2 = f->size + 0x2C;
 
     void *raw_w = malloc(size2);
 
@@ -195,23 +191,22 @@ Mix_Chunk *Load_ZGI(FManNode_t *file, char type)
     raw_i[10] = size2 - 0x2C;
 
     if (pkd == 1)
-        adpcm8_decode(fil, &raw_i[11], stereo, size, NULL);
+        adpcm8_decode(f->buf, &raw_i[11], stereo, f->size, NULL);
     else
-        memcpy(&raw_i[11], fil, size);
+        memcpy(&raw_i[11], f->buf, f->size);
 
     mfclose(f);
 
     return Mix_LoadWAV_RW(SDL_RWFromMem(raw_w, size2), 1);
 }
 
-Mix_Chunk *Load_ZNEM(FManNode_t *file, char type)
+static Mix_Chunk *Load_ZNEM(FManNode_t *file, char type)
 {
     int32_t freq;
     int32_t bits;
     int32_t stereo;
     int32_t pkd;
-
-    int32_t size, size2;
+    int32_t size2;
 
     char low = tolower(type);
 
@@ -228,15 +223,7 @@ Mix_Chunk *Load_ZNEM(FManNode_t *file, char type)
         low -= '\'';
     low -= '0';
 
-    char buf[4];
-    int32_t t_len = strlen(file->File);
-
-    buf[0] = file->File[t_len - 3];
-    buf[1] = file->File[t_len - 2];
-    buf[2] = file->File[t_len - 1];
-    buf[3] = 0;
-
-    if (strCMP(buf, "ifp") == 0 || type == '6')
+    if (str_ends_with(file->name, "ifp") || type == '6')
         pkd = 0;
     else
         pkd = 1;
@@ -246,14 +233,11 @@ Mix_Chunk *Load_ZNEM(FManNode_t *file, char type)
     stereo = znem_stereo[low % 2];
 
     mfile_t *f = mfopen(file);
-    size = f->size;
-
-    void *fil = f->buf;
 
     if (pkd == 1)
-        size2 = size * 2 + 0x2C;
+        size2 = f->size * 2 + 0x2C;
     else
-        size2 = size + 0x2C;
+        size2 = f->size + 0x2C;
 
     void *raw_w = malloc(size2);
 
@@ -276,9 +260,9 @@ Mix_Chunk *Load_ZNEM(FManNode_t *file, char type)
     raw_i[10] = size2 - 0x2C;
 
     if (pkd == 1)
-        adpcm8_decode(fil, &raw_i[11], stereo, size, NULL);
+        adpcm8_decode(f->buf, &raw_i[11], stereo, f->size, NULL);
     else
-        memcpy(&raw_i[11], fil, size);
+        memcpy(&raw_i[11], f->buf, f->size);
 
     mfclose(f);
 
@@ -287,16 +271,13 @@ Mix_Chunk *Load_ZNEM(FManNode_t *file, char type)
 
 Mix_Chunk *loader_LoadChunk(const char *file)
 {
-    char buf[4];
-
     FManNode_t *mfil = FindInBinTree(file);
-
     const char *fil = NULL;
 
     if (!mfil)
         fil = GetFilePath(file);
     else
-        fil = mfil->File;
+        fil = mfil->name;
 
     if (!fil)
         return NULL;
@@ -304,28 +285,19 @@ Mix_Chunk *loader_LoadChunk(const char *file)
     if (mfsize(mfil) < 10)
         return NULL;
 
-    int32_t t_len = strlen(fil);
+    Mix_Chunk *chunk = NULL;
 
-    buf[0] = fil[t_len - 3];
-    buf[1] = fil[t_len - 2];
-    buf[2] = fil[t_len - 1];
-    buf[3] = 0;
-
-    Mix_Chunk *chunk;
-
-    if (((strCMP(buf, "src") == 0) || (strCMP(buf, "raw") == 0) || (strCMP(buf, "ifp") == 0)) && (mfil != NULL))
+    if ((str_ends_with(fil, "src") || str_ends_with(fil, "raw") || str_ends_with(fil, "ifp")) && (mfil != NULL))
     {
         if (CUR_GAME == GAME_ZGI)
-            chunk = Load_ZGI(mfil, fil[t_len - 5]);
+            chunk = Load_ZGI(mfil, fil[strlen(fil) - 5]);
         else
-            chunk = Load_ZNEM(mfil, fil[t_len - 6]);
+            chunk = Load_ZNEM(mfil, fil[strlen(fil) - 6]);
     }
     else if (!mfil)
     {
         chunk = Mix_LoadWAV(fil);
     }
-    else
-        return NULL;
 
     return chunk;
 }
@@ -575,95 +547,64 @@ static SDL_Surface *buf_to_surf(void *buf, int32_t w, int32_t h, int8_t transpos
     return srf;
 }
 
-SDL_Surface *loader_Load_GF_File(const char *file, int8_t transpose, int8_t key, uint32_t ckey)
+static SDL_Surface *Load_gfx_File(const char *file, int8_t transpose, int8_t key, uint32_t ckey)
 {
-    char buf[4];
+    TRACE_LOADER("Load GFX file '%s'\n", file);
 
     FManNode_t *mfil = FindInBinTree(file);
 
-    const char *fil = NULL;
-
     if (!mfil)
-        fil = GetFilePath(file);
-    else
-        fil = mfil->File;
-
-    if (!fil)
+    {
+        LOG_WARN("GFX File '%s' not found\n", file);
         return NULL;
-
-    int32_t t_len = strlen(fil);
-
-    buf[0] = fil[t_len - 3];
-    buf[1] = fil[t_len - 2];
-    buf[2] = fil[t_len - 1];
-    buf[3] = 0;
+    }
 
     SDL_Surface *srf = NULL;
 
-    if ((strCMP(buf, "tga") == 0) && (mfil != NULL))
+    mfile_t *mfp = mfopen(mfil);
+
+    uint32_t magic = ((uint32_t*)mfp->buf)[0];
+
+    if (magic == MAGIC_TGA)
     {
-        mfile_t *f = mfopen(mfil);
-        uint32_t magic;
-        mfread(&magic, 4, f);
-        if (magic == 0x005A4754)
+        int32_t wi = ((int32_t*)mfp->buf)[2];
+        int32_t hi = ((int32_t*)mfp->buf)[3];
+
+        if (transpose)
         {
-
-            int32_t pksz = f->size - 0x10;
-
-            mfseek(f, 8);
-
-            int32_t wi;
-            mfread(&wi, 4, f);
-
-            int32_t hi;
-            mfread(&hi, 4, f);
-
-            uint8_t *mem = (uint8_t *)malloc(pksz);
-            mfread(mem, pksz, f);
-            mfclose(f);
-
-            if (transpose)
-            {
-                wi ^= hi;
-                hi ^= wi;
-                wi ^= hi;
-            }
-
-            srf = SDL_CreateRGBSurface(SDL_SWSURFACE, wi, hi, 16, 0x7C00, 0x3E0, 0x1F, 0);
-
-            de_lz(srf, mem, pksz, transpose);
-
-            free(mem);
+            wi ^= hi;
+            hi ^= wi;
+            wi ^= hi;
         }
-        else
-        {
-            srf = IMG_Load_RW(SDL_RWFromMem(f->buf, f->size), 0);
-            if (!srf)
-            {
-                mfseek(f, 12);
-                uint16_t wi, hi;
-                mfread(&wi, 2, f);
-                mfread(&hi, 2, f);
-                if (transpose == 1)
-                {
-                    srf = buf_to_surf(f->buf + 18, hi, wi, transpose);
-                    flip_horizont(srf);
-                }
-                else
-                {
-                    srf = buf_to_surf(f->buf + 18, wi, hi, transpose);
-                    flip_vertical(srf);
-                }
-            }
-            mfclose(f);
-        }
-    }
-    else if (!mfil)
-    {
-        srf = IMG_Load(fil);
+
+        srf = SDL_CreateRGBSurface(SDL_SWSURFACE, wi, hi, 16, 0x7C00, 0x3E0, 0x1F, 0);
+
+        de_lz(srf, mfp->buf + 0x10, mfp->size - 0x10, transpose);
     }
     else
-        return NULL;
+    {
+        LOG_WARN("File '%s' is not valid TGA\n", file);
+
+        srf = IMG_Load_RW(SDL_RWFromMem(mfp->buf, mfp->size), 0);
+        if (!srf)
+        {
+            uint16_t wi = ((uint16_t*)mfp->buf)[7];
+            uint16_t hi = ((uint16_t*)mfp->buf)[8];
+
+            if (transpose == 1)
+            {
+                srf = buf_to_surf(mfp->buf + 18, hi, wi, transpose);
+                flip_horizont(srf);
+            }
+            else
+            {
+                srf = buf_to_surf(mfp->buf + 18, wi, hi, transpose);
+                flip_vertical(srf);
+            }
+        }
+    }
+
+    mfclose(mfp);
 
     if (srf)
     {
@@ -675,13 +616,15 @@ SDL_Surface *loader_Load_GF_File(const char *file, int8_t transpose, int8_t key,
 
     return srf;
 }
+
 SDL_Surface *loader_LoadFile(const char *file, int8_t transpose)
 {
-    return loader_Load_GF_File(file, transpose, 0, 0);
+    return Load_gfx_File(file, transpose, 0, 0);
 }
+
 SDL_Surface *loader_LoadFile_key(const char *file, int8_t transpose, uint32_t key)
 {
-    return loader_Load_GF_File(file, transpose, 1, key);
+    return Load_gfx_File(file, transpose, 1, key);
 }
 /*********************************** END TGZ_Support *******************************/
 
@@ -837,26 +780,27 @@ anim_surf_t *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask)
     TRACE_LOADER("Load RLF file '%s'\n", file);
 
     FManNode_t *fil = FindInBinTree(file);
-
-    if (fil == NULL)
-        return LoadAnimImage(file, mask); //rollback mechanism
+    if (!fil)
+        Z_PANIC("File %s not found\n", file);
 
     mfile_t *f = mfopen(fil);
-    if (!f)
-        return NULL;
 
     Header hd;
-    mfread(&hd, sizeof(Header), f);
-
-    if (hd.magic != 0x524C4546) //RLEF
-        return NULL;
-
     Cinf cin;
-    mfread(&cin, sizeof(Cinf), f);
     MinF mn;
-    mfread(&mn, sizeof(MinF), f);
     mTime tm;
+    Frame frm;
+
+    mfread(&hd, sizeof(Header), f);
+    mfread(&cin, sizeof(Cinf), f);
+    mfread(&mn, sizeof(MinF), f);
     mfread(&tm, sizeof(mTime), f);
+
+    if (hd.magic != MAGIC_RLF)
+    {
+        LOG_WARN("File '%s' is not valid RLF\n", file);
+        return NULL;
+    }
 
     if (transpose == 1)
     {
@@ -867,33 +811,28 @@ anim_surf_t *loader_LoadRlf(const char *file, int8_t transpose, int32_t mask)
 
     anim_surf_t *atmp = NEW(anim_surf_t);
 
-    typedef SDL_Surface *PSDL_Surface;
-
     atmp->info.time = tm.microsecs / 10;
     atmp->info.frames = hd.frames;
     atmp->info.w = mn.width;
     atmp->info.h = mn.height;
-    atmp->img = NEW_ARRAY(PSDL_Surface, atmp->info.frames);
+    atmp->img = NEW_ARRAY(SDL_Surface*, atmp->info.frames);
 
-    Frame frm;
     int32_t sz_frame = mn.height * mn.width * 2;
-    void *buf2 = calloc(sz_frame, 1);
+    int8_t *buf2 = calloc(sz_frame, 1);
+    void *buf  = NULL;
 
     for (uint16_t i = 0; i < hd.frames; i++)
     {
         if (mfread(&frm, sizeof(Frame), f))
             if (frm.size > 0 && frm.size < 0x40000000)
             {
-                void *buf = malloc(frm.size - frm.offset);
-                if (mfread(buf, frm.size - frm.offset, f))
+                if (mfread_ptr(&buf, frm.size - frm.offset, f))
                 {
                     if (frm.TYPE == 0x44484C45)
-                        DHLE((int8_t *)buf2, (int8_t *)buf, frm.size - frm.offset, sz_frame);
+                        DHLE(buf2, buf, frm.size - frm.offset, sz_frame);
                     else if (frm.TYPE == 0x48524C45)
-                        HRLE((int8_t *)buf2, (int8_t *)buf, frm.size - frm.offset, sz_frame);
+                        HRLE(buf2, buf, frm.size - frm.offset, sz_frame);
                 }
-
-                free(buf);
             }
 
         atmp->img[i] = buf_to_surf(buf2, atmp->info.w, atmp->info.h, transpose);
@@ -938,7 +877,7 @@ void loader_LoadZcr(const char *file, Cursor_t *cur)
         tmp[len + 1] = 't';
         tmp[len + 2] = 0x0;
 
-        const char *tmp2 = GetExactFilePath(tmp);
+        const char *tmp2 = GetFilePath(tmp);
         if (tmp2 == NULL)
             return;
 
@@ -950,12 +889,10 @@ void loader_LoadZcr(const char *file, Cursor_t *cur)
     }
 
     mfile_t *f = mfopen(fl);
-    if (!f)
-        return;
 
     uint32_t magic = 0;
     mfread(&magic, 4, f);
-    if (magic == 0x3152435A)
+    if (magic == MAGIC_ZCR)
     {
         uint16_t x, y, w, h;
         mfread(&x, 2, f);
@@ -977,6 +914,10 @@ void loader_LoadZcr(const char *file, Cursor_t *cur)
         ConvertImage(&cur->img);
 
         SDL_SetColorKey(cur->img, SDL_SRCCOLORKEY, 0);
+    }
+    else
+    {
+        LOG_WARN("File '%s' is not ZCR\n", file);
     }
     mfclose(f);
 }
@@ -1013,15 +954,14 @@ void loader_openzfs(const char *file, MList *list)
 
     FILE *fl = fopen(file, "rb");
     if (!fl)
-        return;
+        Z_PANIC("Error: File '%s' not found!\n", file);
 
     header_zfs hdr;
     fread(&hdr, sizeof(hdr), 1, fl);
 
-    if (hdr.magic != 0x4653465A)
+    if (hdr.magic != MAGIC_ZFS)
     {
-        printf("Error: File is not ZFS!\n");
-        fclose(fl);
+        LOG_WARN("File '%s' is not valid ZFS\n", file);
         return;
     }
 
@@ -1047,13 +987,13 @@ void loader_openzfs(const char *file, MList *list)
             file_header_zfs fil;
             fread(&fil, sizeof(fil), 1, fl);
 
-            if (strlen(fil.name) > 0)
+            if (!str_empty(fil.name))
             {
                 TRACE_LOADER("Adding zfs file : %s\n", fil.name);
 
                 FManNode_t *nod = NEW(FManNode_t);
-                nod->Path = strdup(fil.name);
-                nod->File = nod->Path;
+                nod->path = strdup(fil.name);
+                nod->name = nod->path;
                 nod->zfs = NEW(zfs_file_t);
                 nod->zfs->archive = tmp;
                 nod->zfs->offset = fil.offset;
@@ -1067,67 +1007,102 @@ void loader_openzfs(const char *file, MList *list)
 /******************** ZFS END************************/
 
 
-mfile_t *mfopen_path(const char *file)
+/******************* STRINGS *****************/
+char **loader_loadStr_m(mfile_t *mfp)
 {
-    FILE *fl = fopen(file, "rb");
-    if (!fl)
+    char buffer[STRBUFSIZE];
+    int lines = 1;
+
+    if (!mfp)
         return NULL;
 
+    m_wide_to_utf8(mfp);
+
+    for (int i = strlen(mfp->buf); i > 0; i--)
+    {
+        if (mfp->buf[i] == '\n')
+            lines++;
+    }
+
+    char **strings = NEW_ARRAY(char *, lines + 10);
+    int pos = 0;
+
+    while (!mfeof(mfp))
+    {
+        mfgets(buffer, STRBUFSIZE, mfp);
+        strings[pos++] = str_trim(buffer);
+    }
+    strings[pos] = NULL;
+
+    mfclose(mfp);
+
+    return strings;
+}
+
+char **loader_loadStr(const char *path)
+{
+    FManNode_t file = {
+        .name = (char*)path,
+        .path = (char*)path,
+        .zfs = NULL
+    };
+    return loader_loadStr_m(mfopen(&file));
+}
+/***************** STRINGS END ***************/
+
+
+/**************** FS and ZFS ACCESS *****************/
+mfile_t *mfopen(FManNode_t *nod)
+{
+    if (!nod)
+        Z_PANIC("mfopen(NULL)");
+
     mfile_t *tmp = NEW(mfile_t);
+    zfs_file_t *zfile = nod->zfs;
 
-    fseek(fl, 0, SEEK_END);
+    if (zfile)
+    {
+        tmp->buf = NEW_ARRAY(char, zfile->size + 4);
+        tmp->size = zfile->size;
 
-    tmp->size = ftell(fl);
+        fseek(zfile->archive->fl, zfile->offset, SEEK_SET);
+        fread(tmp->buf, zfile->size, 1, zfile->archive->fl);
 
-    fseek(fl, 0, SEEK_SET);
+        if (zfile->archive->xor_key)
+        {
+            size_t cnt = zfile->size >> 2;
+            for (size_t i = 0; i < cnt; i++)
+                ((uint32_t*)tmp->buf)[i] ^= zfile->archive->xor_key;
+        }
+    }
+    else
+    {
+        FILE *fp = fopen(nod->path, "rb");
+        if (!fp)
+            Z_PANIC("File '%s' could not be opened\n", nod->path);
 
-    tmp->pos = 0;
+        fseek(fp, 0, SEEK_END);
 
-    tmp->buf = (char *)malloc(tmp->size);
+        tmp->size = ftell(fp);
+        tmp->buf = NEW_ARRAY(char, tmp->size);
 
-    fread(tmp->buf, tmp->size, 1, fl);
+        fseek(fp, 0, SEEK_SET);
+        fread(tmp->buf, tmp->size, 1, fp);
 
-    fclose(fl);
+        fclose(fp);
+    }
 
     return tmp;
 }
 
-mfile_t *mfopen(FManNode_t *nod)
-{
-    if (nod->zfs)
-    {
-        mfile_t *tmp = NEW(mfile_t);
-        zfs_file_t *file = nod->zfs;
-
-        tmp->buf = (char *)calloc(file->size + 4, 1);
-        tmp->pos = 0;
-        tmp->size = nod->zfs->size;
-
-        fseek(file->archive->fl, file->offset, SEEK_SET);
-        fread(tmp->buf, file->size, 1, file->archive->fl);
-
-        if (file->archive->xor_key)
-        {
-            uint32_t cnt = file->size >> 2;
-            uint32_t *px = (uint32_t *)tmp->buf;
-            for (uint32_t i = 0; i < cnt; i++)
-                px[i] ^= file->archive->xor_key;
-        }
-
-        return tmp;
-    }
-    else
-    {
-        return mfopen_path(nod->Path);
-    }
-}
-
 int32_t mfsize(FManNode_t *nod)
 {
+    struct stat statbuf;
     if (nod->zfs)
         return nod->zfs->size;
-
-    return FileSize(nod->Path);
+    if (stat(nod->path, &statbuf) == 0)
+        return statbuf.st_size;
+    return -1;
 }
 
 bool mfread(void *buf, int32_t bytes, mfile_t *file)
@@ -1142,10 +1117,27 @@ bool mfread(void *buf, int32_t bytes, mfile_t *file)
     return true;
 }
 
+bool mfread_ptr(void **buf, int32_t bytes, mfile_t *file)
+{
+    if (file->pos + bytes > file->size)
+        return false;
+
+    *buf = file->buf + file->pos;
+
+    file->pos += bytes;
+
+    return true;
+}
+
 void mfseek(mfile_t *fil, int32_t pos)
 {
     if (pos <= fil->size && pos >= 0)
         fil->pos = pos;
+}
+
+int32_t mftell(mfile_t *fil)
+{
+    return fil ? fil->pos : -1;
 }
 
 void mfclose(mfile_t *fil)
@@ -1288,3 +1280,4 @@ void m_wide_to_utf8(mfile_t *file)
     file->size = pos;
     file->buf = buf;
 }
+/************** END FS and ZFS ACCESS ***************/

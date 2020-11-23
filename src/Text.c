@@ -71,7 +71,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
     const char *find = " ";
 
     //font with "item what i want"
-    char *fontitem = findstr(buf, "font");
+    const char *fontitem = str_find(buf, "font");
     if (fontitem != NULL)
     {
         fontitem += 5; //to next item
@@ -125,7 +125,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
         //
         //        }
         //        else
-        if (strCMP(token, "blue") == 0)
+        if (str_starts_with(token, "blue"))
         {
             token = strtok(NULL, find);
             if (token == NULL)
@@ -140,7 +140,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
                 }
             }
         }
-        else if (strCMP(token, "red") == 0)
+        else if (str_starts_with(token, "red"))
         {
             token = strtok(NULL, find);
             if (token == NULL)
@@ -155,7 +155,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
                 }
             }
         }
-        else if (strCMP(token, "green") == 0)
+        else if (str_starts_with(token, "green"))
         {
             token = strtok(NULL, find);
             if (token == NULL)
@@ -170,7 +170,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
                 }
             }
         }
-        else if (strCMP(token, "newline") == 0)
+        else if (str_starts_with(token, "newline"))
         {
             if ((retval & TXT_RET_NEWLN) == 0)
                 style->newline = 0;
@@ -178,7 +178,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
             style->newline++;
             retval |= TXT_RET_NEWLN;
         }
-        else if (strCMP(token, "point") == 0)
+        else if (str_starts_with(token, "point"))
         {
             token = strtok(NULL, find);
             if (token == NULL)
@@ -193,7 +193,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
                 }
             }
         }
-        else if (strCMP(token, "escapement") == 0)
+        else if (str_starts_with(token, "escapement"))
         {
             token = strtok(NULL, find);
             if (token == NULL)
@@ -201,12 +201,12 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
             else
                 style->escapement = atoi(token);
         }
-        else if (strCMP(token, "italic") == 0)
+        else if (str_starts_with(token, "italic"))
         {
             token = strtok(NULL, find);
             if (token == NULL)
                 gooood = false;
-            else if (strCMP(token, "on") == 0)
+            else if (str_starts_with(token, "on"))
             {
                 if (style->italic != TXT_STYLE_VAR_TRUE)
                 {
@@ -214,7 +214,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
                     retval |= TXT_RET_FNTSTL;
                 }
             }
-            else if (strCMP(token, "off") == 0)
+            else if (str_starts_with(token, "off"))
             {
                 if (style->italic != TXT_STYLE_VAR_FALSE)
                 {
@@ -225,12 +225,12 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
             else
                 gooood = false;
         }
-        else if (strCMP(token, "underline") == 0)
+        else if (str_starts_with(token, "underline"))
         {
             token = strtok(NULL, find);
             if (token == NULL)
                 gooood = false;
-            else if (strCMP(token, "on") == 0)
+            else if (str_starts_with(token, "on"))
             {
                 if (style->underline != TXT_STYLE_VAR_TRUE)
                 {
@@ -238,7 +238,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
                     retval |= TXT_RET_FNTSTL;
                 }
             }
-            else if (strCMP(token, "off") == 0)
+            else if (str_starts_with(token, "off"))
             {
                 if (style->underline != TXT_STYLE_VAR_FALSE)
                 {
@@ -249,12 +249,12 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
             else
                 gooood = false;
         }
-        else if (strCMP(token, "strikeout") == 0)
+        else if (str_starts_with(token, "strikeout"))
         {
             token = strtok(NULL, find);
             if (token == NULL)
                 gooood = false;
-            else if (strCMP(token, "on") == 0)
+            else if (str_starts_with(token, "on"))
             {
                 if (style->strikeout != TXT_STYLE_VAR_TRUE)
                 {
@@ -262,7 +262,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
                     retval |= TXT_RET_FNTSTL;
                 }
             }
-            else if (strCMP(token, "off") == 0)
+            else if (str_starts_with(token, "off"))
             {
                 if (style->strikeout != TXT_STYLE_VAR_FALSE)
                 {
@@ -273,12 +273,12 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
             else
                 gooood = false;
         }
-        else if (strCMP(token, "bold") == 0)
+        else if (str_starts_with(token, "bold"))
         {
             token = strtok(NULL, find);
             if (token == NULL)
                 gooood = false;
-            else if (strCMP(token, "on") == 0)
+            else if (str_starts_with(token, "on"))
             {
                 if (style->bold != TXT_STYLE_VAR_TRUE)
                 {
@@ -286,7 +286,7 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
                     retval |= TXT_RET_FNTSTL;
                 }
             }
-            else if (strCMP(token, "off") == 0)
+            else if (str_starts_with(token, "off"))
             {
                 if (style->bold != TXT_STYLE_VAR_FALSE)
                 {
@@ -297,23 +297,23 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
             else
                 gooood = false;
         }
-        else if (strCMP(token, "skipcolor") == 0)
+        else if (str_starts_with(token, "skipcolor"))
         {
             token = strtok(NULL, find);
             if (token == NULL)
                 gooood = false;
-            else if (strCMP(token, "on") == 0)
+            else if (str_starts_with(token, "on"))
                 style->skipcolor = TXT_STYLE_VAR_TRUE;
-            else if (strCMP(token, "off") == 0)
+            else if (str_starts_with(token, "off"))
                 style->skipcolor = TXT_STYLE_VAR_FALSE;
             else
                 gooood = false;
         }
-        else if (strCMP(token, "image") == 0)
+        else if (str_starts_with(token, "image"))
         {
             //token = strtok(NULL,find);
         }
-        else if (strCMP(token, "statebox") == 0)
+        else if (str_starts_with(token, "statebox"))
         {
             token = strtok(NULL, find);
             if (token == NULL)
@@ -324,16 +324,16 @@ int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
                 retval |= TXT_RET_HASSTBOX;
             }
         }
-        else if (strCMP(token, "justify") == 0)
+        else if (str_starts_with(token, "justify"))
         {
             token = strtok(NULL, find);
             if (token == NULL)
                 gooood = false;
-            else if (strCMP(token, "center") == 0)
+            else if (str_starts_with(token, "center"))
                 style->justify = TXT_JUSTIFY_CENTER;
-            else if (strCMP(token, "left") == 0)
+            else if (str_starts_with(token, "left"))
                 style->justify = TXT_JUSTIFY_LEFT;
-            else if (strCMP(token, "right") == 0)
+            else if (str_starts_with(token, "right"))
                 style->justify = TXT_JUSTIFY_RIGHT;
             else
                 gooood = false;
@@ -459,7 +459,7 @@ void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
     int8_t TxtJustify[TXT_CFG_TEXTURES_LINES];
     int8_t TxtPoint[TXT_CFG_TEXTURES_LINES];
 
-    memset(TxtSurfaces, 0, sizeof(TxtSurfaces[0][0]) * TXT_CFG_TEXTURES_LINES * TXT_CFG_TEXTURES_PER_LINE);
+    memset(TxtSurfaces, 0, sizeof(TxtSurfaces));
 
     int32_t stringlen = strlen(text);
 
@@ -491,9 +491,8 @@ void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
 
             if (ret & (TXT_RET_FNTCHG | TXT_RET_FNTSTL | TXT_RET_NEWLN))
             {
-                if (strlen(buf) > 0)
+                if (!str_empty(buf))
                 {
-
                     TTF_SizeUTF8(font, buf, &txt_w, &txt_h);
 
                     TxtSurfaces[currentline][currentlineitm] = txt_RenderUTF8(font, buf, &style2);
@@ -532,7 +531,6 @@ void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
         }
         else
         {
-
             buf[txtpos++] = text[i];
 
             if (text[i] == ' ')
@@ -554,7 +552,7 @@ void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
                     memcpy(buf2, buf, prevbufspace + 1);
                     buf2[prevbufspace + 1] = 0x0;
 
-                    if (strlen(buf2) > 0)
+                    if (!str_empty(buf2))
                         TxtSurfaces[currentline][currentlineitm] = txt_RenderUTF8(font, buf2, &style);
 
                     memset(buf, 0, TXT_CFG_BUF_MAX_LEN);
@@ -570,7 +568,7 @@ void txt_DrawTxtInOneLine(const char *text, SDL_Surface *dst)
         i++;
     }
 
-    if (strlen(buf) > 0)
+    if (!str_empty(buf))
         TxtSurfaces[currentline][currentlineitm] = txt_RenderUTF8(font, buf, &style);
 
     dy = 0;
@@ -690,6 +688,7 @@ int txt_ProcessTTYtext(action_res_t *nod)
         return NODE_RET_NO;
 
     ttytext_t *tty = nod->nodes.tty_text;
+    char buf[MINIBUFSZ];
 
     tty->nexttime -= GetDTime();
 
@@ -724,11 +723,8 @@ int txt_ProcessTTYtext(action_res_t *nod)
 
                 if (ret & TXT_RET_HASSTBOX)
                 {
-                    char buf[MINIBUFSZ];
-                    sprintf(buf, "%d", GetgVarInt(tty->style.statebox));
-
-                    int32_t t_len = strlen(buf);
-                    for (int8_t j = 0; j < t_len; j++)
+                    int t_len = sprintf(buf, "%d", GetgVarInt(tty->style.statebox));
+                    for (int j = 0; j < t_len; j++)
                         outchartotty(buf[j], tty);
                 }
 
@@ -737,7 +733,6 @@ int txt_ProcessTTYtext(action_res_t *nod)
             else
             {
                 int8_t charsz = GetUtf8CharSize(tty->txtbuf[tty->txtpos]);
-
                 uint16_t chr = ReadUtf8Char(&tty->txtbuf[tty->txtpos]);
 
                 if (chr == ' ')

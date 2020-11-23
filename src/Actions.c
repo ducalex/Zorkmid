@@ -1,10 +1,9 @@
-#include "Actions.h"
+#include "System.h"
 
 static const char *get_addition(const char *str)
 {
     const char *s = str;
     int32_t len = strlen(str);
-
     int32_t pos = 0;
     int32_t num = 0;
     bool whitespace = true;
@@ -39,9 +38,7 @@ static const char *get_addition(const char *str)
 static void useart_recovery(char *str)
 {
     int32_t len = strlen(str);
-
     int32_t pos = 0;
-
     bool bracket = false;
 
     while (pos < len)
@@ -56,20 +53,16 @@ static void useart_recovery(char *str)
     }
 }
 
-int action_set_screen(char *params, int aSlot, pzllst_t *owner)
+static int action_set_screen(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     if (Rend_LoadGamescr(params) == 0)
-        printf("Can't find %s, screen load failed\n", params);
+        LOG_WARN("Can't find %s, screen load failed\n", params);
 
     return ACTION_NORMAL;
 }
 
-int action_set_partial_screen(char *params, int aSlot, pzllst_t *owner)
+static int action_set_partial_screen(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     int x, y /*,tmp1*/, tmp2;
     char xx[16], yy[16], tmp11[16], tmp22[16];
     char file[255];
@@ -87,16 +80,13 @@ int action_set_partial_screen(char *params, int aSlot, pzllst_t *owner)
         b = ((tmp2 >> 10) & 0x1F) * 8;
         g = ((tmp2 >> 5) & 0x1F) * 8;
         r = (tmp2 & 0x1F) * 8;
-#ifdef TRACE
-        printf("        action:set_partial_screen Color Key (%x %x %x)\n", r, g, b);
-#endif
         tmp = loader_LoadFile_key(file, Rend_GetRenderer() == RENDER_PANA, Rend_MapScreenRGB(r, g, b));
     }
     else
         tmp = loader_LoadFile(file, Rend_GetRenderer() == RENDER_PANA);
 
     if (!tmp)
-        printf("ERROR:  IMG_Load(%s): %s\n\n", params, IMG_GetError());
+        LOG_WARN("IMG_Load(%s): %s\n", params, IMG_GetError());
     else
     {
         Rend_DrawImageToGamescr(tmp, x, y);
@@ -105,10 +95,8 @@ int action_set_partial_screen(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_assign(char *params, int aSlot, pzllst_t *owner)
+static int action_assign(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     char tmp1[16], tmp2[16];
     sscanf(params, "%s %s", tmp1, tmp2);
 
@@ -116,10 +104,8 @@ int action_assign(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_timer(char *params, int aSlot, pzllst_t *owner)
+static int action_timer(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     char tmp2[16];
     sscanf(params, "%s", tmp2);
 
@@ -146,10 +132,8 @@ int action_timer(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_change_location(char *params, int aSlot, pzllst_t *owner)
+static int action_change_location(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     char tmp[4], tmp2[4], tmp3[4], tmp4[16];
     sscanf(params, "%c %c %c%c %s", tmp, tmp2, tmp3, tmp3 + 1, tmp4);
 
@@ -160,37 +144,29 @@ int action_change_location(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_dissolve(char *params, int aSlot, pzllst_t *owner)
+static int action_dissolve(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     SDL_FillRect(Rend_GetGameScreen(), NULL, Rend_MapScreenRGB(0, 0, 0));
 
     return ACTION_NORMAL;
 }
 
-int action_disable_control(char *params, int aSlot, pzllst_t *owner)
+static int action_disable_control(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     ScrSys_SetFlag(GetIntVal(params), FLAG_DISABLED);
 
     return ACTION_NORMAL;
 }
 
-int action_enable_control(char *params, int aSlot, pzllst_t *owner)
+static int action_enable_control(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     ScrSys_SetFlag(GetIntVal(params), 0);
 
     return ACTION_NORMAL;
 }
 
-int action_add(char *params, int aSlot, pzllst_t *owner)
+static int action_add(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     char number[16];
     int slot;
     //    int tmp;
@@ -202,23 +178,18 @@ int action_add(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_debug(char *params, int aSlot, pzllst_t *owner)
+static int action_debug(char *params, int aSlot, pzllst_t *owner)
 {
     char txt[256], number[16];
-    int tmp;
+
     sscanf(params, "%s %s", txt, number);
-
-    tmp = GetIntVal(number);
-
-    printf("DEBUG :%s\t: %d \n", txt, tmp);
+    LOG_WARN("DEBUG :%s\t: %d \n", txt, GetIntVal(number));
 
     return ACTION_NORMAL;
 }
 
-int action_random(char *params, int aSlot, pzllst_t *owner)
+static int action_random(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     int number;
     char chars[16];
     sscanf(params, "%s", chars);
@@ -229,10 +200,8 @@ int action_random(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
+static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     char file[255];
     char x[16];
     char y[16];
@@ -254,190 +223,86 @@ int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
     ww = GetIntVal(w) - xx + 1;
     hh = GetIntVal(h) - yy + 1;
 
-    tmp = strlen(file);
+    char *ext = file + (strlen(file) - 3);
 
-#ifdef SMPEG_SUPPORT
-    if (strCMP((file + tmp - 3), "mpg") == 0)
+    anim_avi_t *anm = NEW(anim_avi_t);
+    Mix_Chunk *aud = NULL;
+    subtitles_t *subs = NULL;
+
+    fil = GetFilePath(file);
+
+    if (fil == NULL)
+        return ACTION_NORMAL;
+
+    anm->av = avi_openfile(fil, 0);
+
+    anm->img = CreateSurface(anm->av->w, anm->av->h);
+    scaler_t *scl = CreateScaler(anm->img, ww, hh);
+
+    if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
     {
-        anim_mpg *anm = NEW(anim_mpg);
-        Mix_Chunk *aud = NULL;
+        strcpy(ext, "sub");
+        subs = sub_LoadSubtitles(file);
+    }
 
-        fil = GetFilePath(file);
-        if (fil == NULL)
-            return ACTION_NORMAL;
-        anm->mpg = SMPEG_new(fil, &anm->inf, 0);
+    aud = avi_get_audio(anm->av);
+    if (aud != NULL)
+    {
+        tmp = GetFreeChannel();
+        Mix_UnregisterAllEffects(tmp);
+        Mix_PlayChannel(tmp, aud, 0);
+        Mix_Volume(tmp, 127);
+    }
 
-        anm->img = CreateSurface(anm->inf.width, anm->inf.height);
-        scaler_t *scl = CreateScaler(anm->img, ww, hh);
+    avi_play(anm->av);
 
-        //        tmp=strlen(file);
-        file[tmp - 1] = 'v';
-        file[tmp - 2] = 'a';
-        file[tmp - 3] = 'w';
+    while (anm->av->status == AVI_PLAY)
+    {
+        GameUpdate();
 
-        fil = GetExactFilePath(file);
+        if (KeyHit(SDLK_SPACE))
+            avi_stop(anm->av);
 
-        if (fil != NULL)
-        {
-            if (FileSize(fil) > 44)
-                aud = Mix_LoadWAV(fil);
-        }
+        avi_to_surf(anm->av, anm->img);
+        //DrawImage(anm->img,0,0);
+        DrawScalerToScreen(scl, GAMESCREEN_X + xx + GAMESCREEN_FLAT_X, GAMESCREEN_Y + yy); //it's direct rendering without game screen update
 
-        file[tmp - 1] = 'b';
-        file[tmp - 2] = 'u';
-        file[tmp - 3] = 's';
-
-        subtitles_t *subs = NULL;
-        if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
-            subs = sub_LoadSubtitles(file);
-
-        SMPEG_setdisplay(anm->mpg, anm->img, 0, 0);
-        SMPEG_setdisplayregion(anm->mpg, 0, 0, anm->inf.width, anm->inf.height);
-        SMPEG_renderFrame(anm->mpg, 1);
-        SMPEG_play(anm->mpg);
-
-        if (aud != NULL)
-        {
-            tmp = GetFreeChannel();
-            Mix_UnregisterAllEffects(tmp);
-            Mix_PlayChannel(tmp, aud, 0);
-            //if (u2 == 0)
-            //{
-            //    SaveVol();
-            //    SilenceVol();
-            //}
-            Mix_Volume(tmp, 127);
-        }
-
-        while (SMPEG_status(anm->mpg) != SMPEG_STOPPED)
-        {
-            GameUpdate();
-
-            if (KeyHit(SDLK_SPACE))
-                SMPEG_stop(anm->mpg);
-            DrawScalerToScreen(scl, GAMESCREEN_X + xx + GAMESCREEN_FLAT_X, GAMESCREEN_Y + yy); //it's direct rendering without game screen update
-
-            if (subs != NULL)
-            {
-                SMPEG_getinfo(anm->mpg, &anm->inf);
-                sub_ProcessSub(subs, anm->inf.current_frame / 2);
-            }
-
-            Rend_ProcessSubs();
-            Rend_ScreenFlip();
-
-            int delay = -1;
-            if (anm->inf.current_fps != 0)
-                delay = 1000 / anm->inf.current_fps;
-
-            if (delay > 200 || delay < 0)
-                delay = 15;
-
-            Rend_Delay(delay);
-        }
-
-        if (aud != NULL)
-        {
-            //if (u2 == 0)
-            //   RestoreVol();
-            Mix_HaltChannel(tmp);
-            Mix_FreeChunk(aud);
-        }
+        avi_update(anm->av);
 
         if (subs != NULL)
-            sub_DeleteSub(subs);
+            sub_ProcessSub(subs, anm->av->cframe);
 
-        SMPEG_stop(anm->mpg);
-        SMPEG_delete(anm->mpg);
-        free(anm);
+        Rend_ProcessSubs();
+        Rend_ScreenFlip();
 
-        DeleteScaler(scl);
+        int32_t delay = anm->av->header.mcrSecPframe / 2000;
+
+        if (delay > 200 || delay < 0)
+            delay = 15;
+
+        Rend_Delay(delay);
     }
-    else
-#endif
+
+    if (aud != NULL)
     {
-        anim_avi_t *anm = NEW(anim_avi_t);
-        Mix_Chunk *aud = NULL;
-
-        fil = GetFilePath(file);
-
-        if (fil == NULL)
-            return ACTION_NORMAL;
-
-        anm->av = avi_openfile(fil, 0);
-
-        anm->img = CreateSurface(anm->av->w, anm->av->h);
-        scaler_t *scl = CreateScaler(anm->img, ww, hh);
-
-        file[tmp - 1] = 'b';
-        file[tmp - 2] = 'u';
-        file[tmp - 3] = 's';
-
-        subtitles_t *subs = NULL;
-        if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
-            subs = sub_LoadSubtitles(file);
-
-        aud = avi_get_audio(anm->av);
-        if (aud != NULL)
-        {
-            tmp = GetFreeChannel();
-            Mix_UnregisterAllEffects(tmp);
-            Mix_PlayChannel(tmp, aud, 0);
-            Mix_Volume(tmp, 127);
-        }
-
-        avi_play(anm->av);
-
-        while (anm->av->status == AVI_PLAY)
-        {
-            GameUpdate();
-
-            if (KeyHit(SDLK_SPACE))
-                avi_stop(anm->av);
-
-            avi_to_surf(anm->av, anm->img);
-            //DrawImage(anm->img,0,0);
-            DrawScalerToScreen(scl, GAMESCREEN_X + xx + GAMESCREEN_FLAT_X, GAMESCREEN_Y + yy); //it's direct rendering without game screen update
-
-            avi_update(anm->av);
-
-            if (subs != NULL)
-                sub_ProcessSub(subs, anm->av->cframe);
-
-            Rend_ProcessSubs();
-            Rend_ScreenFlip();
-
-            int32_t delay = anm->av->header.mcrSecPframe / 2000;
-
-            if (delay > 200 || delay < 0)
-                delay = 15;
-
-            Rend_Delay(delay);
-        }
-
-        if (aud != NULL)
-        {
-            //if (u2 == 0)
-            //   RestoreVol();
-            Mix_HaltChannel(tmp);
-            Mix_FreeChunk(aud);
-        }
-
-        if (subs != NULL)
-            sub_DeleteSub(subs);
-
-        avi_close(anm->av);
-        free(anm);
-        DeleteScaler(scl);
+        //if (u2 == 0)
+        //   RestoreVol();
+        Mix_HaltChannel(tmp);
+        Mix_FreeChunk(aud);
     }
+
+    if (subs != NULL)
+        sub_DeleteSub(subs);
+
+    avi_close(anm->av);
+    free(anm);
+    DeleteScaler(scl);
 
     return ACTION_NORMAL;
 }
 
-int action_animplay(char *params, int aSlot, pzllst_t *owner)
+static int action_animplay(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     char file[255];
     char x[16];
     char y[16];
@@ -456,7 +321,6 @@ int action_animplay(char *params, int aSlot, pzllst_t *owner)
     StartMList(all);
     while (!eofMList(all))
     {
-
         action_res_t *nd = (action_res_t *)DataMList(all);
 
         if (nd->node_type == NODE_TYPE_ANIMPLAY)
@@ -470,7 +334,6 @@ int action_animplay(char *params, int aSlot, pzllst_t *owner)
     }
 
     action_res_t *glob = anim_CreateAnimPlayNode();
-
     animnode_t *nod = glob->nodes.node_anim;
 
     ScrSys_AddToActResList(glob);
@@ -509,10 +372,10 @@ int action_animplay(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
+static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
 {
     int type;
-    char file[16];
+    char file[32];
     char loop[16];
     char vol[16];
     char fn[PATHBUFSIZ];
@@ -533,7 +396,7 @@ int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
         int32_t instr = atoi(file);
         int32_t pitch = atoi(loop);
         sprintf(fn, "%s/MIDI/%d/%d.wav", GetGamePath(), instr, pitch);
-        if (FileExist(fn))
+        if (FileExists(fn))
         {
             nod->nodes.node_music->universe = universe;
             nod->nodes.node_music->chunk = Mix_LoadWAV(fn);
@@ -541,7 +404,7 @@ int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
             nod->nodes.node_music->chn = GetFreeChannel();
             if (nod->nodes.node_music->chn == -1)
             {
-                printf("ERROR, NO CHANNELS!\n");
+                LOG_WARN("ERROR: NO CHANNELS! %s\n", params);
                 snd_DeleteWav(nod);
                 return ACTION_NORMAL;
             }
@@ -578,32 +441,23 @@ int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
     {
         nod->nodes.node_music->universe = universe;
 
-        int st = strlen(file);
+        char *ext = file + (strlen(file) - 3);
 
         nod->nodes.node_music->chunk = loader_LoadChunk(file);
 
         if (nod->nodes.node_music->chunk == NULL)
         {
-            file[st - 1] = 'w';
-            file[st - 2] = 'a';
-            file[st - 3] = 'r';
-
+            strcpy(ext, "raw");
             nod->nodes.node_music->chunk = loader_LoadChunk(file);
 
             if (nod->nodes.node_music->chunk == NULL)
             {
-                file[st - 1] = 'p';
-                file[st - 2] = 'f';
-                file[st - 3] = 'i';
-
+                strcpy(ext, "ifp");
                 nod->nodes.node_music->chunk = loader_LoadChunk(file);
 
                 if (nod->nodes.node_music->chunk == NULL)
                 {
-                    file[st - 1] = 'c';
-                    file[st - 2] = 'r';
-                    file[st - 3] = 's';
-
+                    strcpy(ext, "src");
                     nod->nodes.node_music->chunk = loader_LoadChunk(file);
                 }
             }
@@ -615,17 +469,16 @@ int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
             return ACTION_NORMAL;
         }
 
-        file[st - 1] = 'b';
-        file[st - 2] = 'u';
-        file[st - 3] = 's';
-
         if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
+        {
+            strcpy(ext, "sub");
             nod->nodes.node_music->sub = sub_LoadSubtitles(file);
+        }
 
         nod->nodes.node_music->chn = GetFreeChannel();
         if (nod->nodes.node_music->chn == -1)
         {
-            printf("ERROR, NO CHANNELS!\n");
+            LOG_WARN("ERROR: NO CHANNELS! %s\n", params);
             snd_DeleteWav(nod);
             return ACTION_NORMAL;
         }
@@ -660,24 +513,18 @@ int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
     return ACTION_NORMAL;
 }
 
-int action_music(char *params, int aSlot, pzllst_t *owner)
+static int action_music(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     return music_music(params, aSlot, owner, false);
 }
 
-int action_universe_music(char *params, int aSlot, pzllst_t *owner)
+static int action_universe_music(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     return music_music(params, aSlot, owner, true);
 }
 
-int action_syncsound(char *params, int aSlot, pzllst_t *owner)
+static int action_syncsound(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     //slot maybe 0
     //params:
     //1 - sync with
@@ -719,16 +566,13 @@ int action_syncsound(char *params, int aSlot, pzllst_t *owner)
 
     if (tmp->nodes.node_sync->chn == -1 || tmp->nodes.node_sync->chunk == NULL)
     {
-        printf("ERROR, NO CHANNELS OR NO FILE!\n");
+        LOG_WARN("ERROR: NO CHANNELS OR FILE! %s\n", params);
         snd_DeleteSync(tmp);
         return ACTION_NORMAL;
     }
 
-    int st = strlen(a3);
-
-    a3[st - 1] = 'b';
-    a3[st - 2] = 'u';
-    a3[st - 3] = 's';
+    char *ext = a3 + (strlen(a3) - 3);
+    strcpy(ext, "sub");
 
     if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
         tmp->nodes.node_sync->sub = sub_LoadSubtitles(a3);
@@ -746,10 +590,8 @@ int action_syncsound(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_animpreload(char *params, int aSlot, pzllst_t *owner)
+static int action_animpreload(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     if (getGNode(aSlot) != NULL)
         return ACTION_NORMAL;
 
@@ -781,19 +623,15 @@ int action_animpreload(char *params, int aSlot, pzllst_t *owner)
 
     setGNode(aSlot, pre);
 
-    //printf("AnimPreload \n");
-
     return ACTION_NORMAL;
 }
 
-int action_playpreload(char *params, int aSlot, pzllst_t *owner)
+static int action_playpreload(char *params, int aSlot, pzllst_t *owner)
 {
     char sl[16];
     uint32_t slot;
     int x, y, w, h, start, end, loop;
     sscanf(params, "%s %d %d %d %d %d %d %d", sl, &x, &y, &w, &h, &start, &end, &loop);
-
-    TRACE_ACTION();
 
     slot = GetIntVal(sl);
 
@@ -837,10 +675,8 @@ int action_playpreload(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_ttytext(char *params, int aSlot, pzllst_t *owner)
+static int action_ttytext(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     char chars[16];
     int32_t delay;
     int32_t x, y, w, h;
@@ -865,26 +701,16 @@ int action_ttytext(char *params, int aSlot, pzllst_t *owner)
     mfile_t *fl = mfopen(fil);
     m_wide_to_utf8(fl);
 
-    int32_t flsize = fl->size;
+    nod->nodes.tty_text->txtbuf = NEW_ARRAY(char, fl->size);
 
-    uint8_t *tmp = (uint8_t *)malloc(flsize);
+    size_t j = 0;
+    for (size_t i = 0; i < fl->size; i++)
+        if (fl->buf[i] != 0x0A && fl->buf[i] != 0x0D)
+            nod->nodes.tty_text->txtbuf[j++] = (char)fl->buf[i];
 
-    nod->nodes.tty_text->txtbuf = (char *)malloc(flsize);
-    memset(nod->nodes.tty_text->txtbuf, 0, flsize);
-
-    memcpy(tmp, fl->buf, fl->size);
+    nod->nodes.tty_text->txtsize = j;
 
     mfclose(fl);
-
-    int32_t j = 0;
-    for (int32_t i = 0; i < flsize; i++)
-        if (tmp[i] != 0x0A && tmp[i] != 0x0D)
-        {
-            nod->nodes.tty_text->txtbuf[j] = (char)tmp[i];
-            j++;
-        }
-    nod->nodes.tty_text->txtsize = j;
-    free(tmp);
 
     txt_get_font_style(&nod->nodes.tty_text->style, nod->nodes.tty_text->txtbuf);
     nod->nodes.tty_text->fnt = GetFontByName(nod->nodes.tty_text->style.fontname, nod->nodes.tty_text->style.size);
@@ -904,22 +730,20 @@ int action_ttytext(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
+static int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
 {
-    TRACE_ACTION();
-
     int slot;
     char chars[16];
     sscanf(params, "%s", chars);
     if (iskillfunc)
     {
-        if (strcasecmp(chars, "\"all\"") == 0)
+        if (str_equals(chars, "\"all\""))
         {
             ScrSys_FlushActResList();
             return ACTION_NORMAL;
         }
 
-        if (strcasecmp(chars, "\"anim\"") == 0)
+        if (str_equals(chars, "\"anim\""))
         {
             ScrSys_FlushResourcesByType(NODE_TYPE_ANIMPLAY);
             ScrSys_FlushResourcesByType(NODE_TYPE_ANIMPRPL);
@@ -927,38 +751,38 @@ int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
             return ACTION_NORMAL;
         }
 
-        if (strcasecmp(chars, "\"audio\"") == 0)
+        if (str_equals(chars, "\"audio\""))
         {
             ScrSys_FlushResourcesByType(NODE_TYPE_MUSIC);
             //ScrSys_FlushResourcesByType(NODE_TYPE_SYNCSND);
             return ACTION_NORMAL;
         }
 
-        if (strcasecmp(chars, "\"distort\"") == 0)
+        if (str_equals(chars, "\"distort\""))
         {
             ScrSys_FlushResourcesByType(NODE_TYPE_DISTORT);
             return ACTION_NORMAL;
         }
 
-        if (strcasecmp(chars, "\"pantrack\"") == 0)
+        if (str_equals(chars, "\"pantrack\""))
         {
             ScrSys_FlushResourcesByType(NODE_TYPE_PANTRACK);
             return ACTION_NORMAL;
         }
 
-        if (strcasecmp(chars, "\"region\"") == 0)
+        if (str_equals(chars, "\"region\""))
         {
             ScrSys_FlushResourcesByType(NODE_TYPE_REGION);
             return ACTION_NORMAL;
         }
 
-        if (strcasecmp(chars, "\"timer\"") == 0)
+        if (str_equals(chars, "\"timer\""))
         {
             ScrSys_FlushResourcesByType(NODE_TYPE_TIMER);
             return ACTION_NORMAL;
         }
 
-        if (strcasecmp(chars, "\"ttytext\"") == 0)
+        if (str_equals(chars, "\"ttytext\""))
         {
             ScrSys_FlushResourcesByType(NODE_TYPE_TTYTEXT);
             return ACTION_NORMAL;
@@ -1012,50 +836,22 @@ int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
     return ACTION_NORMAL;
 }
 
-int action_kill(char *params, int aSlot, pzllst_t *owner)
+static int action_kill(char *params, int aSlot, pzllst_t *owner)
 {
-#ifdef TRACE
-    printf("        action:kill(%s)\n", params);
-#endif
-
-#ifdef TRACE
-    int result = stopkiller(params, aSlot, owner, true);
-#else
     stopkiller(params, aSlot, owner, true);
-#endif
-
-#ifdef TRACE
-    if (result == ACTION_NOT_FOUND)
-        printf("Nothing to kill %s\n", params);
-#endif
 
     return ACTION_NORMAL;
 }
 
-int action_stop(char *params, int aSlot, pzllst_t *owner)
+static int action_stop(char *params, int aSlot, pzllst_t *owner)
 {
-#ifdef TRACE
-    printf("        action:stop(%s)\n", params);
-#endif
-
-#ifdef TRACE
-    int result = stopkiller(params, aSlot, owner, false);
-#else
     stopkiller(params, aSlot, owner, false);
-#endif
-
-#ifdef TRACE
-    if (result == ACTION_NOT_FOUND)
-        printf("Nothing to stop %s\n", params);
-#endif
 
     return ACTION_NORMAL;
 }
 
-int action_inventory(char *params, int aSlot, pzllst_t *owner)
+static int action_inventory(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     int item;
     char cmd[16];
     char chars[16];
@@ -1063,28 +859,28 @@ int action_inventory(char *params, int aSlot, pzllst_t *owner)
     sscanf(params, "%s %s", cmd, chars);
     item = GetIntVal(chars);
 
-    if (strcasecmp(cmd, "add") == 0)
+    if (str_equals(cmd, "add"))
     {
         inv_add(item);
     }
-    else if (strcasecmp(cmd, "addi") == 0)
+    else if (str_equals(cmd, "addi"))
     {
         item = GetgVarInt(item);
         inv_add(item);
     }
-    else if (strcasecmp(cmd, "drop") == 0)
+    else if (str_equals(cmd, "drop"))
     {
         if (item >= 0)
             inv_drop(item);
         else
             inv_drop(GetgVarInt(SLOT_INVENTORY_MOUSE));
     }
-    else if (strcasecmp(cmd, "dropi") == 0)
+    else if (str_equals(cmd, "dropi"))
     {
         item = GetgVarInt(item);
         inv_drop(item);
     }
-    else if (strcasecmp(cmd, "cycle") == 0)
+    else if (str_equals(cmd, "cycle"))
     {
         inv_cycle();
     }
@@ -1094,10 +890,8 @@ int action_inventory(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_crossfade(char *params, int aSlot, pzllst_t *owner)
+static int action_crossfade(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     //crossfade(%d %d %d %d %d %d %ld)
     // item1 item2 fromvol1 fromvol2 tovol1 tovol2 time_in_millisecs
     uint32_t item, item2;
@@ -1174,28 +968,22 @@ int action_crossfade(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_menu_bar_enable(char *params, int aSlot, pzllst_t *owner)
+static int action_menu_bar_enable(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     menu_SetMenuBarVal(GetIntVal(params));
 
     return ACTION_NORMAL;
 }
 
-int action_delay_render(char *params, int aSlot, pzllst_t *owner)
+static int action_delay_render(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     Rend_SetDelay(GetIntVal(params));
 
     return ACTION_NORMAL;
 }
 
-int action_pan_track(char *params, int aSlot, pzllst_t *owner)
+static int action_pan_track(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     if (Rend_GetRenderer() != RENDER_PANA)
         return ACTION_NORMAL;
 
@@ -1232,10 +1020,8 @@ int action_pan_track(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_attenuate(char *params, int aSlot, pzllst_t *owner)
+static int action_attenuate(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     int slot;
     int att;
 
@@ -1261,10 +1047,8 @@ int action_attenuate(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_cursor(char *params, int aSlot, pzllst_t *owner)
+static int action_cursor(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     if (tolower(params[0]) == 'u')
         Mouse_ShowCursor();
     else if (tolower(params[0]) == 'h')
@@ -1275,10 +1059,8 @@ int action_cursor(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_animunload(char *params, int aSlot, pzllst_t *owner)
+static int action_animunload(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     int slot;
 
     sscanf(params, "%d", &slot);
@@ -1292,39 +1074,31 @@ int action_animunload(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_flush_mouse_events(char *params, int aSlot, pzllst_t *owner)
+static int action_flush_mouse_events(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     FlushMouseBtn(SDL_BUTTON_LEFT);
     FlushMouseBtn(SDL_BUTTON_RIGHT);
 
     return ACTION_NORMAL;
 }
 
-int action_save_game(char *params, int aSlot, pzllst_t *owner)
+static int action_save_game(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     ScrSys_PrepareSaveBuffer();
     ScrSys_SaveGame(params);
 
     return ACTION_NORMAL;
 }
 
-int action_restore_game(char *params, int aSlot, pzllst_t *owner)
+static int action_restore_game(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     ScrSys_LoadGame(params);
 
     return ACTION_NORMAL;
 }
 
-int action_quit(char *params, int aSlot, pzllst_t *owner)
+static int action_quit(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     if (atoi(params) == 1)
         GameQuit();
     else
@@ -1333,10 +1107,8 @@ int action_quit(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_rotate_to(char *params, int aSlot, pzllst_t *owner)
+static int action_rotate_to(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     if (Rend_GetRenderer() != RENDER_PANA)
         return ACTION_NORMAL;
 
@@ -1389,10 +1161,8 @@ int action_rotate_to(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_distort(char *params, int aSlot, pzllst_t *owner)
+static int action_distort(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     if (Rend_GetRenderer() != RENDER_PANA && Rend_GetRenderer() != RENDER_TILT)
         return ACTION_NORMAL;
 
@@ -1434,11 +1204,9 @@ int action_distort(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_preferences(char *params, int aSlot, pzllst_t *owner)
+static int action_preferences(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
-    if (strCMP(params, "save") == 0)
+    if (str_starts_with(params, "save"))
         ScrSys_SavePreferences();
     else
         ScrSys_LoadPreferences();
@@ -1447,10 +1215,8 @@ int action_preferences(char *params, int aSlot, pzllst_t *owner)
 }
 
 //Graphic effects
-int action_region(char *params, int aSlot, pzllst_t *owner)
+static int action_region(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     char art[64];
     int32_t x;
     int32_t y;
@@ -1549,10 +1315,8 @@ int action_region(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_display_message(char *params, int aSlot, pzllst_t *owner)
+static int action_display_message(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     int32_t p1, p2, p3, p4, p5, p6;
 
     if (sscanf(params, "%d %d %d %d %d %d", &p1, &p2, &p3, &p4, &p5, &p6) == 6)
@@ -1569,10 +1333,8 @@ int action_display_message(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_set_venus(char *params, int aSlot, pzllst_t *owner)
+static int action_set_venus(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     int32_t p1;
 
     p1 = atoi(params);
@@ -1586,10 +1348,8 @@ int action_set_venus(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-int action_disable_venus(char *params, int aSlot, pzllst_t *owner)
+static int action_disable_venus(char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION();
-
     int32_t p1;
 
     p1 = atoi(params);
@@ -1598,4 +1358,55 @@ int action_disable_venus(char *params, int aSlot, pzllst_t *owner)
         SetgVarInt(p1, 0);
 
     return ACTION_NORMAL;
+}
+
+
+int action_exec(const char* name, char *params, int aSlot, pzllst_t *owner)
+{
+    TRACE_ACTION("Running %s %s\n", name, params);
+
+    if (str_equals(name, "set_screen"))              return action_set_screen(params, aSlot, owner);
+    else if (str_equals(name, "debug"))              return action_debug(params, aSlot, owner);
+    else if (str_equals(name, "assign"))             return action_assign(params, aSlot, owner);
+    else if (str_equals(name, "timer"))              return action_timer(params, aSlot, owner);
+    else if (str_equals(name, "set_partial_screen")) return action_set_partial_screen(params, aSlot, owner);
+    else if (str_equals(name, "change_location"))    return action_change_location(params, aSlot, owner);
+    else if (str_equals(name, "dissolve"))           return action_dissolve(params, aSlot, owner);
+    else if (str_equals(name, "disable_control"))    return action_disable_control(params, aSlot, owner);
+    else if (str_equals(name, "enable_control"))     return action_enable_control(params, aSlot, owner);
+    else if (str_equals(name, "add"))                return action_add(params, aSlot, owner);
+    else if (str_equals(name, "random"))             return action_random(params, aSlot, owner);
+    else if (str_equals(name, "animplay"))           return action_animplay(params, aSlot, owner);
+    else if (str_equals(name, "universe_music"))     return action_universe_music(params, aSlot, owner);
+    else if (str_equals(name, "music"))              return action_music(params, aSlot, owner);
+    else if (str_equals(name, "kill"))               return action_kill(params, aSlot, owner);
+    else if (str_equals(name, "stop"))               return action_stop(params, aSlot, owner);
+    else if (str_equals(name, "inventory"))          return action_inventory(params, aSlot, owner);
+    else if (str_equals(name, "crossfade"))          return action_crossfade(params, aSlot, owner);
+    else if (str_equals(name, "streamvideo"))        return action_streamvideo(params, aSlot, owner);
+    else if (str_equals(name, "animpreload"))        return action_animpreload(params, aSlot, owner);
+    else if (str_equals(name, "playpreload"))        return action_playpreload(params, aSlot, owner);
+    else if (str_equals(name, "syncsound"))          return action_syncsound(params, aSlot, owner);
+    else if (str_equals(name, "menu_bar_enable"))    return action_menu_bar_enable(params, aSlot, owner);
+    else if (str_equals(name, "delay_render"))       return action_delay_render(params, aSlot, owner);
+    else if (str_equals(name, "ttytext"))            return action_ttytext(params, aSlot, owner);
+    else if (str_equals(name, "cursor"))             return action_cursor(params, aSlot, owner);
+    else if (str_equals(name, "attenuate"))          return action_attenuate(params, aSlot, owner);
+    else if (str_equals(name, "pan_track"))          return action_pan_track(params, aSlot, owner);
+    else if (str_equals(name, "animunload"))         return action_animunload(params, aSlot, owner);
+    else if (str_equals(name, "flush_mouse_events")) return action_flush_mouse_events(params, aSlot, owner);
+    else if (str_equals(name, "save_game"))          return action_save_game(params, aSlot, owner);
+    else if (str_equals(name, "restore_game"))       return action_restore_game(params, aSlot, owner);
+    else if (str_equals(name, "quit"))               return action_quit(params, aSlot, owner);
+    else if (str_equals(name, "rotate_to"))          return action_rotate_to(params, aSlot, owner);
+    else if (str_equals(name, "distort"))            return action_distort(params, aSlot, owner);
+    else if (str_equals(name, "preferences"))        return action_preferences(params, aSlot, owner);
+    else if (str_equals(name, "region"))             return action_region(params, aSlot, owner);
+    else if (str_equals(name, "display_message"))    return action_display_message(params, aSlot, owner);
+    else if (str_equals(name, "set_venus"))          return action_set_venus(params, aSlot, owner);
+    else if (str_equals(name, "disable_venus"))      return action_disable_venus(params, aSlot, owner);
+
+    LOG_WARN("Action '%s' not found!\n", name);
+
+    return ACTION_ERROR; // return ACTION_NOT_FOUND;
 }

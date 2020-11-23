@@ -3,6 +3,32 @@
 static Location_t Need_Locate;
 static bool NeedToLoadScript = false;
 static int8_t NeedToLoadScriptDelay = CHANGELOCATIONDELAY;
+static char *GamePath = "./";
+
+const char *GetGamePath()
+{
+    return GamePath;
+}
+
+void SetGamePath(const char *path)
+{
+    GamePath = strdup(path);
+    while (GamePath[strlen(GamePath - 1)] == '/' || GamePath[strlen(GamePath - 1)] == '\\')
+        GamePath[strlen(GamePath - 1)] = 0;
+}
+
+const char *GetGameTitle()
+{
+    switch (CUR_GAME)
+    {
+    case GAME_ZGI:
+        return "Zork: Grand Inquisitor";
+    case GAME_NEM:
+        return "Zork: Nemesis";
+    default:
+        return "Unknown";
+    }
+}
 
 void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X)
 {
@@ -35,8 +61,13 @@ void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X)
     }
 }
 
-void GameInit()
+void GameInit(const char *path)
 {
+    SetGamePath(path);
+    InitFileManager(path);
+    Mouse_LoadCursors();
+    menu_LoadGraphics();
+
     InitScriptsEngine();
     LoadScriptFile(GetUni(), FindInBinTree("universe.scr"), false, NULL);
 
@@ -147,7 +178,7 @@ void EasterEggsAndDebug()
             else
                 sprintf(message_buffer, "0 %s 0", "v000hnta.raw");
 
-            action_universe_music(message_buffer, 0, GetUni());
+            action_exec("universe_music", message_buffer, 0, GetUni());
         }
     }
 

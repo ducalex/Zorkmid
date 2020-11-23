@@ -390,7 +390,7 @@ int8_t Rend_LoadGamescr(const char *file)
     SDL_FillRect(tempbuf, 0, 0);
 
     if (!scrbuf)
-        printf("ERROR:  IMG_Load(%s): %s\n\n", file, SDL_GetError());
+        LOG_WARN("IMG_Load(%s): %s\n", file, SDL_GetError());
 
     if (!scrbuf) // no errors if no screen
     {
@@ -614,8 +614,7 @@ void Rend_DrawPanorama()
     }
     else
     {
-        printf("Write panorama code for %d bpp\n", GAME_BPP);
-        exit(0);
+        Z_PANIC("Bit depth %d not supported!\n", GAME_BPP);
     }
     SDL_UnlockSurface(tempbuf);
     SDL_UnlockSurface(viewportbuf);
@@ -713,7 +712,7 @@ void Rend_RenderFunc()
         Rend_DrawTilt_pre();
 
     //draw dynamic controls
-    Ctrl_DrawControls();
+    DrawControls();
 
     //effect-processor
     for (int32_t i = 0; i < EFFECTS_MAX_CNT; i++)
@@ -753,11 +752,8 @@ subrect_t *Rend_CreateSubRect(int x, int y, int w, int h)
     tmp->x = x;
     tmp->y = y;
     tmp->todelete = false;
-    tmp->id = subid;
+    tmp->id = subid++;
     tmp->timer = -1;
-
-    subid++;
-
     tmp->img = CreateSurface(w, h);
 
     AddToMList(sublist, tmp);
@@ -936,8 +932,7 @@ void Rend_DrawTilt()
     }
     else
     {
-        printf("Write tilt code for %d bpp\n", GAME_BPP);
-        exit(0);
+        Z_PANIC("Bit depth %d not supported!\n", GAME_BPP);
     }
     SDL_UnlockSurface(tempbuf);
     SDL_UnlockSurface(viewportbuf);
@@ -1223,8 +1218,7 @@ static int32_t Effects_GetColor(uint32_t x, uint32_t y)
     }
     else
     {
-        printf("Write your code for %d bit mode in %s at %d line.\n", GAME_BPP, __FILE__, __LINE__);
-        //exit()
+        LOG_WARN("Bit depth %d not supported!\n", GAME_BPP);
     }
     SDL_UnlockSurface(scrbuf);
 
@@ -1261,7 +1255,7 @@ static int8_t *Effects_Map_Useart(int32_t color, int32_t color_dlta, int32_t x, 
     }
     else
     {
-        printf("Write your code for %d bit mode in %s at %d line.\n", GAME_BPP, __FILE__, __LINE__);
+        LOG_WARN("Bit depth %d not supported!\n", GAME_BPP);
     }
     SDL_UnlockSurface(scrbuf);
 
@@ -1283,7 +1277,7 @@ int32_t Rend_EF_Light_Setup(char *string, int32_t x, int32_t y, int32_t w, int32
         return -1;
     }
 
-    if (strCMP(string, "useart") == 0)
+    if (str_starts_with(string, "useart"))
     {
         int32_t xx, yy, dlt;
         sscanf(string, "useart[%d,%d,%d]", &xx, &yy, &dlt);
@@ -1298,7 +1292,7 @@ int32_t Rend_EF_Light_Setup(char *string, int32_t x, int32_t y, int32_t w, int32
         else if (GAME_BPP == 16)
             dlt = ((dlt & 0x1F) << 10) | ((dlt & 0x1F) << 5) | (dlt & 0x1F);
         else
-            printf("Write your code for %d bit mode in %s at %d line.\n", GAME_BPP, __FILE__, __LINE__);
+            LOG_WARN("Bit depth %d not supported!\n", GAME_BPP);
 
         ef->effect.ef1.map = Effects_Map_Useart(color, dlt, x, y, w, h);
     }
@@ -1404,7 +1398,7 @@ static void Rend_EF_Light_Draw(struct_effect_t *ef)
         }
         else
         {
-            printf("Write your code for %d bit mode in %s at %d line.\n", GAME_BPP, __FILE__, __LINE__);
+            LOG_WARN("Bit depth %d not supported!\n", GAME_BPP);
         }
 
         SDL_UnlockSurface(srf);
@@ -1444,7 +1438,7 @@ int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s
     ef->delay = delay;
     ef->time = 0;
 
-    ef->effect.ef0.ampls = (int8_t **)calloc(frames, sizeof(int8_t *));
+    ef->effect.ef0.ampls = NEW_ARRAY(int8_t *, frames);
 
     int32_t frmsize = GAMESCREEN_H_2 * GAMESCREEN_W_2;
 
@@ -1455,7 +1449,7 @@ int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s
 
     for (int32_t i = 0; i < ef->effect.ef0.frame_cnt; i++)
     {
-        ef->effect.ef0.ampls[i] = (int8_t *)calloc(frmsize, sizeof(int8_t));
+        ef->effect.ef0.ampls[i] = NEW_ARRAY(int8_t, frmsize);
 
         for (int y = 0; y < GAMESCREEN_H_2; y++)
             for (int x = 0; x < GAMESCREEN_W_2; x++)
@@ -1687,7 +1681,7 @@ int32_t Rend_EF_9_Setup(char *mask, char *clouds, int32_t delay, int32_t x, int3
         return -1;
     }
 
-    ef->effect.ef9.cloud_mod = (int8_t *)calloc(ef->effect.ef9.cloud->w, ef->effect.ef9.cloud->h);
+    ef->effect.ef9.cloud_mod = NEW_ARRAY(int8_t, ef->effect.ef9.cloud->w * ef->effect.ef9.cloud->h);
     ef->effect.ef9.mapping = CreateSurface(w, h);
 
     ef->x = x;
@@ -1762,7 +1756,7 @@ static void Rend_EF_9_Draw(struct_effect_t *ef)
         }
         else
         {
-            printf("Write your code for %d bit mode in %s at %d line.\n", GAME_BPP, __FILE__, __LINE__);
+            LOG_WARN("Bit depth %d not supported!\n", GAME_BPP);
         }
 
         SDL_UnlockSurface(ef->effect.ef9.cloud);
@@ -1849,7 +1843,7 @@ static void Rend_EF_9_Draw(struct_effect_t *ef)
         }
         else
         {
-            printf("Write your code for %d bit mode in %s at %d line.\n", GAME_BPP, __FILE__, __LINE__);
+            LOG_WARN("Bit depth %d not supported!\n", GAME_BPP);
         }
 
         SDL_UnlockSurface(srf);
@@ -1884,62 +1878,6 @@ void ConvertImage(SDL_Surface **tmp)
 SDL_Surface *CreateSurface(uint16_t w, uint16_t h)
 {
     return SDL_CreateRGBSurface(SFTYPE, w, h, GAME_BPP, 0, 0, 0, 0);
-}
-
-anim_surf_t *LoadAnimImage(const char *file, int32_t mask)
-{
-#ifdef LOADTRACE
-    printf("fallback-mechanism\n");
-#endif
-    char buf[64];
-    const char *bufp;
-    strcpy(buf, file);
-    int len = strlen(buf);
-
-    bufp = GetFilePath(buf);
-    if (bufp == NULL)
-        return NULL;
-
-    SDL_Surface *tmp = IMG_Load(bufp);
-    //ConvertImage(&tmp);
-
-    buf[len - 1] = 'm';
-    buf[len - 2] = 'n';
-    buf[len - 3] = 'a';
-
-    bufp = GetExactFilePath(buf);
-    if (bufp == NULL)
-        return NULL;
-
-    anim_surf_t *atmp = NEW(anim_surf_t);
-
-    FILE *ff = fopen(bufp, "rb");
-    fread(&atmp->info, 1, sizeof(atmp->info), ff);
-    fclose(ff);
-
-    //atmp->info.time&=0x7f;
-
-    typedef SDL_Surface *PSDL_Surface;
-
-    atmp->info.time /= 10;
-    atmp->img = NEW_ARRAY(PSDL_Surface, atmp->info.frames); //frames * sizeof(SDL_Surface *));
-
-    for (uint8_t i = 0; i < atmp->info.frames; i++)
-    {
-        atmp->img[i] = CreateSurface(atmp->info.w, atmp->info.h);
-        if (mask != 0 && mask != -1)
-            SDL_SetColorKey(atmp->img[i], SDL_SRCCOLORKEY, mask);
-        SDL_Rect rtmp;
-        rtmp.x = 0;
-        rtmp.y = i * atmp->info.h;
-        rtmp.w = atmp->info.w;
-        rtmp.h = atmp->info.h;
-        SDL_BlitSurface(tmp, &rtmp, atmp->img[i], 0);
-    }
-
-    SDL_FreeSurface(tmp);
-
-    return atmp;
 }
 
 void DrawAnimImageToSurf(anim_surf_t *anim, int x, int y, int frame, SDL_Surface *surf)
@@ -2115,7 +2053,7 @@ void DrawScaler(scaler_t *scal, int16_t x, int16_t y, SDL_Surface *dst)
             }
             else
             {
-                printf("Produce your scaler_t code there \"%s\":%d\n", __FILE__, __LINE__);
+                LOG_WARN("Bit depth %d not supported!\n", GAME_BPP);
             }
             SDL_UnlockSurface(scal->surf);
             SDL_UnlockSurface(dst);
@@ -2199,7 +2137,7 @@ void DrawScaler(scaler_t *scal, int16_t x, int16_t y, SDL_Surface *dst)
             }
             else
             {
-                printf("Produce your scaler_t code there \"%s\":%d\n", __FILE__, __LINE__);
+                LOG_WARN("Bit depth %d not supported!\n", GAME_BPP);
             }
             SDL_UnlockSurface(scal->surf);
             SDL_UnlockSurface(dst);

@@ -14,23 +14,15 @@ typedef struct animnode
     int32_t start;
     int32_t end;
     int32_t loopcnt;
-    int32_t unk1; //???
-    int32_t unk2;
     int32_t mask;
     int32_t framerate;
     int32_t CurFr;
     int32_t nexttick;
     int32_t loops;
-    union anim
-    {
-        anim_surf_t *rlf;
-        anim_avi_t *avi;
-#ifdef SMPEG_SUPPORT
-        anim_mpg *mpg;
-#endif
-    } anim;
+    int32_t type; // AVI or RLF or MPG
+    anim_surf_t *anim_rlf;
+    anim_avi_t *anim_avi;
     scaler_t *scal;
-    int8_t vid;
     int32_t playID;
     bool playing;
 } animnode_t;

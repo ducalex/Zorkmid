@@ -87,11 +87,10 @@ static void control_input_draw(ctrlnode_t *ct)
 {
     inputnode_t *inp = ct->node.inp;
 
-    if (strlen(inp->text))
+    if (!str_empty(inp->text))
     {
         if (inp->textchanged)
         {
-
             SDL_FillRect(inp->rect, NULL, 0);
 
             if (!inp->readonly || !inp->focused)
@@ -223,7 +222,7 @@ static void control_input(ctrlnode_t *ct)
                         if (c_tmp)
                             if (c_tmp->type == CTRL_INPUT)
                             {
-                                if (strlen(c_tmp->node.inp->text) > 0)
+                                if (!str_empty(c_tmp->node.inp->text))
                                 {
                                     FocusInput = cycle;
                                     break;
@@ -345,10 +344,6 @@ static void control_slot(ctrlnode_t *ct)
                 inv_drop(mouse_item);
             }
 
-#ifdef TRACE
-            printf("Pushed\n");
-            printf("Slot #%d to 1\n", ct->slot);
-#endif
             FlushMouseBtn(SDL_BUTTON_LEFT);
         }
     }
@@ -550,12 +545,10 @@ static void control_fist(ctrlnode_t *ct)
                 if (fist->entries[i].strt == old_status &&
                     fist->entries[i].send == fist->fiststatus)
                 {
-                    //printf("fist_seq %d \n",i);
                     fist->frame_cur = fist->entries[i].anm_str;
                     fist->frame_end = fist->entries[i].anm_end;
                     fist->frame_time = 0;
 
-                    //printf("%d %d\n",fist->soundkey,fist->entries[i].sound);
                     SetgVarInt(fist->animation_id, 1);
                     SetgVarInt(fist->soundkey, fist->entries[i].sound);
                     break;
@@ -830,10 +823,6 @@ static void control_push(ctrlnode_t *ct)
 {
     bool mousein = false;
 
-#ifdef FULLTRACE
-    printf("Push_toggle\n");
-#endif
-
     if (!Rend_MouseInGamescr())
         return;
     pushnode_t *psh = ct->node.push;
@@ -906,12 +895,12 @@ static void control_save(ctrlnode_t *ct)
             {
                 if (sv->forsaving)
                 {
-                    if (strlen(sv->input_nodes[i]->node.inp->text) > 0)
+                    if (!str_empty(sv->input_nodes[i]->node.inp->text))
                     {
                         bool tosave = true;
 
                         sprintf(fln, CTRL_SAVE_SAVES, i + 1);
-                        if (FileExist(fln))
+                        if (FileExists(fln))
                         {
                             if (game_question_message(GetSystemString(SYSTEM_STR_SAVEEXIST)))
                                 tosave = true;
@@ -1213,7 +1202,6 @@ static int Parse_Control_Flat()
 static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     char buf[STRBUFSIZE];
-    char *str;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_LEVER);
     levernode_t *lev = ctnode->node.lev;
@@ -1227,26 +1215,23 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
     while (!mfeof(fl))
     {
         mfgets(buf, STRBUFSIZE, fl);
-        str = PrepareString(buf);
+        char *str = PrepareString(buf);
 
         if (str[0] == '}')
         {
             break;
         }
-        else if (strCMP(str, "descfile") == 0)
+        else if (str_starts_with(str, "descfile"))
         {
-            str = GetParams(str);
-            strcpy(filename, str);
+            strcpy(filename, GetParams(str));
         }
-        else if (strCMP(str, "cursor") == 0)
+        else if (str_starts_with(str, "cursor"))
         {
-            str = GetParams(str);
-            lev->cursor = Mouse_GetCursorIndex(str);
+            lev->cursor = Mouse_GetCursorIndex(GetParams(str));
         }
-        else if (strCMP(str, "venus_id") == 0)
+        else if (str_starts_with(str, "venus_id"))
         {
-            str = GetParams(str);
-            ctnode->venus = atoi(str);
+            ctnode->venus = atoi(GetParams(str));
         }
     }
 
@@ -1260,13 +1245,13 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
     while (!feof(file2))
     {
         fgets(buf, STRBUFSIZE, file2);
-        str = PrepareString(buf);
+        char *str = PrepareString(buf);
 
-        if (strCMP(str, "animation_id") == 0)
+        if (str_starts_with(str, "animation_id"))
         {
             //sscanf(str,"animation_id:%d",);
         }
-        else if (strCMP(str, "filename") == 0)
+        else if (str_starts_with(str, "filename"))
         {
             char minbuf[MINIBUFSZ];
             sscanf(str, "filename:%s", minbuf);
@@ -1276,10 +1261,10 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
             lev->anm = NEW(animnode_t);
             anim_LoadAnim(lev->anm, minbuf, 0, 0, 0, 0);
         }
-        else if (strCMP(str, "skipcolor") == 0)
+        else if (str_starts_with(str, "skipcolor"))
         {
         }
-        else if (strCMP(str, "anim_coords") == 0)
+        else if (str_starts_with(str, "anim_coords"))
         {
             int32_t t1, t2, t3, t4;
             sscanf(str, "anim_coords:%d %d %d %d~", &t1, &t2, &t3, &t4);
@@ -1288,7 +1273,7 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
             lev->AnimCoords.w = t3 - t1 + 1;
             lev->AnimCoords.h = t4 - t2 + 1;
         }
-        else if (strCMP(str, "mirrored") == 0)
+        else if (str_starts_with(str, "mirrored"))
         {
             int32_t t1;
             sscanf(str, "mirrored:%d", &t1);
@@ -1297,26 +1282,26 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
             else
                 lev->mirrored = false;
         }
-        else if (strCMP(str, "frames") == 0)
+        else if (str_starts_with(str, "frames"))
         {
             int32_t t1;
             sscanf(str, "frames:%d", &t1);
             lev->frames = t1;
         }
-        else if (strCMP(str, "elsewhere") == 0)
+        else if (str_starts_with(str, "elsewhere"))
         {
         }
-        else if (strCMP(str, "out_of_control") == 0)
+        else if (str_starts_with(str, "out_of_control"))
         {
         }
-        else if (strCMP(str, "start_pos") == 0)
+        else if (str_starts_with(str, "start_pos"))
         {
             int32_t t1;
             sscanf(str, "start_pos:%d", &t1);
             lev->startpos = t1;
             lev->curfrm = lev->startpos;
         }
-        else if (strCMP(str, "hotspot_deltas") == 0)
+        else if (str_starts_with(str, "hotspot_deltas"))
         {
             int32_t t1, t2;
             sscanf(str, "hotspot_deltas:%d %d", &t1, &t2);
@@ -1339,7 +1324,7 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
                     token = strtok(tmpbuf, find);
                     while (token != NULL)
                     {
-                        if (strCMP(token, "d") == 0)
+                        if (tolower(token[0]) == 'd')
                         {
                             int32_t t4, t5;
                             sscanf(token, "d=%d,%d", &t4, &t5);
@@ -1404,23 +1389,23 @@ static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
         {
             break;
         }
-        else if (strCMP(str, "hs_frame_list") == 0)
+        else if (str_starts_with(str, "hs_frame_list"))
         {
             str = GetParams(str);
             strcpy(filename, str);
         }
-        else if (strCMP(str, "num_frames") == 0)
+        else if (str_starts_with(str, "num_frames"))
         {
             str = GetParams(str);
             hotm->num_frames = atoi(str) + 1;
             hotm->frame_list = NEW_ARRAY(Rect_t, hotm->num_frames);
         }
-        else if (strCMP(str, "num_cycles") == 0)
+        else if (str_starts_with(str, "num_cycles"))
         {
             str = GetParams(str);
             hotm->num_cycles = atoi(str);
         }
-        else if (strCMP(str, "animation") == 0)
+        else if (str_starts_with(str, "animation"))
         {
             str = GetParams(str);
             char file[MINIBUFSZ];
@@ -1428,7 +1413,7 @@ static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
             hotm->anm = NEW(animnode_t);
             anim_LoadAnim(hotm->anm, file, 0, 0, 0, 0);
         }
-        else if (strCMP(str, "rectangle") == 0)
+        else if (str_starts_with(str, "rectangle"))
         {
             str = GetParams(str);
             int32_t t1, t2, t3, t4;
@@ -1438,7 +1423,7 @@ static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
             hotm->rect.w = t3 - t1 + 1;
             hotm->rect.h = t4 - t2 + 1;
         }
-        else if (strCMP(str, "venus_id") == 0)
+        else if (str_starts_with(str, "venus_id"))
         {
             str = GetParams(str);
             ctnode->venus = atoi(str);
@@ -1493,35 +1478,32 @@ static int Parse_Control_Panorama(mfile_t *fl)
             good = 1;
             break;
         }
-        else if (strCMP(str, "angle") == 0)
+        else if (str_starts_with(str, "angle"))
         {
             str = GetParams(str);
             angle = atof(str);
             Rend_pana_SetAngle(angle);
         }
-        else if (strCMP(str, "linscale") == 0)
+        else if (str_starts_with(str, "linscale"))
         {
             str = GetParams(str);
             k = atof(str);
             Rend_pana_SetLinscale(k);
         }
-        else if (strCMP(str, "reversepana") == 0)
+        else if (str_starts_with(str, "reversepana"))
         {
             str = GetParams(str);
             tmp = atoi(str);
             if (tmp == 1)
                 Rend_SetReversePana(true);
         }
-        else if (strCMP(str, "zeropoint") == 0)
+        else if (str_starts_with(str, "zeropoint"))
         {
             str = GetParams(str);
             tmp = atoi(str);
             Rend_pana_SetZeroPoint(tmp);
         }
     }
-
-    //  printf("%f\n",angle);
-    //  printf("%f\n",k);
 
     Rend_pana_SetTable();
     return good;
@@ -1549,19 +1531,19 @@ static int Parse_Control_Tilt(mfile_t *fl)
             good = 1;
             break;
         }
-        else if (strCMP(str, "angle") == 0)
+        else if (str_starts_with(str, "angle") == 0)
         {
             str = GetParams(str);
             angle = atof(str);
             Rend_tilt_SetAngle(angle);
         }
-        else if (strCMP(str, "linscale") == 0)
+        else if (str_starts_with(str, "linscale") == 0)
         {
             str = GetParams(str);
             k = atof(str);
             Rend_tilt_SetLinscale(k);
         }
-        else if (strCMP(str, "reversepana") == 0)
+        else if (str_starts_with(str, "reversepana") == 0)
         {
             str = GetParams(str);
             tmp = atoi(str);
@@ -1569,9 +1551,6 @@ static int Parse_Control_Tilt(mfile_t *fl)
                 Rend_SetReversePana(true);
         }
     }
-
-    //  printf("%f\n",angle);
-    //  printf("%f\n",k);
 
     Rend_tilt_SetTable();
     return good;
@@ -1592,33 +1571,22 @@ static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
     ctnode->slot = slot;
     SetDirectgVarInt(slot, 0);
 
-    FILE *f = fopen(CTRL_SAVE_FILE, "rb");
-    if (f == NULL)
-    {
-        f = fopen(CTRL_SAVE_FILE, "wb");
-        for (int i = 0; i < MAX_SAVES; i++)
-            fprintf(f, "\r\n");
-        fseek(f, 0, SEEK_SET);
-    }
+    memset(sv->Names, 0, sizeof(sv->Names));
 
-    for (int i = 0; i < MAX_SAVES; i++)
+    if (FileExists(CTRL_SAVE_FILE))
     {
-        fgets(buf, STRBUFSIZE, f);
-        memset(sv->Names[i], 0, SAVE_NAME_MAX_LEN + 1);
-        str = TrimRight(buf);
-        if (strlen(str) > 0)
+        char **saves = loader_loadStr(CTRL_SAVE_FILE);
+
+        for (int i = 0; saves[i] != NULL; i++)
         {
             sprintf(fln, CTRL_SAVE_SAVES, i + 1);
-            FILE *d = fopen(fln, "rb");
-            if (d != NULL)
-            {
-                strcpy(sv->Names[i], str);
-                fclose(d);
-            }
+            if (FileExists(fln))
+                strcpy(sv->Names[i], saves[i]);
+            free(saves[i]);
         }
-    }
 
-    fclose(f);
+        free(saves);
+    }
 
     while (!mfeof(fl))
     {
@@ -1630,7 +1598,7 @@ static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
             good = 1;
             break;
         }
-        else if (strCMP(str, "savebox") == 0)
+        else if (str_starts_with(str, "savebox"))
         {
             str = GetParams(str);
             int ctrlslot, saveslot;
@@ -1639,28 +1607,27 @@ static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
             saveslot--;
 
             ctrlnode_t *nd = GetControlByID(ctrlslot);
-            if (nd != NULL)
-                if (nd->type == CTRL_INPUT)
-                {
-                    strcpy(nd->node.inp->text, sv->Names[saveslot]);
-                    nd->node.inp->textchanged = true;
-                    sv->inputslot[saveslot] = ctrlslot;
-                    sv->input_nodes[saveslot] = nd;
-                }
+            if (nd && nd->type == CTRL_INPUT)
+            {
+                strcpy(nd->node.inp->text, sv->Names[saveslot]);
+                nd->node.inp->textchanged = true;
+                sv->inputslot[saveslot] = ctrlslot;
+                sv->input_nodes[saveslot] = nd;
+            }
         }
-        else if (strCMP(str, "control_type") == 0)
+        else if (str_starts_with(str, "control_type"))
         {
             str = GetParams(str);
-            if (strCMP(str, "save") == 0)
+            if (str_starts_with(str, "save"))
                 sv->forsaving = true;
-            else if (strCMP(str, "restore") == 0)
+            else if (str_starts_with(str, "restore"))
                 sv->forsaving = false;
             else
-                printf("Unknown control_type: %s\n", str);
+                LOG_WARN("Unknown control_type: %s\n", str);
         }
         else
         {
-            printf("Unknown parameter for save control: %s\n", str);
+            LOG_WARN("Unknown parameter for save control: %s\n", str);
         }
 
     } //while (!feof(fl))
@@ -1669,9 +1636,8 @@ static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
         if (sv->inputslot[i] != -1)
         {
             ctrlnode_t *nd = sv->input_nodes[i];
-            if (nd != NULL)
-                if (nd->type == CTRL_INPUT)
-                    nd->node.inp->readonly = !sv->forsaving;
+            if (nd && nd->type == CTRL_INPUT)
+                nd->node.inp->readonly = !sv->forsaving;
         }
     return good;
 }
@@ -1698,10 +1664,9 @@ static int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
             good = 1;
             break;
         }
-        else if (strCMP(str, "rectangle") == 0)
+        else if (str_starts_with(str, "rectangle") == 0)
         {
-            str = GetParams(str);
-            sscanf(str, "%d %d %d %d",
+            sscanf(GetParams(str), "%d %d %d %d",
                    &titler->rectangle.x,
                    &titler->rectangle.y,
                    &titler->rectangle.w,
@@ -1710,35 +1675,28 @@ static int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
             titler->surface = CreateSurface(titler->rectangle.w - titler->rectangle.x + 1, titler->rectangle.h - titler->rectangle.y + 1);
             SetColorKey(titler->surface, 0, 0, 0);
         }
-        else if (strCMP(str, "string_resource_file") == 0)
+        else if (str_starts_with(str, "string_resource_file") == 0)
         {
-            str = GetParams(str);
-            const char *tmp = GetFilePath(str);
-            if (tmp != NULL)
+            const char *path = GetFilePath(GetParams(str));
+            if (path)
             {
+                char **strings = loader_loadStr(path);
+
                 titler->num_strings = 0;
-                mfile_t *fl2 = mfopen_path(tmp);
 
-                m_wide_to_utf8(fl2);
-
-                char bf[STRBUFSIZE];
-
-                while (!mfeof(fl2) && titler->num_strings < CTRL_TITLER_MAX_STRINGS)
+                for (int i = 0; i < CTRL_TITLER_MAX_STRINGS; i++)
                 {
-                    mfgets(bf, STRBUFSIZE, fl2);
-                    char *str2 = PrepareString(bf);
-                    if (bf > 0)
-                    {
-                        titler->strings[titler->num_strings] = strdup(str2);
-                    }
+                    if (strings[i] == NULL)
+                        break;
 
-                    titler->num_strings++;
+                    // char *str2 = PrepareString(bf);
+                    titler->strings[titler->num_strings++] = strings[i];
                 }
 
-                mfclose(fl2);
+                free(strings);
             }
         }
-    } //while (!feof(fl))
+    }
     return good;
 }
 
@@ -1746,7 +1704,6 @@ static int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
-    char *str;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_INPUT);
     inputnode_t *inp = ctnode->node.inp;
@@ -1759,17 +1716,16 @@ static int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
     while (!mfeof(fl))
     {
         mfgets(buf, STRBUFSIZE, fl);
-        str = PrepareString(buf);
+        char *str = PrepareString(buf);
 
         if (str[0] == '}')
         {
             good = 1;
             break;
         }
-        else if (strCMP(str, "rectangle") == 0)
+        else if (str_starts_with(str, "rectangle"))
         {
-            str = GetParams(str);
-            sscanf(str, "%d %d %d %d",
+            sscanf(GetParams(str), "%d %d %d %d",
                    &inp->rectangle.x,
                    &inp->rectangle.y,
                    &inp->rectangle.w,
@@ -1778,56 +1734,48 @@ static int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
             inp->rect = CreateSurface(inp->rectangle.w - inp->rectangle.x, inp->rectangle.h - inp->rectangle.y);
             SetColorKey(inp->rect, 0, 0, 0);
         }
-        else if (strCMP(str, "aux_hotspot") == 0)
+        else if (str_starts_with(str, "aux_hotspot"))
         {
-            str = GetParams(str);
-            sscanf(str, "%d %d %d %d",
+            sscanf(GetParams(str), "%d %d %d %d",
                    &inp->hotspot.x,
                    &inp->hotspot.y,
                    &inp->hotspot.w,
                    &inp->hotspot.h);
         }
-        else if (strCMP(str, "cursor_animation_frames") == 0)
+        else if (str_starts_with(str, "cursor_animation_frames"))
         {
-            // str=GetParams(str);
-            //  inp->frame = atoi(str);
+            //  inp->frame = atoi(GetParams(str));
         } //if (str[0] == '}')
-        else if (strCMP(str, "next_tabstop") == 0)
+        else if (str_starts_with(str, "next_tabstop"))
         {
-            str = GetParams(str);
-            inp->next_tab = atoi(str);
+            inp->next_tab = atoi(GetParams(str));
         }
-        else if (strCMP(str, "cursor_animation") == 0)
+        else if (str_starts_with(str, "cursor_animation"))
         {
-            str = GetParams(str);
             char file[16];
-            sscanf(str, "%s", file);
+            sscanf(GetParams(str), "%s", file);
             inp->cursor = loader_LoadRlf(file, 0, 0);
         }
-        else if (strCMP(str, "focus") == 0)
+        else if (str_starts_with(str, "focus"))
         {
-            str = GetParams(str);
-            if (atoi(str) == 1)
+            if (atoi(GetParams(str)) == 1)
                 FocusInput = ctnode->slot;
         }
-        else if (strCMP(str, "string_init") == 0)
+        else if (str_starts_with(str, "string_init"))
         {
-            str = GetParams(str);
-            const char *tmp = GetSystemString(atoi(str));
+            const char *tmp = GetSystemString(atoi(GetParams(str)));
             if (tmp != NULL)
                 txt_get_font_style(&inp->string_init, tmp);
         }
-        else if (strCMP(str, "chooser_init_string") == 0)
+        else if (str_starts_with(str, "chooser_init_string"))
         {
-            str = GetParams(str);
-            const char *tmp = GetSystemString(atoi(str));
+            const char *tmp = GetSystemString(atoi(GetParams(str)));
             if (tmp != NULL)
                 txt_get_font_style(&inp->string_chooser_init, tmp);
         }
-        else if (strCMP(str, "venus_id") == 0)
+        else if (str_starts_with(str, "venus_id"))
         {
-            str = GetParams(str);
-            ctnode->venus = atoi(str);
+            ctnode->venus = atoi(GetParams(str));
         }
 
     } //while (!feof(fl))
@@ -1838,7 +1786,6 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
-    char *str;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_PAINT);
     paintnode_t *paint = ctnode->node.paint;
@@ -1851,25 +1798,22 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
     while (!mfeof(fl))
     {
         mfgets(buf, STRBUFSIZE, fl);
-        str = PrepareString(buf);
+        char *str = PrepareString(buf);
 
         if (str[0] == '}')
         {
             good = 1;
             break;
         }
-        else if (strCMP(str, "rectangle") == 0)
+        else if (str_starts_with(str, "rectangle"))
         {
-            str = GetParams(str);
-            sscanf(str, "%d %d %d %d",
+            sscanf(GetParams(str), "%d %d %d %d",
                    &paint->rectangle.x,
                    &paint->rectangle.y,
                    &paint->rectangle.w,
                    &paint->rectangle.h);
-            //paint->rectangle.w -= (paint->rectangle.x-1);
-            // paint->rectangle.h -= (paint->rectangle.y-1);
         }
-        else if (strCMP(str, "brush_file") == 0)
+        else if (str_starts_with(str, "brush_file"))
         {
             str = GetParams(str);
             SDL_Surface *tmp = loader_LoadFile(str, 0);
@@ -1898,22 +1842,19 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
                 SDL_FreeSurface(tmp);
             }
         }
-        else if (strCMP(str, "cursor") == 0)
+        else if (str_starts_with(str, "cursor"))
         {
-            str = GetParams(str);
-            paint->cursor = Mouse_GetCursorIndex(str);
+            paint->cursor = Mouse_GetCursorIndex(GetParams(str));
         }
-        else if (strCMP(str, "paint_file") == 0)
+        else if (str_starts_with(str, "paint_file"))
         {
-            str = GetParams(str);
-            strcpy(filename, str);
+            strcpy(filename, GetParams(str));
         }
-        else if (strCMP(str, "venus_id") == 0)
+        else if (str_starts_with(str, "venus_id"))
         {
-            str = GetParams(str);
-            ctnode->venus = atoi(str);
+            ctnode->venus = atoi(GetParams(str));
         }
-        else if (strCMP(str, "eligible_objects") == 0)
+        else if (str_starts_with(str, "eligible_objects"))
         {
             str = GetParams(str);
             int tmpobj = 0;
@@ -1971,7 +1912,6 @@ static int Parse_Control_Slot(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
-    char *str;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_SLOT);
     slotnode_t *slut = ctnode->node.slot;
@@ -1983,47 +1923,42 @@ static int Parse_Control_Slot(MList *controlst, mfile_t *fl, uint32_t slot)
     while (!mfeof(fl))
     {
         mfgets(buf, STRBUFSIZE, fl);
-        str = PrepareString(buf);
+        char *str = PrepareString(buf);
 
         if (str[0] == '}')
         {
             good = 1;
             break;
         }
-        else if (strCMP(str, "rectangle") == 0)
+        else if (str_starts_with(str, "rectangle"))
         {
-            str = GetParams(str);
-            sscanf(str, "%d %d %d %d",
+            sscanf(GetParams(str), "%d %d %d %d",
                    &slut->rectangle.x,
                    &slut->rectangle.y,
                    &slut->rectangle.w,
                    &slut->rectangle.h);
         }
-        else if (strCMP(str, "hotspot") == 0)
+        else if (str_starts_with(str, "hotspot"))
         {
-            str = GetParams(str);
-            sscanf(str, "%d %d %d %d",
+            sscanf(GetParams(str), "%d %d %d %d",
                    &slut->hotspot.x,
                    &slut->hotspot.y,
                    &slut->hotspot.w,
                    &slut->hotspot.h);
         }
-        else if (strCMP(str, "cursor") == 0)
+        else if (str_starts_with(str, "cursor"))
         {
-            str = GetParams(str);
-            slut->cursor = Mouse_GetCursorIndex(str);
+            slut->cursor = Mouse_GetCursorIndex(GetParams(str));
         }
-        else if (strCMP(str, "distance_id") == 0)
+        else if (str_starts_with(str, "distance_id"))
         {
-            str = GetParams(str);
-            strcpy(slut->distance_id, str);
+            strcpy(slut->distance_id, GetParams(str));
         }
-        else if (strCMP(str, "venus_id") == 0)
+        else if (str_starts_with(str, "venus_id"))
         {
-            str = GetParams(str);
-            ctnode->venus = atoi(str);
+            ctnode->venus = atoi(GetParams(str));
         }
-        else if (strCMP(str, "eligible_objects") == 0)
+        else if (str_starts_with(str, "eligible_objects"))
         {
             str = GetParams(str);
             int tmpobj = 0;
@@ -2062,7 +1997,6 @@ static int Parse_Control_PushTgl(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
-    char *str;
 
     //    SetgVarInt(slot,0);
 
@@ -2075,61 +2009,52 @@ static int Parse_Control_PushTgl(MList *controlst, mfile_t *fl, uint32_t slot)
     while (!mfeof(fl))
     {
         mfgets(buf, STRBUFSIZE, fl);
-        str = PrepareString(buf);
+        char *str = PrepareString(buf);
 
         if (str[0] == '}')
         {
             good = 1;
             break;
         }
-        else if (strCMP(str, "flat_hotspot") == 0)
+        else if (str_starts_with(str, "flat_hotspot"))
         {
             psh->flat = true;
             str = GetParams(str);
             sscanf(str, "%d %d %d %d", &psh->x, &psh->y, &psh->w, &psh->h);
-#ifdef FULLTRACE
-            printf("    Flat %d %d %d %d %d\n", psh->x, psh->y, psh->w, psh->h, psh->flat);
-#endif
         }
-        else if (strCMP(str, "warp_hotspot") == 0)
+        else if (str_starts_with(str, "warp_hotspot"))
         {
             psh->flat = true;
             str = GetParams(str);
             sscanf(str, "%d %d %d %d", &psh->x, &psh->y, &psh->w, &psh->h);
-#ifdef FULLTRACE
-            printf("    Warp %d %d %d %d %d\n", psh->x, psh->y, psh->w, psh->h, psh->flat);
-#endif
         }
-        else if (strCMP(str, "cursor") == 0)
+        else if (str_starts_with(str, "cursor"))
         {
-            str = GetParams(str); //cursor
-            psh->cursor = Mouse_GetCursorIndex(str);
+            psh->cursor = Mouse_GetCursorIndex(GetParams(str));
         }
-        else if (strCMP(str, "animation") == 0)
+        else if (str_starts_with(str, "animation"))
         {
         }
-        else if (strCMP(str, "mouse_event") == 0)
+        else if (str_starts_with(str, "mouse_event"))
         {
             str = GetParams(str);
-            if (strCMP(str, "up") == 0)
+            if (str_starts_with(str, "up"))
                 psh->event = CTRL_PUSH_EV_UP;
-            else if (strCMP(str, "down") == 0)
+            else if (str_starts_with(str, "down"))
                 psh->event = CTRL_PUSH_EV_DWN;
-            else if (strCMP(str, "double") == 0)
+            else if (str_starts_with(str, "double"))
                 psh->event = CTRL_PUSH_EV_DBL;
         }
-        else if (strCMP(str, "sound") == 0)
+        else if (str_starts_with(str, "sound"))
         {
         }
-        else if (strCMP(str, "count_to") == 0)
+        else if (str_starts_with(str, "count_to"))
         {
-            str = GetParams(str);
-            psh->count_to = atoi(str) + 1;
+            psh->count_to = atoi(GetParams(str)) + 1;
         }
-        else if (strCMP(str, "venus_id") == 0)
+        else if (str_starts_with(str, "venus_id"))
         {
-            str = GetParams(str);
-            ctnode->venus = atoi(str);
+            ctnode->venus = atoi(GetParams(str));
         }
     }
 
@@ -2143,7 +2068,6 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
-    char *str;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_FIST);
     fistnode_t *fist = ctnode->node.fist;
@@ -2154,37 +2078,32 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
     while (!mfeof(fl))
     {
         mfgets(buf, STRBUFSIZE, fl);
-        str = PrepareString(buf);
+        char *str = PrepareString(buf);
 
         if (str[0] == '}')
         {
             good = 1;
             break;
         }
-        else if (strCMP(str, "sound_key") == 0)
+        else if (str_starts_with(str, "sound_key"))
         {
-            str = GetParams(str);
-            fist->soundkey = atoi(str);
+            fist->soundkey = atoi(GetParams(str));
         }
-        else if (strCMP(str, "cursor") == 0)
+        else if (str_starts_with(str, "cursor"))
         {
-            str = GetParams(str);
-            fist->cursor = Mouse_GetCursorIndex(str);
+            fist->cursor = Mouse_GetCursorIndex(GetParams(str));
         }
-        else if (strCMP(str, "descfile") == 0)
+        else if (str_starts_with(str, "descfile"))
         {
-            str = GetParams(str);
-            strcpy(filename, str);
+            strcpy(filename, GetParams(str));
         }
-        else if (strCMP(str, "animation_id") == 0)
+        else if (str_starts_with(str, "animation_id"))
         {
-            str = GetParams(str);
-            fist->animation_id = atoi(str);
+            fist->animation_id = atoi(GetParams(str));
         }
-        else if (strCMP(str, "venus_id") == 0)
+        else if (str_starts_with(str, "venus_id"))
         {
-            str = GetParams(str);
-            ctnode->venus = atoi(str);
+            ctnode->venus = atoi(GetParams(str));
         }
     }
 
@@ -2197,23 +2116,23 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
         while (!feof(fil))
         {
             fgets(buf, STRBUFSIZE, fil);
-            str = PrepareString(buf);
+            char *str = PrepareString(buf);
             int32_t ln = strlen(str);
             if (str[ln - 1] == '~')
                 str[ln - 1] = 0;
 
-            if (strCMP(str, "animation_id") == 0)
+            if (str_starts_with(str, "animation_id"))
             {
                 //sscanf(str,"animation_id:%d",);
             }
-            else if (strCMP(str, "animation") == 0)
+            else if (str_starts_with(str, "animation"))
             {
                 char minbuf[MINIBUFSZ];
                 sscanf(str, "animation:%s", minbuf);
                 fist->anm = NEW(animnode_t);
                 anim_LoadAnim(fist->anm, minbuf, 0, 0, 0, 0);
             }
-            else if (strCMP(str, "anim_rect") == 0)
+            else if (str_starts_with(str, "anim_rect"))
             {
                 int32_t t1, t2, t3, t4;
                 sscanf(str, "anim_rect:%d %d %d %d", &t1, &t2, &t3, &t4);
@@ -2222,27 +2141,27 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
                 fist->anm_rect.w = t3 - t1 + 1;
                 fist->anm_rect.h = t4 - t2 + 1;
             }
-            else if (strCMP(str, "num_fingers") == 0)
+            else if (str_starts_with(str, "num_fingers"))
             {
                 int32_t t1;
                 sscanf(str, "num_fingers:%d", &t1);
                 if (t1 >= 0 && t1 <= CTRL_FIST_MAX_FISTS)
                     fist->fistnum = t1;
             }
-            else if (strCMP(str, "entries") == 0)
+            else if (str_starts_with(str, "entries"))
             {
                 int32_t t1;
                 sscanf(str, "entries:%d", &t1);
                 if (t1 >= 0 && t1 <= CTRL_FIST_MAX_ENTRS)
                     fist->num_entries = t1;
             }
-            else if (strCMP(str, "eval_order_ascending") == 0)
+            else if (str_starts_with(str, "eval_order_ascending"))
             {
                 int32_t t1;
                 sscanf(str, "eval_order_ascending:%d", &t1);
                 fist->order = t1;
             }
-            else if (strCMP(str, "up_hs_num_") == 0)
+            else if (str_starts_with(str, "up_hs_num_"))
             {
                 int32_t t1, t2;
                 sscanf(str, "up_hs_num_%d:%d", &t1, &t2);
@@ -2250,7 +2169,7 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
                     if (t2 >= 0 && t2 <= CTRL_FIST_MAX_BOXES)
                         fist->fists_up[t1].num_box = t2;
             }
-            else if (strCMP(str, "up_hs_") == 0)
+            else if (str_starts_with(str, "up_hs_"))
             {
                 int32_t t1, t2, t3, t4, t5, t6;
                 sscanf(str, "up_hs_%d_%d:%d %d %d %d", &t1, &t2, &t3, &t4, &t5, &t6);
@@ -2263,7 +2182,7 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
                         fist->fists_up[t1].boxes[t2].y2 = t6;
                     }
             }
-            else if (strCMP(str, "down_hs_num_") == 0)
+            else if (str_starts_with(str, "down_hs_num_"))
             {
                 int32_t t1, t2;
                 sscanf(str, "down_hs_num_%d:%d", &t1, &t2);
@@ -2271,7 +2190,7 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
                     if (t2 >= 0 && t2 <= CTRL_FIST_MAX_BOXES)
                         fist->fists_dwn[t1].num_box = t2;
             }
-            else if (strCMP(str, "down_hs_") == 0)
+            else if (str_starts_with(str, "down_hs_"))
             {
                 int32_t t1, t2, t3, t4, t5, t6;
                 sscanf(str, "down_hs_%d_%d:%d %d %d %d", &t1, &t2, &t3, &t4, &t5, &t6);
@@ -2329,7 +2248,6 @@ static int Parse_Control_Safe(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
-    char *str;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_SAFE);
     safenode_t *safe = ctnode->node.safe;
@@ -2338,71 +2256,65 @@ static int Parse_Control_Safe(MList *controlst, mfile_t *fl, uint32_t slot)
     while (!mfeof(fl))
     {
         mfgets(buf, STRBUFSIZE, fl);
-        str = PrepareString(buf);
+        char *str = PrepareString(buf);
 
         if (str[0] == '}')
         {
             good = 1;
             break;
         }
-        else if (strCMP(str, "animation") == 0)
+        else if (str_starts_with(str, "animation"))
         {
-            str = GetParams(str);
             safe->anm = NEW(animnode_t);
-            anim_LoadAnim(safe->anm, str, 0, 0, 0, 0);
+            anim_LoadAnim(safe->anm, GetParams(str), 0, 0, 0, 0);
         }
-        else if (strCMP(str, "rectangle") == 0)
+        else if (str_starts_with(str, "rectangle"))
         {
-            str = GetParams(str);
-            sscanf(str, "%d %d %d %d", &safe->rectangle.x, &safe->rectangle.y, &safe->rectangle.w, &safe->rectangle.h);
+            sscanf(
+                GetParams(str),
+                "%d %d %d %d",
+                &safe->rectangle.x, &safe->rectangle.y, &safe->rectangle.w, &safe->rectangle.h);
             safe->rectangle.w -= (safe->rectangle.x - 1);
             safe->rectangle.h -= (safe->rectangle.y - 1);
         }
-        else if (strCMP(str, "center") == 0)
+        else if (str_starts_with(str, "center"))
         {
-            str = GetParams(str);
-            sscanf(str, "%d %d", &safe->center_x, &safe->center_y);
+            sscanf(GetParams(str), "%d %d", &safe->center_x, &safe->center_y);
         }
-        else if (strCMP(str, "num_states") == 0)
+        else if (str_starts_with(str, "num_states"))
         {
-            str = GetParams(str);
-            safe->num_states = atoi(str);
+            safe->num_states = atoi(GetParams(str));
         }
-        else if (strCMP(str, "dial_inner_radius") == 0)
+        else if (str_starts_with(str, "dial_inner_radius"))
         {
-            str = GetParams(str);
-            safe->radius_inner = atoi(str);
+            safe->radius_inner = atoi(GetParams(str));
             safe->radius_inner_sq = safe->radius_inner * safe->radius_inner;
         }
-        else if (strCMP(str, "radius") == 0)
+        else if (str_starts_with(str, "radius"))
         {
-            str = GetParams(str);
-            safe->radius_outer = atoi(str);
+            safe->radius_outer = atoi(GetParams(str));
             safe->radius_outer_sq = safe->radius_outer * safe->radius_outer;
         }
-        else if (strCMP(str, "zero_radians_offset") == 0)
+        else if (str_starts_with(str, "zero_radians_offset"))
         {
-            str = GetParams(str);
-            safe->zero_pointer = atoi(str);
+            safe->zero_pointer = atoi(GetParams(str));
         }
-        else if (strCMP(str, "pointer_offset") == 0)
+        else if (str_starts_with(str, "pointer_offset"))
         {
-            str = GetParams(str);
-            safe->start_pointer = atoi(str);
+            safe->start_pointer = atoi(GetParams(str));
             safe->cur_state = safe->start_pointer;
         }
-        else if (strCMP(str, "cursor") == 0)
+        else if (str_starts_with(str, "cursor"))
         {
             //not needed
         }
-        else if (strCMP(str, "mirrored") == 0)
+        else if (str_starts_with(str, "mirrored"))
         {
             //not needed
         }
-        else if (strCMP(str, "venus_id") == 0)
+        else if (str_starts_with(str, "venus_id"))
         {
-            str = GetParams(str);
-            ctnode->venus = atoi(str);
+            ctnode->venus = atoi(GetParams(str));
         }
     }
 
@@ -2491,7 +2403,7 @@ static void ctrl_Delete_TitlerNode(ctrlnode_t *nod)
     free(nod->node.titler);
 }
 
-void Ctrl_DrawControls()
+void DrawControls()
 {
     MList *ctrl = Getctrl();
     StartMList(ctrl);
@@ -2521,91 +2433,33 @@ void Ctrl_DrawControls()
     }
 }
 
-int Parse_Control(MList *controlst, mfile_t *fl, char *ctstr)
+void Parse_Control(MList *controlst, mfile_t *fl, char *ctstr)
 {
-    int good = 0;
-
     uint32_t slot;
     char ctrltp[100];
     memset(ctrltp, 0, 100);
 
     sscanf(ctstr, "control:%d %s", &slot, ctrltp); //read slot number;
 
-#ifdef FULLTRACE
-    printf("Creating control:%d %s Creating object\n", slot, ctrltp);
-#endif
+    TRACE_CONTROL("Creating control:%d %s Creating object\n", slot, ctrltp);
 
-    if (strCMP(ctrltp, "flat") == 0)
-    {
-#ifdef FULLTRACE
-        printf("    Flat Renderer\n");
-#endif
-
-        Parse_Control_Flat();
-    }
-    else if (strCMP(ctrltp, "pana") == 0)
-    {
-#ifdef FULLTRACE
-        printf("    Panorama Renderer\n");
-#endif
-
-        Parse_Control_Panorama(fl);
-    }
-    else if (strCMP(ctrltp, "tilt") == 0)
-    {
-#ifdef FULLTRACE
-        printf("    Tilt Renderer\n");
-#endif
-
-        Parse_Control_Tilt(fl);
-    }
-    else if (strCMP(ctrltp, "push_toggle") == 0)
-    {
-        Parse_Control_PushTgl(controlst, fl, slot);
-    }
-    else if (strCMP(ctrltp, "input") == 0)
-    {
-        Parse_Control_Input(controlst, fl, slot);
-    }
-    else if (strCMP(ctrltp, "save") == 0)
-    {
-        Parse_Control_Save(controlst, fl, slot);
-    }
-    else if (strCMP(ctrltp, "slot") == 0)
-    {
-        Parse_Control_Slot(controlst, fl, slot);
-    }
-    else if (strCMP(ctrltp, "lever") == 0)
-    {
-        Parse_Control_Lever(controlst, fl, slot);
-    }
-    else if (strCMP(ctrltp, "safe") == 0)
-    {
-        Parse_Control_Safe(controlst, fl, slot);
-    }
-    else if (strCMP(ctrltp, "fist") == 0)
-    {
-        Parse_Control_Fist(controlst, fl, slot);
-    }
-    else if (strCMP(ctrltp, "hotmovie") == 0)
-    {
-        Parse_Control_HotMov(controlst, fl, slot);
-    }
-    else if (strCMP(ctrltp, "paint") == 0)
-    {
-        Parse_Control_Paint(controlst, fl, slot);
-    }
-    else if (strCMP(ctrltp, "titler") == 0)
-    {
-        Parse_Control_Titler(controlst, fl, slot);
-    }
-
-    return good;
+    if (str_equals(ctrltp, "flat"))             Parse_Control_Flat();
+    else if (str_equals(ctrltp, "pana"))        Parse_Control_Panorama(fl);
+    else if (str_equals(ctrltp, "tilt"))        Parse_Control_Tilt(fl);
+    else if (str_equals(ctrltp, "push_toggle")) Parse_Control_PushTgl(controlst, fl, slot);
+    else if (str_equals(ctrltp, "input"))       Parse_Control_Input(controlst, fl, slot);
+    else if (str_equals(ctrltp, "save"))        Parse_Control_Save(controlst, fl, slot);
+    else if (str_equals(ctrltp, "slot"))        Parse_Control_Slot(controlst, fl, slot);
+    else if (str_equals(ctrltp, "lever"))       Parse_Control_Lever(controlst, fl, slot);
+    else if (str_equals(ctrltp, "safe"))        Parse_Control_Safe(controlst, fl, slot);
+    else if (str_equals(ctrltp, "fist"))        Parse_Control_Fist(controlst, fl, slot);
+    else if (str_equals(ctrltp, "hotmovie"))    Parse_Control_HotMov(controlst, fl, slot);
+    else if (str_equals(ctrltp, "paint"))       Parse_Control_Paint(controlst, fl, slot);
+    else if (str_equals(ctrltp, "titler"))      Parse_Control_Titler(controlst, fl, slot);
 }
 
 void ProcessControls(MList *ctrlst)
 {
-
     pushChangeMouse = false;
 
     LastMList(ctrlst);
@@ -2614,9 +2468,7 @@ void ProcessControls(MList *ctrlst)
     {
         ctrlnode_t *nod = (ctrlnode_t *)DataMList(ctrlst);
 
-#ifdef FULLTRACE
-        printf("Control, slot:%d \n", nod->slot);
-#endif
+        TRACE_CONTROL("Control, slot:%d \n", nod->slot);
 
         if (!(ScrSys_GetFlag(nod->slot) & FLAG_DISABLED)) //(nod->enable)
             if (nod->func != NULL)
