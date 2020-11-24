@@ -239,20 +239,6 @@ bool MouseMove()
     return false;
 }
 
-bool isDirectory(const char *path)
-{
-    struct stat statbuf;
-    if (stat(path, &statbuf) != 0)
-        return 0;
-    return S_ISDIR(statbuf.st_mode);
-}
-
-bool FileExists(const char *path)
-{
-    struct stat statbuf;
-    return stat(path, &statbuf) == 0;
-}
-
 char *PrepareString(char *buf)
 {
     char *str = (char *)str_ltrim(buf);

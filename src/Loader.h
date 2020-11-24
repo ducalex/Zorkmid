@@ -46,8 +46,8 @@ typedef struct
     int32_t pos;
 } mfile_t;
 
-FManNode_t *Loader_FindNode(const char *chr);
 void Loader_Init(const char *dir);
+FManNode_t *Loader_FindNode(const char *chr);
 const char *Loader_GetPath(const char *chr);
 TTF_Font *Loader_LoadFont(char *name, int size);
 Mix_Chunk *Loader_LoadChunk(const char *file);
@@ -70,5 +70,8 @@ void mfseek(mfile_t *fil, int32_t pos);
 bool mfread_ptr(void **buf, int32_t bytes, mfile_t *file);
 char *mfgets(char *str, int32_t num, mfile_t *stream);
 void m_wide_to_utf8(mfile_t *file);
+
+bool isDirectory(const char *);
+bool FileExists(const char *);
 
 #endif // LOADER_H_INCLUDED

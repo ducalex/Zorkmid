@@ -194,15 +194,15 @@ void EasterEggsAndDebug()
 
     if ((KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)) && (KeyHit(SDLK_EQUALS) || KeyHit(SDLK_PLUS)))
     {
-        setGamma(getGamma() + 0.1);
-        sprintf(message_buffer, "Gamma: %1.1f", getGamma());
+        Rend_SetGamma(Rend_GetGamma() + 0.1);
+        sprintf(message_buffer, "Gamma: %1.1f", Rend_GetGamma());
         game_timed_debug_message(1500, message_buffer);
     }
 
     if ((KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)) && (KeyHit(SDLK_UNDERSCORE) || KeyHit(SDLK_MINUS)))
     {
-        setGamma(getGamma() - 0.1);
-        sprintf(message_buffer, "Gamma: %1.1f", getGamma());
+        Rend_SetGamma(Rend_GetGamma() - 0.1);
+        sprintf(message_buffer, "Gamma: %1.1f", Rend_GetGamma());
         game_timed_debug_message(1500, message_buffer);
     }
 

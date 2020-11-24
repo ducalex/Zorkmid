@@ -1,6 +1,8 @@
 #ifndef RENDER_H_INCLUDED
 #define RENDER_H_INCLUDED
 
+#define RENDER_SURFACE SDL_SWSURFACE // SDL_HWSURFACE
+
 extern int GAME_W;
 extern int GAME_H;
 extern int GAME_BPP;
@@ -141,6 +143,8 @@ int32_t Rend_ProcessDistortNode(action_res_t *nod);
 int32_t Rend_DeleteDistortNode(action_res_t *nod);
 int Rend_DeleteRegion(action_res_t *nod);
 int8_t Rend_GetScreenPart(int32_t *x, int32_t *y, int32_t w, int32_t h, SDL_Surface *dst);
+void Rend_SetGamma(float val);
+float Rend_GetGamma();
 
 int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s_y, float apml, float waveln, float spd);
 int32_t Rend_EF_Light_Setup(char *string, int32_t x, int32_t y, int32_t w, int32_t h, int32_t delay, int32_t steps);
@@ -157,7 +161,5 @@ scaler_t *CreateScaler(SDL_Surface *src, uint16_t w, uint16_t h);
 void DeleteScaler(scaler_t *scal);
 void DrawScaler(scaler_t *scal, int16_t x, int16_t y, SDL_Surface *dst);
 void DrawScalerToScreen(scaler_t *scal, int16_t x, int16_t y);
-void setGamma(float val);
-float getGamma();
 
 #endif // RENDER_H_INCLUDED

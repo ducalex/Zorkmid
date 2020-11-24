@@ -5,21 +5,13 @@
 #define CUR_GAME GAME_ZGI
 // extern int CUR_GAME;
 
+#define ENABLE_TRACING
 
-#define TRACE(x...) printf(x)
-// #define TRACE(x...)
-
-#define SFTYPE SDL_SWSURFACE // SDL_HWSURFACE
-
-#include <inttypes.h>
 #include <stdbool.h>
-#include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <string.h>
 #include <strings.h>
-#include <ctype.h>
+#include <string.h>
 #include <errno.h>
 #include <math.h>
 
@@ -39,7 +31,7 @@
 
 //speed tune
 #define FPS 15
-#define FPS_DELAY 66 //millisecs  1000/FPS
+#define FPS_DELAY (1000 / FPS)
 
 //Script names
 #define SystemWorld 'g'
@@ -72,8 +64,14 @@
     {                                                           \
         fprintf(stderr, "[PANIC] IN FUNCTION %s:\n", __func__); \
         fprintf(stderr, "[PANIC] " x);                          \
-        exit(-1);                                               \
+        abort();                                               \
     }
+
+#ifdef ENABLE_TRACING
+#define TRACE(x...) printf(x)
+#else
+#define TRACE(x...)
+#endif
 
 #define TRACE_LOADER(x...) TRACE("[LOADER] " x)
 #define TRACE_PUZZLE(x...) TRACE("[PUZZLE] " x)
@@ -83,14 +81,13 @@
 #define LOG_INFO(f, x...) printf("[INFO] %s : " f, __func__, x)
 #define LOG_WARN(f, x...) fprintf(stderr, "[WARNING] %s : " f, __func__, x)
 
-#include "avi_duck/simple_avi.h"
-
 typedef struct anim_preplay_node anim_preplay_node_t;
 typedef struct struct_action_res action_res_t;
 typedef struct pzllst pzllst_t;
 typedef struct ctrlnode ctrlnode_t;
 typedef struct animnode animnode_t;
 
+#include "avi_duck/simple_avi.h"
 #include "mylist.h"
 #include "Render.h"
 #include "Text.h"
@@ -131,13 +128,8 @@ SDLKey GetLastKey();
 int GetKeyBuffered(int indx);
 bool CheckKeyboardMessage(const char *msg, int len);
 
-bool isDirectory(const char *);
-bool FileExists(const char *);
-
 char *PrepareString(char *buf);
 char *GetParams(char *str);
-
-double round(double r);
 
 const char *str_find(const char *haystack, const char *needle);
 bool str_starts_with(const char *haystack, const char *needle);

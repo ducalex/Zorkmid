@@ -276,7 +276,6 @@ void Rend_InitGraphics(bool fullscreen, bool widescreen)
     // To do : Use a nice struct instead
     GAME_W = 640;
     GAME_H = 480;
-    GAME_BPP = 32;
 
     if (CUR_GAME == GAME_ZGI)
     {
@@ -308,27 +307,23 @@ void Rend_InitGraphics(bool fullscreen, bool widescreen)
         Z_PANIC("Unable to init SDL: %s\n", SDL_GetError());
     }
 
+    uint32_t flags = RENDER_SURFACE | SDL_RESIZABLE;
+
     if (fullscreen)
-        screen = SDL_SetVideoMode(GAME_W, GAME_H, GAME_BPP, SFTYPE | SDL_FULLSCREEN);
-    else
-        screen = SDL_SetVideoMode(GAME_W, GAME_H, GAME_BPP, SFTYPE | SDL_RESIZABLE);
+        flags |= SDL_FULLSCREEN;
+
+    screen = SDL_SetVideoMode(GAME_W, GAME_H, GAME_BPP, flags);
+    tempbuf = CreateSurface(GAMESCREEN_W, GAMESCREEN_H);
+    viewportbuf = CreateSurface(GAMESCREEN_W, GAMESCREEN_H);
+    sublist = CreateMList();
+    view_X = GetDirectgVarInt(SLOT_VIEW_POS);
+    tilt_gap = GAMESCREEN_H_2;
 
     char buffer[128];
     sprintf(buffer, "Zorkmid: %s [build: " __DATE__ " " __TIME__ "]", GetGameTitle());
     SDL_WM_SetCaption(buffer, NULL);
-
-    sublist = CreateMList();
-    subid = 0;
-
-    tempbuf = CreateSurface(GAMESCREEN_W, GAMESCREEN_H);
-    viewportbuf = CreateSurface(GAMESCREEN_W, GAMESCREEN_H);
-
-    TTF_Init();
-
     SDL_ShowCursor(SDL_DISABLE);
-
-    view_X = GetDirectgVarInt(SLOT_VIEW_POS);
-    tilt_gap = GAMESCREEN_H_2;
+    TTF_Init();
 
     memset(Effects, 0, sizeof(Effects));
 }
@@ -492,13 +487,13 @@ bool Rend_MouseInGamescr()
 
 int Rend_GetMouseGameX()
 {
-    int32_t tmpl;
-    int32_t tmp;
+    int32_t tmp, tmpl;
+
     switch (Renderer)
     {
     case RENDER_FLAT:
         return MouseX() - GAMESCREEN_X - GAMESCREEN_FLAT_X;
-        break;
+
     case RENDER_PANA:
         tmp = MouseY() - GAMESCREEN_Y;
         tmpl = MouseX() - GAMESCREEN_X;
@@ -515,7 +510,6 @@ int Rend_GetMouseGameX()
             tmpl -= pana_PanaWidth;
 
         return tmpl;
-        break;
 
     case RENDER_TILT:
         tmp = MouseY() - GAMESCREEN_Y;
@@ -535,8 +529,6 @@ int Rend_GetMouseGameX()
 
         return tmpl;
 
-        break;
-
     default:
         return MouseX() - GAMESCREEN_X;
     }
@@ -544,23 +536,19 @@ int Rend_GetMouseGameX()
 
 int Rend_GetMouseGameY()
 {
-    int32_t tmpl;
-    int32_t tmp;
+    int32_t tmp, tmpl;
+
     switch (Renderer)
     {
     case RENDER_FLAT:
         return MouseY() - GAMESCREEN_Y;
-        break;
 
     case RENDER_PANA:
         tmp = MouseY() - GAMESCREEN_Y;
         tmpl = MouseX() - GAMESCREEN_X;
         if (tmp >= 0 && tmp < GAMESCREEN_H && tmpl >= 0 && tmpl < GAMESCREEN_W)
             return render_table[tmpl][tmp].y;
-        else
-            return tmp;
-
-        break;
+        return tmp;
 
     case RENDER_TILT:
         tmp = MouseY() - GAMESCREEN_Y;
@@ -578,8 +566,6 @@ int Rend_GetMouseGameY()
             tmpl = 0;
 
         return tmpl;
-
-        break;
 
     default:
         return MouseY() - GAMESCREEN_Y;
@@ -1115,29 +1101,20 @@ int8_t Rend_GetScreenPart(int32_t *x, int32_t *y, int32_t w, int32_t h, SDL_Surf
 {
     if (dst != NULL)
     {
-        SDL_Rect rct;
-        rct.x = *x;
-        rct.y = *y;
-        rct.w = w;
-        rct.h = h;
-
+        SDL_Rect rct = {*x, *y, w, h};
         SDL_BlitSurface(scrbuf, &rct, dst, NULL);
     }
 
     if (Renderer == RENDER_FLAT)
     {
-        if ((*x + w) < 0 ||
-            (*x) >= scrbuf->w ||
-            (*y + h) < 0 ||
-            (*y) >= scrbuf->h)
+        if ((*x + w) < 0 || (*x) >= scrbuf->w || (*y + h) < 0 || (*y) >= scrbuf->h)
             return 0;
         else
             return 1;
     }
     else if (Renderer == RENDER_PANA)
     {
-        if ((*y + h) < 0 ||
-            (*y) >= scrbuf->h)
+        if ((*y + h) < 0 || (*y) >= scrbuf->h)
             return 0;
         else
         {
@@ -1181,14 +1158,12 @@ int8_t Rend_GetScreenPart(int32_t *x, int32_t *y, int32_t w, int32_t h, SDL_Surf
 static int32_t Effects_GetColor(uint32_t x, uint32_t y)
 {
     int32_t color = 0;
-
     int32_t xx = x;
     int32_t yy = y;
 
     SDL_LockSurface(scrbuf);
     if (GAME_BPP == 32)
     {
-
         if (xx < scrbuf->w && yy < scrbuf->h)
         {
             int32_t *pixels = (int32_t *)scrbuf->pixels;
@@ -1423,18 +1398,14 @@ int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s
 
     ef->effect.ef0.frame = -1;
     ef->effect.ef0.frame_cnt = frames;
-
+    ef->effect.ef0.ampls = NEW_ARRAY(int8_t *, frames);
     ef->delay = delay;
     ef->time = 0;
 
-    ef->effect.ef0.ampls = NEW_ARRAY(int8_t *, frames);
-
     int32_t frmsize = GAMESCREEN_H_2 * GAMESCREEN_W_2;
-
-    float phase = 0;
-
     int32_t w_4 = GAMESCREEN_W / 4;
     int32_t h_4 = GAMESCREEN_H / 4;
+    float phase = 0;
 
     for (int32_t i = 0; i < ef->effect.ef0.frame_cnt; i++)
     {
@@ -1600,7 +1571,6 @@ static void Effects_Delete(uint32_t index)
 {
     if (index < EFFECTS_MAX_CNT)
     {
-
         struct_effect_t *effect = &Effects[index];
 
         switch (effect->type)
@@ -1641,8 +1611,7 @@ static struct_effect_t *Effects_GetEf(uint32_t index)
 {
     if (index < EFFECTS_MAX_CNT)
         return &Effects[index];
-    else
-        return NULL;
+    return NULL;
 }
 
 int32_t Rend_EF_9_Setup(char *mask, char *clouds, int32_t delay, int32_t x, int32_t y, int32_t w, int32_t h)
@@ -1843,7 +1812,7 @@ static void Rend_EF_9_Draw(struct_effect_t *ef)
     }
 }
 
-void setGamma(float val)
+void Rend_SetGamma(float val)
 {
     if (val > 0.4 && val < 2.1)
     {
@@ -1852,21 +1821,21 @@ void setGamma(float val)
     }
 }
 
-float getGamma()
+float Rend_GetGamma()
 {
     return mgamma;
 }
 
 void ConvertImage(SDL_Surface **tmp)
 {
-    SDL_Surface *tmp2 = SDL_ConvertSurface(*tmp, screen->format, SFTYPE);
+    SDL_Surface *tmp2 = SDL_ConvertSurface(*tmp, screen->format, RENDER_SURFACE);
     SDL_FreeSurface(*tmp);
     *tmp = tmp2;
 }
 
 SDL_Surface *CreateSurface(uint16_t w, uint16_t h)
 {
-    return SDL_CreateRGBSurface(SFTYPE, w, h, GAME_BPP, 0, 0, 0, 0);
+    return SDL_CreateRGBSurface(RENDER_SURFACE, w, h, GAME_BPP, 0, 0, 0, 0);
 }
 
 void DrawAnimImageToSurf(anim_surf_t *anim, int x, int y, int frame, SDL_Surface *surf)
@@ -1885,16 +1854,12 @@ void FreeAnimImage(anim_surf_t *anim)
     if (!anim)
         return;
 
-    if (anim)
-    {
-        int32_t frames = anim->info.frames;
-        for (int i = 0; i < frames; i++)
-            if (anim->img[i])
-                SDL_FreeSurface(anim->img[i]);
+    for (int i = 0; i < anim->info.frames; i++)
+        if (anim->img[i])
+            SDL_FreeSurface(anim->img[i]);
 
-        free(anim->img);
-        free(anim);
-    }
+    free(anim->img);
+    free(anim);
 }
 
 void DrawImage(SDL_Surface *surf, int16_t x, int16_t y)
@@ -1932,8 +1897,8 @@ void SetColorKey(SDL_Surface *surf, int8_t r, int8_t g, int8_t b)
 scaler_t *CreateScaler(SDL_Surface *src, uint16_t w, uint16_t h)
 {
     scaler_t *tmp = NEW(scaler_t);
-    tmp->surf = src;
 
+    tmp->surf = src;
     tmp->w = w;
     tmp->h = h;
     tmp->offsets = NULL;
@@ -1967,174 +1932,176 @@ scaler_t *CreateScaler(SDL_Surface *src, uint16_t w, uint16_t h)
     return tmp;
 }
 
-void DeleteScaler(scaler_t *scal)
+void DeleteScaler(scaler_t *scaler)
 {
-    if (scal->offsets != NULL)
-        free(scal->offsets);
+    if (scaler->offsets != NULL)
+        free(scaler->offsets);
 
-    free(scal);
+    free(scaler);
 }
 
-void DrawScaler(scaler_t *scal, int16_t x, int16_t y, SDL_Surface *dst)
+void DrawScaler(scaler_t *scaler, int16_t x, int16_t y, SDL_Surface *dst)
 {
-    if (!scal)
-        return;
-    if ((scal->surf->format->BytesPerPixel != dst->format->BytesPerPixel) ||
-        x >= dst->w || y >= dst->h || x <= -scal->w || y <= -scal->h)
+    if (!scaler)
         return;
 
-    if (scal->offsets == NULL)
-        DrawImageToSurf(scal->surf, x, y, dst);
-    else
+    if (scaler->surf->format->BytesPerPixel != dst->format->BytesPerPixel)
+        return;
+
+    if (x >= dst->w || y >= dst->h || x <= -scaler->w || y <= -scaler->h)
+        return;
+
+    if (scaler->offsets == NULL)
     {
-        if (x >= 0 && y >= 0 &&
-            x + scal->w <= dst->w &&
-            y + scal->h <= dst->h)
+        DrawImageToSurf(scaler->surf, x, y, dst);
+        return;
+    }
+
+    if (x >= 0 && y >= 0 && x + scaler->w <= dst->w && y + scaler->h <= dst->h)
+    {
+        int32_t oneline = dst->w - scaler->w;
+
+        SDL_LockSurface(scaler->surf);
+        SDL_LockSurface(dst);
+
+        if (GAME_BPP == 32)
         {
-            int32_t oneline = dst->w - scal->w;
+            int32_t *ofs = (int32_t *)dst->pixels;
 
-            SDL_LockSurface(scal->surf);
-            SDL_LockSurface(dst);
+            ofs += y * dst->w + x;
 
-            if (GAME_BPP == 32)
+            int32_t *ifs = (int32_t *)scaler->surf->pixels;
+            int32_t *dlt = scaler->offsets;
+
+            for (int16_t yy = 0; yy < scaler->h; yy++)
             {
-                int32_t *ofs = (int32_t *)dst->pixels;
-
-                ofs += y * dst->w + x;
-
-                int32_t *ifs = (int32_t *)scal->surf->pixels;
-                int32_t *dlt = scal->offsets;
-
-                for (int16_t yy = 0; yy < scal->h; yy++)
+                for (int16_t xx = 0; xx < scaler->w; xx++)
                 {
-                    for (int16_t xx = 0; xx < scal->w; xx++)
-                    {
-                        ifs += *dlt;
-                        *ofs = *ifs;
-                        ofs++;
-                        dlt++;
-                    }
-
-                    ofs += oneline;
+                    ifs += *dlt;
+                    *ofs = *ifs;
+                    ofs++;
+                    dlt++;
                 }
+
+                ofs += oneline;
             }
-            else if (GAME_BPP == 16)
+        }
+        else if (GAME_BPP == 16)
+        {
+            int16_t *ofs = (int16_t *)dst->pixels;
+
+            ofs += y * dst->w + x;
+
+            int16_t *ifs = (int16_t *)scaler->surf->pixels;
+            int32_t *dlt = scaler->offsets;
+
+            for (int16_t yy = 0; yy < scaler->h; yy++)
             {
-                int16_t *ofs = (int16_t *)dst->pixels;
-
-                ofs += y * dst->w + x;
-
-                int16_t *ifs = (int16_t *)scal->surf->pixels;
-                int32_t *dlt = scal->offsets;
-
-                for (int16_t yy = 0; yy < scal->h; yy++)
+                for (int16_t xx = 0; xx < scaler->w; xx++)
                 {
-                    for (int16_t xx = 0; xx < scal->w; xx++)
-                    {
-                        ifs += *dlt;
-                        *ofs = *ifs;
-                        ofs++;
-                        dlt++;
-                    }
-
-                    ofs += oneline;
+                    ifs += *dlt;
+                    *ofs = *ifs;
+                    ofs++;
+                    dlt++;
                 }
+
+                ofs += oneline;
             }
-            else
-            {
-                LOG_WARN("Bit depth %d not supported!\n", GAME_BPP);
-            }
-            SDL_UnlockSurface(scal->surf);
-            SDL_UnlockSurface(dst);
         }
         else
         {
-            int32_t oneline = dst->w - scal->w;
-
-            SDL_LockSurface(scal->surf);
-            SDL_LockSurface(dst);
-
-            if (GAME_BPP == 32)
-            {
-                int32_t *ofs = (int32_t *)dst->pixels;
-                int32_t *maxofs = ofs, *minofs = ofs;
-
-                maxofs += dst->w * dst->h;
-
-                ofs += y * dst->w + x;
-
-                int16_t lx = 0, rx = scal->w;
-
-                if (x < 0)
-                    lx = -x;
-
-                if (x + scal->w >= dst->w)
-                    rx = dst->w - x;
-
-                int32_t *ifs = (int32_t *)scal->surf->pixels;
-                int32_t *dlt = scal->offsets;
-
-                for (int16_t yy = 0; yy < scal->h; yy++)
-                {
-                    for (int16_t xx = 0; xx < scal->w; xx++)
-                    {
-                        ifs += *dlt;
-                        if (ofs >= minofs && ofs < maxofs &&
-                            xx >= lx && xx < rx)
-                            *ofs = *ifs;
-                        ofs++;
-                        dlt++;
-                    }
-
-                    ofs += oneline;
-                }
-            }
-            else if (GAME_BPP == 16)
-            {
-                int16_t *ofs = (int16_t *)dst->pixels;
-                int16_t *maxofs = ofs, *minofs = ofs;
-
-                maxofs += dst->w * dst->h;
-
-                ofs += y * dst->w + x;
-
-                int16_t lx = 0, rx = scal->w;
-
-                if (x < 0)
-                    lx = -x;
-
-                if (x + scal->w >= dst->w)
-                    rx = dst->w - x;
-
-                int16_t *ifs = (int16_t *)scal->surf->pixels;
-                int32_t *dlt = scal->offsets;
-
-                for (int16_t yy = 0; yy < scal->h; yy++)
-                {
-                    for (int16_t xx = 0; xx < scal->w; xx++)
-                    {
-                        ifs += *dlt;
-                        if (ofs >= minofs && ofs < maxofs &&
-                            xx >= lx && xx < rx)
-                            *ofs = *ifs;
-                        ofs++;
-                        dlt++;
-                    }
-
-                    ofs += oneline;
-                }
-            }
-            else
-            {
-                LOG_WARN("Bit depth %d not supported!\n", GAME_BPP);
-            }
-            SDL_UnlockSurface(scal->surf);
-            SDL_UnlockSurface(dst);
+            LOG_WARN("Bit depth %d not supported!\n", GAME_BPP);
         }
+        SDL_UnlockSurface(scaler->surf);
+        SDL_UnlockSurface(dst);
+    }
+    else
+    {
+        int32_t oneline = dst->w - scaler->w;
+
+        SDL_LockSurface(scaler->surf);
+        SDL_LockSurface(dst);
+
+        if (GAME_BPP == 32)
+        {
+            int32_t *ofs = (int32_t *)dst->pixels;
+            int32_t *maxofs = ofs, *minofs = ofs;
+
+            maxofs += dst->w * dst->h;
+
+            ofs += y * dst->w + x;
+
+            int16_t lx = 0, rx = scaler->w;
+
+            if (x < 0)
+                lx = -x;
+
+            if (x + scaler->w >= dst->w)
+                rx = dst->w - x;
+
+            int32_t *ifs = (int32_t *)scaler->surf->pixels;
+            int32_t *dlt = scaler->offsets;
+
+            for (int16_t yy = 0; yy < scaler->h; yy++)
+            {
+                for (int16_t xx = 0; xx < scaler->w; xx++)
+                {
+                    ifs += *dlt;
+                    if (ofs >= minofs && ofs < maxofs &&
+                        xx >= lx && xx < rx)
+                        *ofs = *ifs;
+                    ofs++;
+                    dlt++;
+                }
+
+                ofs += oneline;
+            }
+        }
+        else if (GAME_BPP == 16)
+        {
+            int16_t *ofs = (int16_t *)dst->pixels;
+            int16_t *maxofs = ofs, *minofs = ofs;
+
+            maxofs += dst->w * dst->h;
+
+            ofs += y * dst->w + x;
+
+            int16_t lx = 0, rx = scaler->w;
+
+            if (x < 0)
+                lx = -x;
+
+            if (x + scaler->w >= dst->w)
+                rx = dst->w - x;
+
+            int16_t *ifs = (int16_t *)scaler->surf->pixels;
+            int32_t *dlt = scaler->offsets;
+
+            for (int16_t yy = 0; yy < scaler->h; yy++)
+            {
+                for (int16_t xx = 0; xx < scaler->w; xx++)
+                {
+                    ifs += *dlt;
+                    if (ofs >= minofs && ofs < maxofs &&
+                        xx >= lx && xx < rx)
+                        *ofs = *ifs;
+                    ofs++;
+                    dlt++;
+                }
+
+                ofs += oneline;
+            }
+        }
+        else
+        {
+            LOG_WARN("Bit depth %d not supported!\n", GAME_BPP);
+        }
+        SDL_UnlockSurface(scaler->surf);
+        SDL_UnlockSurface(dst);
     }
 }
 
-void DrawScalerToScreen(scaler_t *scal, int16_t x, int16_t y)
+void DrawScalerToScreen(scaler_t *scaler, int16_t x, int16_t y)
 {
-    DrawScaler(scal, x, y, screen);
+    DrawScaler(scaler, x, y, screen);
 }

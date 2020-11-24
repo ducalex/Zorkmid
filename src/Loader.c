@@ -1,9 +1,26 @@
+#include <sys/stat.h>
+#include <dirent.h>
+
 #include "System.h"
 
 /************************** Assets discovery **************************/
 static BinTreeNd_t *root = NULL;
 static MList *BinNodesList = NULL;
 static MList *FontList;
+
+bool isDirectory(const char *path)
+{
+    struct stat statbuf;
+    if (stat(path, &statbuf) != 0)
+        return 0;
+    return S_ISDIR(statbuf.st_mode);
+}
+
+bool FileExists(const char *path)
+{
+    struct stat statbuf;
+    return stat(path, &statbuf) == 0;
+}
 
 static void AddFManNode(FManNode_t *nod)
 {
