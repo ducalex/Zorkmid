@@ -460,7 +460,7 @@ void Menu_Draw()
             case menu_ITEM:
                 if (menu_bar_flag & MENU_BAR_ITEM)
                 {
-                    DrawImage(menuback[menu_ITEM][0], menu_ScrollPos[menu_ITEM], 0);
+                    Rend_DrawImage(menuback[menu_ITEM][0], menu_ScrollPos[menu_ITEM], 0);
 
                     int item_count = GetgVarInt(SLOT_TOTAL_INV_AVAIL);
                     if (item_count == 0)
@@ -490,9 +490,9 @@ void Menu_Draw()
                                 menupicto[itemnum][1] = Loader_LoadFile_key(buf, 0, 0);
                             }
                             if (inrect)
-                                DrawImage(menupicto[itemnum][1], menu_ScrollPos[menu_ITEM] + itemspace * i, 0);
+                                Rend_DrawImage(menupicto[itemnum][1], menu_ScrollPos[menu_ITEM] + itemspace * i, 0);
                             else
-                                DrawImage(menupicto[itemnum][0], menu_ScrollPos[menu_ITEM] + itemspace * i, 0);
+                                Rend_DrawImage(menupicto[itemnum][0], menu_ScrollPos[menu_ITEM] + itemspace * i, 0);
                         }
                     }
                 }
@@ -501,7 +501,7 @@ void Menu_Draw()
             case menu_MAGIC:
                 if (menu_bar_flag & MENU_BAR_MAGIC)
                 {
-                    DrawImage(menuback[menu_MAGIC][0], GAME_W - menu_ScrollPos[menu_MAGIC], 0);
+                    Rend_DrawImage(menuback[menu_MAGIC][0], GAME_W - menu_ScrollPos[menu_MAGIC], 0);
 
                     for (int i = 0; i < 12; i++)
                     {
@@ -529,9 +529,9 @@ void Menu_Draw()
                                 menupicto[itemnum][1] = Loader_LoadFile_key(buf, 0, 0);
                             }
                             if (inrect)
-                                DrawImage(menupicto[itemnum][1], GAME_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0);
+                                Rend_DrawImage(menupicto[itemnum][1], GAME_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0);
                             else
-                                DrawImage(menupicto[itemnum][0], GAME_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0);
+                                Rend_DrawImage(menupicto[itemnum][0], GAME_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0);
                         }
                     }
                 }
@@ -539,16 +539,16 @@ void Menu_Draw()
 
             case menu_MAIN:
 
-                DrawImage(menuback[menu_MAIN][0], menu_MAIN_X, menu_ScrollPos[menu_MAIN]);
+                Rend_DrawImage(menuback[menu_MAIN][0], menu_MAIN_X, menu_ScrollPos[menu_MAIN]);
 
                 //EXIT
                 if (menu_bar_flag & MENU_BAR_EXIT)
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_EXIT)
-                        DrawImage(menubar[menu_MAIN_IMAGE_EXIT][1], menu_MAIN_CENTER + menu_MAIN_EL_W,
+                        Rend_DrawImage(menubar[menu_MAIN_IMAGE_EXIT][1], menu_MAIN_CENTER + menu_MAIN_EL_W,
                                   menu_ScrollPos[menu_MAIN]);
                     else
-                        DrawImage(menubar[menu_MAIN_IMAGE_EXIT][0], menu_MAIN_CENTER + menu_MAIN_EL_W,
+                        Rend_DrawImage(menubar[menu_MAIN_IMAGE_EXIT][0], menu_MAIN_CENTER + menu_MAIN_EL_W,
                                   menu_ScrollPos[menu_MAIN]);
                 }
 
@@ -556,10 +556,10 @@ void Menu_Draw()
                 if (menu_bar_flag & MENU_BAR_SETTINGS)
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_PREF)
-                        DrawImage(menubar[menu_MAIN_IMAGE_PREF][1], menu_MAIN_CENTER,
+                        Rend_DrawImage(menubar[menu_MAIN_IMAGE_PREF][1], menu_MAIN_CENTER,
                                   menu_ScrollPos[menu_MAIN]);
                     else
-                        DrawImage(menubar[menu_MAIN_IMAGE_PREF][0], menu_MAIN_CENTER,
+                        Rend_DrawImage(menubar[menu_MAIN_IMAGE_PREF][0], menu_MAIN_CENTER,
                                   menu_ScrollPos[menu_MAIN]);
                 }
 
@@ -567,10 +567,10 @@ void Menu_Draw()
                 if (menu_bar_flag & MENU_BAR_RESTORE)
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_REST)
-                        DrawImage(menubar[menu_MAIN_IMAGE_REST][1], menu_MAIN_CENTER - menu_MAIN_EL_W,
+                        Rend_DrawImage(menubar[menu_MAIN_IMAGE_REST][1], menu_MAIN_CENTER - menu_MAIN_EL_W,
                                   menu_ScrollPos[menu_MAIN]);
                     else
-                        DrawImage(menubar[menu_MAIN_IMAGE_REST][0], menu_MAIN_CENTER - menu_MAIN_EL_W,
+                        Rend_DrawImage(menubar[menu_MAIN_IMAGE_REST][0], menu_MAIN_CENTER - menu_MAIN_EL_W,
                                   menu_ScrollPos[menu_MAIN]);
                 }
 
@@ -578,23 +578,23 @@ void Menu_Draw()
                 if (menu_bar_flag & MENU_BAR_SAVE)
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_SAVE)
-                        DrawImage(menubar[menu_MAIN_IMAGE_SAVE][1], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
+                        Rend_DrawImage(menubar[menu_MAIN_IMAGE_SAVE][1], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
                                   menu_ScrollPos[menu_MAIN]);
                     else
-                        DrawImage(menubar[menu_MAIN_IMAGE_SAVE][0], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
+                        Rend_DrawImage(menubar[menu_MAIN_IMAGE_SAVE][0], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
                                   menu_ScrollPos[menu_MAIN]);
                 }
 
                 break;
 
             default:
-                DrawImage(menuback[menu_MAIN][1], menu_MAIN_X, 0);
+                Rend_DrawImage(menuback[menu_MAIN][1], menu_MAIN_X, 0);
 
                 if (menu_bar_flag & MENU_BAR_ITEM)
-                    DrawImage(menuback[menu_ITEM][1], 0, 0);
+                    Rend_DrawImage(menuback[menu_ITEM][1], 0, 0);
 
                 if (menu_bar_flag & MENU_BAR_MAGIC)
-                    DrawImage(menuback[menu_MAGIC][1], GAME_W - menu_zgi_inv_hot_w, 0);
+                    Rend_DrawImage(menuback[menu_MAGIC][1], GAME_W - menu_zgi_inv_hot_w, 0);
             }
         }
     }
@@ -603,13 +603,13 @@ void Menu_Draw()
         int menu_MAIN_X = ((GAME_W - 512) >> 1);
         if (inmenu)
         {
-            DrawImage(menubar_znem, menu_MAIN_X, scrollpos_znem);
+            Rend_DrawImage(menubar_znem, menu_MAIN_X, scrollpos_znem);
 
             //EXIT
             if (menu_bar_flag & MENU_BAR_EXIT)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_EXIT)
-                    DrawImage(menubut_znem[menu_MAIN_IMAGE_EXIT][butframe_znem[menu_MAIN_IMAGE_EXIT]], menu_MAIN_X + znem_but4_x,
+                    Rend_DrawImage(menubut_znem[menu_MAIN_IMAGE_EXIT][butframe_znem[menu_MAIN_IMAGE_EXIT]], menu_MAIN_X + znem_but4_x,
                               scrollpos_znem);
             }
 
@@ -617,7 +617,7 @@ void Menu_Draw()
             if (menu_bar_flag & MENU_BAR_SETTINGS)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_PREF)
-                    DrawImage(menubut_znem[menu_MAIN_IMAGE_PREF][butframe_znem[menu_MAIN_IMAGE_PREF]], menu_MAIN_X + znem_but3_x,
+                    Rend_DrawImage(menubut_znem[menu_MAIN_IMAGE_PREF][butframe_znem[menu_MAIN_IMAGE_PREF]], menu_MAIN_X + znem_but3_x,
                               scrollpos_znem);
             }
 
@@ -625,7 +625,7 @@ void Menu_Draw()
             if (menu_bar_flag & MENU_BAR_RESTORE)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_REST)
-                    DrawImage(menubut_znem[menu_MAIN_IMAGE_REST][butframe_znem[menu_MAIN_IMAGE_REST]], menu_MAIN_X + znem_but2_x,
+                    Rend_DrawImage(menubut_znem[menu_MAIN_IMAGE_REST][butframe_znem[menu_MAIN_IMAGE_REST]], menu_MAIN_X + znem_but2_x,
                               scrollpos_znem);
             }
 
@@ -633,11 +633,11 @@ void Menu_Draw()
             if (menu_bar_flag & MENU_BAR_SAVE)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_SAVE)
-                    DrawImage(menubut_znem[menu_MAIN_IMAGE_SAVE][butframe_znem[menu_MAIN_IMAGE_SAVE]], menu_MAIN_X + znem_but1_x,
+                    Rend_DrawImage(menubut_znem[menu_MAIN_IMAGE_SAVE][butframe_znem[menu_MAIN_IMAGE_SAVE]], menu_MAIN_X + znem_but1_x,
                               scrollpos_znem);
             }
         }
         else if (scrollpos_znem > -menubar_znem->h)
-            DrawImage(menubar_znem, menu_MAIN_X, scrollpos_znem);
+            Rend_DrawImage(menubar_znem, menu_MAIN_X, scrollpos_znem);
     }
 }

@@ -244,8 +244,8 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
 
     anm->av = avi_openfile(fil, 0);
 
-    anm->img = CreateSurface(anm->av->w, anm->av->h);
-    scaler_t *scl = CreateScaler(anm->img, ww, hh);
+    anm->img = Rend_CreateSurface(anm->av->w, anm->av->h);
+    scaler_t *scl = Rend_CreateScaler(anm->img, ww, hh);
 
     if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
     {
@@ -273,7 +273,7 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
 
         avi_to_surf(anm->av, anm->img);
         //DrawImage(anm->img,0,0);
-        DrawScalerToScreen(scl, GAMESCREEN_X + xx + GAMESCREEN_FLAT_X, GAMESCREEN_Y + yy); //it's direct rendering without game screen update
+        Rend_DrawScalerToScreen(scl, GAMESCREEN_X + xx + GAMESCREEN_FLAT_X, GAMESCREEN_Y + yy); //it's direct rendering without game screen update
 
         avi_update(anm->av);
 
@@ -302,7 +302,7 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
 
     avi_close(anm->av);
     free(anm);
-    DeleteScaler(scl);
+    Rend_DeleteScaler(scl);
 
     return ACTION_NORMAL;
 }
@@ -726,7 +726,7 @@ static int action_ttytext(char *params, int aSlot, pzllst_t *owner)
     nod->nodes.tty_text->y = y;
     nod->nodes.tty_text->delay = delay;
 
-    nod->nodes.tty_text->img = CreateSurface(w, h);
+    nod->nodes.tty_text->img = Rend_CreateSurface(w, h);
 
     SetgVarInt(nod->slot, 1);
     setGNode(nod->slot, nod);

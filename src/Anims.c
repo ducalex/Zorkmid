@@ -40,7 +40,7 @@ void Anim_Load(animnode_t *nod, char *filename, int u1, int u2, int32_t mask, in
         int w = nod->anim_avi->av->w;
         int h = nod->anim_avi->av->h;
 
-        nod->anim_avi->img = CreateSurface(w, h);
+        nod->anim_avi->img = Rend_CreateSurface(w, h);
 
         if (nod->framerate == 0)
             nod->framerate = nod->anim_avi->av->header.mcrSecPframe / 1000; //~15fps
@@ -183,9 +183,9 @@ int Anim_Play(animnode_t *nod, int x, int y, int w, int h, int start, int end, i
     if (nod->anim_avi)
     {
         if (nod->scal != NULL)
-            DeleteScaler(nod->scal);
+            Rend_DeleteScaler(nod->scal);
 
-        nod->scal = CreateScaler(nod->anim_avi->img, nod->w, nod->h);
+        nod->scal = Rend_CreateScaler(nod->anim_avi->img, nod->w, nod->h);
 
         avi_renderframe(nod->anim_avi->av, nod->start);
         avi_to_surf(nod->anim_avi->av, nod->anim_avi->img);
@@ -215,12 +215,12 @@ void Anim_RenderFrame(animnode_t *mnod, int16_t x, int16_t y, int16_t w, int16_t
         if (mnod->scal)
             if (mnod->scal->w != w || mnod->scal->h != h)
             {
-                DeleteScaler(mnod->scal);
+                Rend_DeleteScaler(mnod->scal);
                 mnod->scal = NULL;
             }
 
         if (!mnod->scal)
-            mnod->scal = CreateScaler(mnod->anim_avi->img, w, h);
+            mnod->scal = Rend_CreateScaler(mnod->anim_avi->img, w, h);
 
         Rend_DrawScalerToGamescr(mnod->scal, x, y);
     }
@@ -234,7 +234,7 @@ void anim_DeleteAnim(animnode_t *nod)
 {
     if (nod->scal)
     {
-        DeleteScaler(nod->scal);
+        Rend_DeleteScaler(nod->scal);
     }
 
     if (nod->anim_avi)
@@ -248,7 +248,7 @@ void anim_DeleteAnim(animnode_t *nod)
 
     if (nod->anim_rlf)
     {
-        FreeAnimImage(nod->anim_rlf);
+        Rend_FreeAnimImage(nod->anim_rlf);
     }
 
     free(nod);

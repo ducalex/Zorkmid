@@ -1672,8 +1672,8 @@ static int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
                    &titler->rectangle.w,
                    &titler->rectangle.h);
 
-            titler->surface = CreateSurface(titler->rectangle.w - titler->rectangle.x + 1, titler->rectangle.h - titler->rectangle.y + 1);
-            SetColorKey(titler->surface, 0, 0, 0);
+            titler->surface = Rend_CreateSurface(titler->rectangle.w - titler->rectangle.x + 1, titler->rectangle.h - titler->rectangle.y + 1);
+            Rend_SetColorKey(titler->surface, 0, 0, 0);
         }
         else if (str_starts_with(str, "string_resource_file") == 0)
         {
@@ -1731,8 +1731,8 @@ static int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
                    &inp->rectangle.w,
                    &inp->rectangle.h);
 
-            inp->rect = CreateSurface(inp->rectangle.w - inp->rectangle.x, inp->rectangle.h - inp->rectangle.y);
-            SetColorKey(inp->rect, 0, 0, 0);
+            inp->rect = Rend_CreateSurface(inp->rectangle.w - inp->rectangle.x, inp->rectangle.h - inp->rectangle.y);
+            Rend_SetColorKey(inp->rect, 0, 0, 0);
         }
         else if (str_starts_with(str, "aux_hotspot"))
         {
@@ -1891,7 +1891,7 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
 
     if (tmp)
     {
-        paint->paint = CreateSurface(paint->rectangle.w, paint->rectangle.h);
+        paint->paint = Rend_CreateSurface(paint->rectangle.w, paint->rectangle.h);
 
         SDL_Rect tr;
         tr.x = paint->rectangle.x;
@@ -2341,7 +2341,7 @@ static void ctrl_Delete_SlotNode(ctrlnode_t *nod)
 static void ctrl_Delete_InputNode(ctrlnode_t *nod)
 {
     if (nod->node.inp->cursor)
-        FreeAnimImage(nod->node.inp->cursor);
+        Rend_FreeAnimImage(nod->node.inp->cursor);
     if (nod->node.inp->rect)
         SDL_FreeSurface(nod->node.inp->rect);
     free(nod->node.inp);

@@ -783,7 +783,7 @@ static SDL_Surface *Load_gfx_File(const char *file, int8_t transpose, int8_t key
 
     if (srf)
     {
-        ConvertImage(&srf);
+        Rend_ConvertImage(&srf);
 
         if (key != 0)
             SDL_SetColorKey(srf, SDL_SRCCOLORKEY, ckey);
@@ -1011,7 +1011,7 @@ anim_surf_t *Loader_LoadRLF(const char *file, int8_t transpose, int32_t mask)
             }
 
         atmp->img[i] = buf_to_surf(buf2, atmp->info.w, atmp->info.h, transpose);
-        ConvertImage(&atmp->img[i]);
+        Rend_ConvertImage(&atmp->img[i]);
 
         if (mask != 0 && mask != -1)
             SDL_SetColorKey(atmp->img[i], SDL_SRCCOLORKEY, mask);
@@ -1086,7 +1086,7 @@ void Loader_LoadZCR(const char *file, Cursor_t *cur)
 
         SDL_UnlockSurface(cur->img);
 
-        ConvertImage(&cur->img);
+        Rend_ConvertImage(&cur->img);
 
         SDL_SetColorKey(cur->img, SDL_SRCCOLORKEY, 0);
     }

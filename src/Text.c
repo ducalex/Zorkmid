@@ -333,15 +333,15 @@ static void Text_DrawWithJustify(char *txt, TTF_Font *fnt, SDL_Color clr, SDL_Su
 
     if (justify == TXT_JUSTIFY_LEFT)
 
-        DrawImageToSurf(aaa, 0, lineY - aaa->h, dst);
+        Rend_DrawImageToSurf(aaa, 0, lineY - aaa->h, dst);
 
     else if (justify == TXT_JUSTIFY_CENTER)
 
-        DrawImageToSurf(aaa, (dst->w - aaa->w) / 2, lineY - aaa->h, dst);
+        Rend_DrawImageToSurf(aaa, (dst->w - aaa->w) / 2, lineY - aaa->h, dst);
 
     else if (justify == TXT_JUSTIFY_RIGHT)
 
-        DrawImageToSurf(aaa, dst->w - aaa->w, lineY - aaa->h, dst);
+        Rend_DrawImageToSurf(aaa, dst->w - aaa->w, lineY - aaa->h, dst);
 
     SDL_FreeSurface(aaa);
 }
@@ -357,8 +357,8 @@ static void ttyscroll(ttytext_t *tty)
     int32_t scroll = 0;
     while (tty->dy - scroll > tty->h - tty->style.size)
         scroll += tty->style.size;
-    SDL_Surface *tmp = CreateSurface(tty->w, tty->h);
-    DrawImageToSurf(tty->img, 0, -scroll, tmp);
+    SDL_Surface *tmp = Rend_CreateSurface(tty->w, tty->h);
+    Rend_DrawImageToSurf(tty->img, 0, -scroll, tmp);
     SDL_FreeSurface(tty->img);
     tty->img = tmp;
     tty->dy -= scroll;
@@ -379,7 +379,7 @@ static void outchartotty(uint16_t chr, ttytext_t *tty)
     if (tty->dy + tty->style.size + tty->style.size / 4 > tty->h)
         ttyscroll(tty);
 
-    DrawImageToSurf(tmp_surf, tty->dx, tty->dy + tty->style.size - maxy, tty->img);
+    Rend_DrawImageToSurf(tmp_surf, tty->dx, tty->dy + tty->style.size - maxy, tty->img);
 
     tty->dx += advice;
 
@@ -628,13 +628,13 @@ void Text_DrawInOneLine(const char *text, SDL_Surface *dst)
         for (int32_t jj = 0; jj < j; jj++)
         {
             if (TxtJustify[i] == TXT_JUSTIFY_LEFT)
-                DrawImageToSurf(TxtSurfaces[i][jj], dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
+                Rend_DrawImageToSurf(TxtSurfaces[i][jj], dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
 
             else if (TxtJustify[i] == TXT_JUSTIFY_CENTER)
-                DrawImageToSurf(TxtSurfaces[i][jj], ((dst->w - width) >> 1) + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
+                Rend_DrawImageToSurf(TxtSurfaces[i][jj], ((dst->w - width) >> 1) + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
 
             else if (TxtJustify[i] == TXT_JUSTIFY_RIGHT)
-                DrawImageToSurf(TxtSurfaces[i][jj], dst->w - width + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
+                Rend_DrawImageToSurf(TxtSurfaces[i][jj], dst->w - width + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
 
             dx += TxtSurfaces[i][jj]->w;
         }
