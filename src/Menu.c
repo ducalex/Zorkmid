@@ -460,7 +460,7 @@ void Menu_Draw()
             case menu_ITEM:
                 if (menu_bar_flag & MENU_BAR_ITEM)
                 {
-                    Rend_DrawImageToScreen(menuback[menu_ITEM][0], menu_ScrollPos[menu_ITEM], 0);
+                    Rend_BlitSurfaceToScreen(menuback[menu_ITEM][0], menu_ScrollPos[menu_ITEM], 0);
 
                     int item_count = GetgVarInt(SLOT_TOTAL_INV_AVAIL);
                     if (item_count == 0)
@@ -490,9 +490,9 @@ void Menu_Draw()
                                 menupicto[itemnum][1] = Loader_LoadGFX(buf, 0, true, 0);
                             }
                             if (inrect)
-                                Rend_DrawImageToScreen(menupicto[itemnum][1], menu_ScrollPos[menu_ITEM] + itemspace * i, 0);
+                                Rend_BlitSurfaceToScreen(menupicto[itemnum][1], menu_ScrollPos[menu_ITEM] + itemspace * i, 0);
                             else
-                                Rend_DrawImageToScreen(menupicto[itemnum][0], menu_ScrollPos[menu_ITEM] + itemspace * i, 0);
+                                Rend_BlitSurfaceToScreen(menupicto[itemnum][0], menu_ScrollPos[menu_ITEM] + itemspace * i, 0);
                         }
                     }
                 }
@@ -501,7 +501,7 @@ void Menu_Draw()
             case menu_MAGIC:
                 if (menu_bar_flag & MENU_BAR_MAGIC)
                 {
-                    Rend_DrawImageToScreen(menuback[menu_MAGIC][0], WINDOW_W - menu_ScrollPos[menu_MAGIC], 0);
+                    Rend_BlitSurfaceToScreen(menuback[menu_MAGIC][0], WINDOW_W - menu_ScrollPos[menu_MAGIC], 0);
 
                     for (int i = 0; i < 12; i++)
                     {
@@ -529,9 +529,9 @@ void Menu_Draw()
                                 menupicto[itemnum][1] = Loader_LoadGFX(buf, false, true, 0);
                             }
                             if (inrect)
-                                Rend_DrawImageToScreen(menupicto[itemnum][1], WINDOW_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0);
+                                Rend_BlitSurfaceToScreen(menupicto[itemnum][1], WINDOW_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0);
                             else
-                                Rend_DrawImageToScreen(menupicto[itemnum][0], WINDOW_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0);
+                                Rend_BlitSurfaceToScreen(menupicto[itemnum][0], WINDOW_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0);
                         }
                     }
                 }
@@ -539,16 +539,16 @@ void Menu_Draw()
 
             case menu_MAIN:
 
-                Rend_DrawImageToScreen(menuback[menu_MAIN][0], menu_MAIN_X, menu_ScrollPos[menu_MAIN]);
+                Rend_BlitSurfaceToScreen(menuback[menu_MAIN][0], menu_MAIN_X, menu_ScrollPos[menu_MAIN]);
 
                 //EXIT
                 if (menu_bar_flag & MENU_BAR_EXIT)
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_EXIT)
-                        Rend_DrawImageToScreen(menubar[menu_MAIN_IMAGE_EXIT][1], menu_MAIN_CENTER + menu_MAIN_EL_W,
+                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_EXIT][1], menu_MAIN_CENTER + menu_MAIN_EL_W,
                                   menu_ScrollPos[menu_MAIN]);
                     else
-                        Rend_DrawImageToScreen(menubar[menu_MAIN_IMAGE_EXIT][0], menu_MAIN_CENTER + menu_MAIN_EL_W,
+                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_EXIT][0], menu_MAIN_CENTER + menu_MAIN_EL_W,
                                   menu_ScrollPos[menu_MAIN]);
                 }
 
@@ -556,10 +556,10 @@ void Menu_Draw()
                 if (menu_bar_flag & MENU_BAR_SETTINGS)
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_PREF)
-                        Rend_DrawImageToScreen(menubar[menu_MAIN_IMAGE_PREF][1], menu_MAIN_CENTER,
+                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_PREF][1], menu_MAIN_CENTER,
                                   menu_ScrollPos[menu_MAIN]);
                     else
-                        Rend_DrawImageToScreen(menubar[menu_MAIN_IMAGE_PREF][0], menu_MAIN_CENTER,
+                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_PREF][0], menu_MAIN_CENTER,
                                   menu_ScrollPos[menu_MAIN]);
                 }
 
@@ -567,10 +567,10 @@ void Menu_Draw()
                 if (menu_bar_flag & MENU_BAR_RESTORE)
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_REST)
-                        Rend_DrawImageToScreen(menubar[menu_MAIN_IMAGE_REST][1], menu_MAIN_CENTER - menu_MAIN_EL_W,
+                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_REST][1], menu_MAIN_CENTER - menu_MAIN_EL_W,
                                   menu_ScrollPos[menu_MAIN]);
                     else
-                        Rend_DrawImageToScreen(menubar[menu_MAIN_IMAGE_REST][0], menu_MAIN_CENTER - menu_MAIN_EL_W,
+                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_REST][0], menu_MAIN_CENTER - menu_MAIN_EL_W,
                                   menu_ScrollPos[menu_MAIN]);
                 }
 
@@ -578,23 +578,23 @@ void Menu_Draw()
                 if (menu_bar_flag & MENU_BAR_SAVE)
                 {
                     if (mouse_on_item == menu_MAIN_IMAGE_SAVE)
-                        Rend_DrawImageToScreen(menubar[menu_MAIN_IMAGE_SAVE][1], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
+                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_SAVE][1], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
                                   menu_ScrollPos[menu_MAIN]);
                     else
-                        Rend_DrawImageToScreen(menubar[menu_MAIN_IMAGE_SAVE][0], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
+                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_SAVE][0], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
                                   menu_ScrollPos[menu_MAIN]);
                 }
 
                 break;
 
             default:
-                Rend_DrawImageToScreen(menuback[menu_MAIN][1], menu_MAIN_X, 0);
+                Rend_BlitSurfaceToScreen(menuback[menu_MAIN][1], menu_MAIN_X, 0);
 
                 if (menu_bar_flag & MENU_BAR_ITEM)
-                    Rend_DrawImageToScreen(menuback[menu_ITEM][1], 0, 0);
+                    Rend_BlitSurfaceToScreen(menuback[menu_ITEM][1], 0, 0);
 
                 if (menu_bar_flag & MENU_BAR_MAGIC)
-                    Rend_DrawImageToScreen(menuback[menu_MAGIC][1], WINDOW_W - menu_zgi_inv_hot_w, 0);
+                    Rend_BlitSurfaceToScreen(menuback[menu_MAGIC][1], WINDOW_W - menu_zgi_inv_hot_w, 0);
             }
         }
     }
@@ -603,13 +603,13 @@ void Menu_Draw()
         int menu_MAIN_X = ((WINDOW_W - 512) >> 1);
         if (inmenu)
         {
-            Rend_DrawImageToScreen(menubar_znem, menu_MAIN_X, scrollpos_znem);
+            Rend_BlitSurfaceToScreen(menubar_znem, menu_MAIN_X, scrollpos_znem);
 
             //EXIT
             if (menu_bar_flag & MENU_BAR_EXIT)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_EXIT)
-                    Rend_DrawImageToScreen(menubut_znem[menu_MAIN_IMAGE_EXIT][butframe_znem[menu_MAIN_IMAGE_EXIT]], menu_MAIN_X + znem_but4_x,
+                    Rend_BlitSurfaceToScreen(menubut_znem[menu_MAIN_IMAGE_EXIT][butframe_znem[menu_MAIN_IMAGE_EXIT]], menu_MAIN_X + znem_but4_x,
                               scrollpos_znem);
             }
 
@@ -617,7 +617,7 @@ void Menu_Draw()
             if (menu_bar_flag & MENU_BAR_SETTINGS)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_PREF)
-                    Rend_DrawImageToScreen(menubut_znem[menu_MAIN_IMAGE_PREF][butframe_znem[menu_MAIN_IMAGE_PREF]], menu_MAIN_X + znem_but3_x,
+                    Rend_BlitSurfaceToScreen(menubut_znem[menu_MAIN_IMAGE_PREF][butframe_znem[menu_MAIN_IMAGE_PREF]], menu_MAIN_X + znem_but3_x,
                               scrollpos_znem);
             }
 
@@ -625,7 +625,7 @@ void Menu_Draw()
             if (menu_bar_flag & MENU_BAR_RESTORE)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_REST)
-                    Rend_DrawImageToScreen(menubut_znem[menu_MAIN_IMAGE_REST][butframe_znem[menu_MAIN_IMAGE_REST]], menu_MAIN_X + znem_but2_x,
+                    Rend_BlitSurfaceToScreen(menubut_znem[menu_MAIN_IMAGE_REST][butframe_znem[menu_MAIN_IMAGE_REST]], menu_MAIN_X + znem_but2_x,
                               scrollpos_znem);
             }
 
@@ -633,11 +633,11 @@ void Menu_Draw()
             if (menu_bar_flag & MENU_BAR_SAVE)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_SAVE)
-                    Rend_DrawImageToScreen(menubut_znem[menu_MAIN_IMAGE_SAVE][butframe_znem[menu_MAIN_IMAGE_SAVE]], menu_MAIN_X + znem_but1_x,
+                    Rend_BlitSurfaceToScreen(menubut_znem[menu_MAIN_IMAGE_SAVE][butframe_znem[menu_MAIN_IMAGE_SAVE]], menu_MAIN_X + znem_but1_x,
                               scrollpos_znem);
             }
         }
         else if (scrollpos_znem > -menubar_znem->h)
-            Rend_DrawImageToScreen(menubar_znem, menu_MAIN_X, scrollpos_znem);
+            Rend_BlitSurfaceToScreen(menubar_znem, menu_MAIN_X, scrollpos_znem);
     }
 }

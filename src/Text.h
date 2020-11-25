@@ -57,8 +57,8 @@ typedef struct
 
 typedef struct
 {
-    char Name[64];
-    char path[255];
+    char name[128];
+    char path[PATHBUFSIZ];
 } graph_font_t;
 
 void Text_InitStyle(txt_style_t *style);

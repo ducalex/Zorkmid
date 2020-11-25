@@ -127,8 +127,8 @@ static void FindAssets(const char *dir)
             if (fnt != NULL)
             {
                 graph_font_t *tmpfnt = NEW(graph_font_t);
-                strncpy(tmpfnt->Name, TTF_FontFaceFamilyName(fnt), 63);
-                strncpy(tmpfnt->path, path, 255);
+                strncpy(tmpfnt->name, TTF_FontFaceFamilyName(fnt), sizeof(tmpfnt->name)-1);
+                strncpy(tmpfnt->path, path, sizeof(path));
                 AddToMList(FontList, tmpfnt);
                 TTF_CloseFont(fnt);
             }
@@ -174,7 +174,7 @@ TTF_Font *Loader_LoadFont(char *name, int size)
     while (!eofMList(FontList))
     {
         fnt = (graph_font_t *)DataMList(FontList);
-        if (str_equals(fnt->Name, name)) // str_starts_with
+        if (str_equals(fnt->name, name)) // str_starts_with
             break;
 
         NextMList(FontList);
@@ -592,68 +592,6 @@ static void de_lz(SDL_Surface *srf, uint8_t *src, uint32_t size, int32_t transpo
     SDL_UnlockSurface(srf);
 }
 
-static SDL_Surface *buf_to_surf(void *buf, int w, int h, bool transpose)
-{
-    SDL_Surface *srf = Rend_CreateSurface(w, h, 0);
-
-    SDL_LockSurface(srf);
-
-    bool need_correction = ((srf->w * srf->format->BytesPerPixel) != srf->pitch);
-    int vpitch = srf->pitch / 2;
-
-    if (transpose)
-    {
-        uint16_t *tmp = (uint16_t *)buf;
-        uint16_t *tmp2 = (uint16_t *)srf->pixels;
-
-        if (need_correction)
-        {
-            int idx = 0;
-
-            for (int j = 0; j < h; j++)
-                for (int i = 0; i < w; i++)
-                {
-                    int32_t real_idx = ((idx / w) * vpitch) + (idx % w);
-                    tmp2[real_idx] = tmp[i * h + j];
-                    idx++;
-                }
-        }
-        else
-        {
-            for (int j = 0; j < h; j++)
-                for (int i = 0; i < w; i++)
-                {
-                    *tmp2 = tmp[i * h + j];
-                    tmp2++;
-                }
-        }
-    }
-    else
-    {
-        if (need_correction)
-        {
-            uint16_t *tmp = (uint16_t *)buf;
-            uint16_t *tmp2 = (uint16_t *)srf->pixels;
-
-            int idx = 0;
-
-            for (int j = 0; j < h; j++)
-                for (int i = 0; i < w; i++)
-                {
-                    int real_idx = ((idx / w) * vpitch) + (idx % w);
-                    tmp2[real_idx] = tmp[j * w + i];
-                    idx++;
-                }
-        }
-        else
-            memcpy(srf->pixels, buf, w * h * 2);
-    }
-
-    SDL_UnlockSurface(srf);
-
-    return srf;
-}
-
 SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, bool use_key, uint32_t key)
 {
     TRACE_LOADER("Load GFX file '%s'\n", file);
@@ -684,7 +622,7 @@ SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, bool use_key, uint
 
     SDL_Surface *srf = Rend_CreateSurface(wi, hi, 0);
 
-    de_lz(srf, mfp->buf + 0x10, mfp->size - 0x10, transpose);
+    de_lz(srf, (uint8_t*)mfp->buf + 0x10, mfp->size - 0x10, transpose);
 
     mfclose(mfp);
 
@@ -889,25 +827,51 @@ anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask)
     atmp->info.h = mn.height;
     atmp->img = NEW_ARRAY(SDL_Surface*, atmp->info.frames);
 
-    int32_t sz_frame = mn.height * mn.width * 2;
+    size_t sz_frame = mn.height * mn.width * 2;
     int8_t *buf2 = calloc(sz_frame, 1);
     void *buf  = NULL;
 
-    for (uint16_t i = 0; i < hd.frames; i++)
+    for (int i = 0; i < hd.frames; i++)
     {
-        if (mfread(&frm, sizeof(Frame), f))
-            if (frm.size > 0 && frm.size < 0x40000000)
-            {
-                if (mfread_ptr(&buf, frm.size - frm.offset, f))
-                {
-                    if (frm.TYPE == 0x44484C45)
-                        DHLE(buf2, buf, frm.size - frm.offset, sz_frame);
-                    else if (frm.TYPE == 0x48524C45)
-                        HRLE(buf2, buf, frm.size - frm.offset, sz_frame);
-                }
-            }
+        if (!mfread(&frm, sizeof(Frame), f))
+        {
+            Z_PANIC("mfread failed\n");
+        }
 
-        atmp->img[i] = buf_to_surf(buf2, atmp->info.w, atmp->info.h, transpose);
+        if (frm.size > 0 && frm.size < 0x40000000)
+        {
+            if (mfread_ptr(&buf, frm.size - frm.offset, f))
+            {
+                if (frm.TYPE == 0x44484C45)
+                    DHLE(buf2, buf, frm.size - frm.offset, sz_frame);
+                else if (frm.TYPE == 0x48524C45)
+                    HRLE(buf2, buf, frm.size - frm.offset, sz_frame);
+            }
+        }
+
+        SDL_Surface *srf = Rend_CreateSurface(atmp->info.w, atmp->info.h, 0);
+
+        SDL_LockSurface(srf);
+
+        if (transpose)
+        {
+            uint16_t *pixels = (uint16_t *)srf->pixels;
+
+            for (int j = 0; j < atmp->info.h; j++)
+                for (int i = 0; i < atmp->info.w; i++)
+                {
+                    *pixels = ((uint16_t *)buf2)[i * atmp->info.h + j];
+                    pixels++;
+                }
+        }
+        else
+        {
+            memcpy(srf->pixels, buf2, sz_frame);
+        }
+
+        SDL_UnlockSurface(srf);
+
+        atmp->img[i] = srf;
 
         if (mask != 0 && mask != -1)
         {
@@ -970,7 +934,7 @@ void Loader_LoadZCR(const char *file, Cursor_t *cur)
     mfread(&magic, 4, f);
     if (magic == MAGIC_ZCR)
     {
-        uint16_t x, y, w, h;
+        uint16_t x = 0, y = 0, w = 0, h = 0;
         mfread(&x, 2, f);
         mfread(&y, 2, f);
         mfread(&w, 2, f);

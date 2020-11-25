@@ -4,7 +4,6 @@
 
 static int CHANNELS = 0;
 
-static uint8_t chanvol[TRY_CHANNELS];
 static uint32_t chantime[TRY_CHANNELS];
 static bool ChanStatus[TRY_CHANNELS];
 

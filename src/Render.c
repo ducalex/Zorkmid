@@ -17,7 +17,6 @@ int FULLSCREEN = 0;
 
 static float tilt_angle = 60.0;
 static float tilt_linscale = 1.0;
-static bool tilt_Reverse = false;
 static int32_t tilt_gap = 0;
 
 static float mgamma = 1.0;
@@ -674,19 +673,19 @@ void Rend_RenderFunc()
     //pre-rendered
     if (Renderer == RENDER_FLAT)
     {
-        Rend_DrawImageToSurf(scrbuf, tempbuf, GAMESCREEN_FLAT_X, 0);
+        Rend_BlitSurfaceXY(scrbuf, tempbuf, GAMESCREEN_FLAT_X, 0);
     }
     else if (Renderer == RENDER_PANA)
     {
-        Rend_DrawImageToSurf(scrbuf, tempbuf, GAMESCREEN_W_2 - *view_X, 0);
+        Rend_BlitSurfaceXY(scrbuf, tempbuf, GAMESCREEN_W_2 - *view_X, 0);
         if (*view_X < GAMESCREEN_W_2)
-            Rend_DrawImageToSurf(scrbuf, tempbuf, GAMESCREEN_W_2 - (*view_X + pana_PanaWidth), 0);
+            Rend_BlitSurfaceXY(scrbuf, tempbuf, GAMESCREEN_W_2 - (*view_X + pana_PanaWidth), 0);
         else if (pana_PanaWidth - *view_X < GAMESCREEN_W_2)
-            Rend_DrawImageToSurf(scrbuf, tempbuf, GAMESCREEN_W_2 + pana_PanaWidth - *view_X, 0);
+            Rend_BlitSurfaceXY(scrbuf, tempbuf, GAMESCREEN_W_2 + pana_PanaWidth - *view_X, 0);
     }
     else if (Renderer == RENDER_TILT)
     {
-        Rend_DrawImageToSurf(scrbuf, tempbuf, 0, GAMESCREEN_H_2 - *view_X);
+        Rend_BlitSurfaceXY(scrbuf, tempbuf, 0, GAMESCREEN_H_2 - *view_X);
     }
 
     //draw dynamic controls
@@ -706,7 +705,7 @@ void Rend_RenderFunc()
     //Apply renderer distortion
     if (Renderer == RENDER_FLAT)
     {
-        Rend_DrawImageToSurf(tempbuf, viewportbuf, 0, 0);
+        Rend_BlitSurfaceXY(tempbuf, viewportbuf, 0, 0);
     }
     else if (Renderer == RENDER_PANA || RenderDelay == RENDER_TILT)
     {
@@ -729,7 +728,7 @@ void Rend_RenderFunc()
     }
 
     //output viewport
-    Rend_DrawImageToScreen(viewportbuf, GAMESCREEN_X, GAMESCREEN_Y);
+    Rend_BlitSurfaceToScreen(viewportbuf, GAMESCREEN_X, GAMESCREEN_Y);
 
     Rend_ProcessSubs();
 
@@ -782,7 +781,7 @@ void Rend_ProcessSubs()
             DeleteCurrent(sublist);
         }
         else
-            Rend_DrawImageToScreen(subrec->img, subrec->x + GAMESCREEN_FLAT_X, subrec->y);
+            Rend_BlitSurfaceToScreen(subrec->img, subrec->x + GAMESCREEN_FLAT_X, subrec->y);
 
         NextMList(sublist);
     }
@@ -1236,7 +1235,7 @@ static void Rend_EF_Light_Draw(effect_t *ef)
 
     SDL_UnlockSurface(srf);
 
-    Rend_DrawImageToSurf(srf, tempbuf, x, y);
+    Rend_BlitSurfaceXY(srf, tempbuf, x, y);
 }
 
 int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s_y, float apml, float waveln, float spd)
@@ -1306,38 +1305,32 @@ static void Rend_EF_Wave_Draw(effect_t *ef)
 
     for (int y = 0; y < GAMESCREEN_H_2; y++)
     {
-        int32_t *abc = ((int32_t *)ef->effect.ef0.surface->pixels) + y * GAMESCREEN_W;
-        int32_t *abc2 = ((int32_t *)ef->effect.ef0.surface->pixels) + (y + GAMESCREEN_H_2) * GAMESCREEN_W;
-        int32_t *abc3 = ((int32_t *)ef->effect.ef0.surface->pixels) + y * GAMESCREEN_W + GAMESCREEN_W_2;
-        int32_t *abc4 = ((int32_t *)ef->effect.ef0.surface->pixels) + (y + GAMESCREEN_H_2) * GAMESCREEN_W + GAMESCREEN_W_2;
+        uint16_t *abc  = ((uint16_t *)ef->effect.ef0.surface->pixels) + y * GAMESCREEN_W;
+        uint16_t *abc2 = ((uint16_t *)ef->effect.ef0.surface->pixels) + (y + GAMESCREEN_H_2) * GAMESCREEN_W;
+        uint16_t *abc3 = ((uint16_t *)ef->effect.ef0.surface->pixels) + y * GAMESCREEN_W + GAMESCREEN_W_2;
+        uint16_t *abc4 = ((uint16_t *)ef->effect.ef0.surface->pixels) + (y + GAMESCREEN_H_2) * GAMESCREEN_W + GAMESCREEN_W_2;
         for (int x = 0; x < GAMESCREEN_W_2; x++)
         {
             int8_t amnt = ef->effect.ef0.ampls[ef->effect.ef0.frame][x + y * GAMESCREEN_W_2];
             int32_t n_x = x + amnt;
             int32_t n_y = y + amnt;
 
-            if (n_x < 0)
-                n_x = 0;
-            if (n_x >= GAMESCREEN_W)
-                n_x = GAMESCREEN_W - 1;
-            if (n_y < 0)
-                n_y = 0;
-            if (n_y >= GAMESCREEN_H)
-                n_y = GAMESCREEN_H - 1;
-            *abc = ((int32_t *)tempbuf->pixels)[n_x + n_y * GAMESCREEN_W];
+            if (n_x < 0) n_x = 0;
+            if (n_x >= GAMESCREEN_W) n_x = GAMESCREEN_W - 1;
+            if (n_y < 0) n_y = 0;
+            if (n_y >= GAMESCREEN_H) n_y = GAMESCREEN_H - 1;
+
+            *abc = ((uint16_t *)tempbuf->pixels)[n_x + n_y * GAMESCREEN_W];
 
             n_x = x + amnt + GAMESCREEN_W_2;
             n_y = y + amnt;
 
-            if (n_x < 0)
-                n_x = 0;
-            if (n_x >= GAMESCREEN_W)
-                n_x = GAMESCREEN_W - 1;
-            if (n_y < 0)
-                n_y = 0;
-            if (n_y >= GAMESCREEN_H)
-                n_y = GAMESCREEN_H - 1;
-            *abc3 = ((int32_t *)tempbuf->pixels)[n_x + n_y * GAMESCREEN_W];
+            if (n_x < 0) n_x = 0;
+            if (n_x >= GAMESCREEN_W)n_x = GAMESCREEN_W - 1;
+            if (n_y < 0) n_y = 0;
+            if (n_y >= GAMESCREEN_H) n_y = GAMESCREEN_H - 1;
+
+            *abc3 = ((uint16_t *)tempbuf->pixels)[n_x + n_y * GAMESCREEN_W];
 
             n_x = x + amnt;
             n_y = y + amnt + GAMESCREEN_H_2;
@@ -1350,7 +1343,7 @@ static void Rend_EF_Wave_Draw(effect_t *ef)
                 n_y = 0;
             if (n_y >= GAMESCREEN_H)
                 n_y = GAMESCREEN_H - 1;
-            *abc2 = ((int32_t *)tempbuf->pixels)[n_x + n_y * GAMESCREEN_W];
+            *abc2 = ((uint16_t *)tempbuf->pixels)[n_x + n_y * GAMESCREEN_W];
 
             n_x = x + amnt + GAMESCREEN_W_2;
             n_y = y + amnt + GAMESCREEN_H_2;
@@ -1363,7 +1356,7 @@ static void Rend_EF_Wave_Draw(effect_t *ef)
                 n_y = 0;
             if (n_y >= GAMESCREEN_H)
                 n_y = GAMESCREEN_H - 1;
-            *abc4 = ((int32_t *)tempbuf->pixels)[n_x + n_y * GAMESCREEN_W];
+            *abc4 = ((uint16_t *)tempbuf->pixels)[n_x + n_y * GAMESCREEN_W];
 
             abc++;
             abc2++;
@@ -1375,7 +1368,7 @@ static void Rend_EF_Wave_Draw(effect_t *ef)
     SDL_UnlockSurface(ef->effect.ef0.surface);
     SDL_UnlockSurface(tempbuf);
 
-    Rend_DrawImageToSurf(ef->effect.ef0.surface, tempbuf, 0, 0);
+    Rend_BlitSurfaceXY(ef->effect.ef0.surface, tempbuf, 0, 0);
 }
 
 int32_t Rend_EF_9_Setup(char *mask, char *clouds, int32_t delay, int32_t x, int32_t y, int32_t w, int32_t h)
@@ -1527,7 +1520,7 @@ static void Rend_EF_9_Draw(effect_t *ef)
         SDL_UnlockSurface(mask);
         SDL_UnlockSurface(cloud);
 
-        Rend_DrawImageToSurf(srf, tempbuf, x, y);
+        Rend_BlitSurfaceXY(srf, tempbuf, x, y);
     }
 }
 
@@ -1569,63 +1562,48 @@ void Rend_SetColorKey(SDL_Surface *surf, uint8_t r, uint8_t g, uint8_t b)
     SDL_SetColorKey(surf, SDL_SRCCOLORKEY, SDL_MapRGB(surf->format, r, g, b));
 }
 
-void Rend_DrawImageToScreen(SDL_Surface *surf, int x, int y)
+void Rend_DrawImageToGameScreen(SDL_Surface *scr, int x, int y)
 {
-    if (!surf)
-        return;
+    SDL_Rect rect = {x, y, 0, 0};
 
-    SDL_Rect tmp;
-    tmp.x = x; //ceil(x*sc_fac);
-    tmp.y = y; //ceil(y*sc_fac);
-    tmp.w = 0;
-    tmp.h = 0;
-    SDL_BlitSurface(surf, 0, screen, &tmp);
+    if (Renderer == RENDER_TILT)
+        rect.y = y + GAMESCREEN_H_2 - *view_X;
+
+    Rend_BlitSurface(scr, NULL, tempbuf, &rect);
 }
 
-void Rend_DrawImageToSurf(SDL_Surface *surf, SDL_Surface *dest, int x, int y)
+void Rend_BlitSurfaceToScreen(SDL_Surface *surf, int x, int y)
 {
-    if (!surf || !dest)
-        return;
-
-    SDL_Rect tmp;
-    tmp.x = x; //ceil(x*sc_fac);
-    tmp.y = y; //ceil(y*sc_fac);
-    tmp.w = 0;
-    tmp.h = 0;
-    //SDL_StretchSurfaceBlit(surf,0,dest,0);
-    SDL_BlitSurface(surf, 0, dest, &tmp);
+    SDL_Rect rect = {x, y, 0, 0};
+    Rend_BlitSurface(surf, NULL, screen, &rect);
 }
 
-void Rend_DrawScaledToSurf(SDL_Surface *src, int w, int h, SDL_Surface *dst, int x, int y)
+void Rend_BlitSurfaceXY(SDL_Surface *surf, SDL_Surface *dest, int x, int y)
+{
+    SDL_Rect rect = {x, y, 0, 0};
+    Rend_BlitSurface(surf, NULL, dest, &rect);
+}
+
+void Rend_BlitSurface(SDL_Surface *src, SDL_Rect *src_rct, SDL_Surface *dst, SDL_Rect *dst_rct)
 {
     if (!dst || !src)
         return;
 
-    if (w == src->w && h == src->h)
+    int src_w = (src_rct && src_rct->w > 0) ? src_rct->w : src->w;
+    int src_h = (src_rct && src_rct->h > 0) ? src_rct->h : src->h;
+    int dst_w = (dst_rct && dst_rct->w > 0) ? dst_rct->w : src_w;
+    int dst_h = (dst_rct && dst_rct->h > 0) ? dst_rct->h : src_h;
+
+    if (dst_h != src_h || dst_w != src_w)
     {
-        Rend_DrawImageToSurf(src, dst, x, y);
-        return;
+        // TO DO: Handle src x/y
+        SDL_Rect dst_rect = {dst_rct ? dst_rct->x : 0, dst_rct ? dst_rct->y : 0, dst_w, dst_h};
+        SDL_Surface *zsrc = zoomSurface(src, (float)dst_w / src_w, (float)dst_h / src_h, 0);
+        SDL_BlitSurface(zsrc, NULL, dst, &dst_rect);
+        SDL_FreeSurface(zsrc);
     }
-
-    double zoomx = (double)w / src->w;
-    double zoomy = (double)h / src->h;
-    SDL_Surface *zoomed = zoomSurface(src, zoomx, zoomy, 1);
-    SDL_Rect dst_rct = {x, y, zoomed->w, zoomed->h};
-    SDL_Rect src_rct = {0, 0, zoomed->w, zoomed->h};
-
-    SDL_BlitSurface(zoomed, &src_rct, dst, &dst_rct);
-    SDL_FreeSurface(zoomed);
-}
-
-void Rend_DrawImageToGameScreen(SDL_Surface *scr, int x, int y)
-{
-    if (!tempbuf)
-        return;
-
-    if (Renderer == RENDER_FLAT)
-        Rend_DrawImageToSurf(scr, tempbuf, x, y);
-    else if (Renderer == RENDER_PANA)
-        Rend_DrawImageToSurf(scr, tempbuf, x, y);
-    else if (Renderer == RENDER_TILT)
-        Rend_DrawImageToSurf(scr, tempbuf, x, y + GAMESCREEN_H_2 - *view_X);
+    else
+    {
+        SDL_BlitSurface(src, src_rct, dst, dst_rct);
+    }
 }

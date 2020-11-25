@@ -5,7 +5,7 @@ static bool NeedToLoadScript = false;
 static int8_t NeedToLoadScriptDelay = CHANGELOCATIONDELAY;
 static char *GamePath = "./";
 
-static char **GameStrings;
+static const char **GameStrings;
 
 static uint32_t CurrentTime = 0;
 static uint32_t DeltaTime = 0;
@@ -89,7 +89,7 @@ static void LoadGameStrings(void)
     const char *file = (CUR_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR");
     char filename[PATHBUFSIZ];
     sprintf(filename, "%s/%s", GetGamePath(), file);
-    GameStrings = Loader_LoadSTR(filename);
+    GameStrings = (const char **)Loader_LoadSTR(filename);
 }
 
 const char *GetGameString(int32_t indx)
@@ -277,7 +277,7 @@ void EasterEggsAndDebug()
 
     if (CheckKeyboardMessage("FRAME", 5))
     {
-        sprintf(message_buffer, "FPS: %d", GetFps());
+        sprintf(message_buffer, "FPS: %.2f", GetFps());
         game_timed_debug_message(3000, message_buffer);
     }
 
@@ -432,7 +432,7 @@ void GameUpdate()
     UpdateKeyboard();
 
     if ((KeyDown(SDLK_RALT) || KeyDown(SDLK_LALT)) && KeyHit(SDLK_RETURN))
-        Rend_SetVideoMode(-1, -1, !FULLSCREEN, -1);
+        Rend_SetVideoMode(640, 480, !FULLSCREEN, -1);
 }
 
 void game_timed_message(int32_t milsecs, const char *str)

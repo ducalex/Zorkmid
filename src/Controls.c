@@ -111,7 +111,7 @@ static void control_input_draw(ctrlnode_t *ct)
         {
             if (inp->cursor != NULL)
             {
-                Rend_DrawImageToSurf(
+                Rend_BlitSurfaceXY(
                     inp->cursor->img[inp->frame],
                     Rend_GetGameScreen(),
                     inp->rectangle.x + GAMESCREEN_FLAT_X + inp->textwidth,
@@ -401,18 +401,11 @@ static void control_paint(ctrlnode_t *ct)
             if (paint->brush[x + y * paint->b_w] == 0)
                 continue;
 
-            if ((d_x - cen_x) + x >= 0 &&
-                (d_x - cen_x) + x < paint->paint->w &&
-                (d_y - cen_y) + y >= 0 &&
-                (d_y - cen_y) + y < paint->paint->h)
+            if ((d_x - cen_x) + x >= 0 && (d_x - cen_x) + x < paint->paint->w &&
+                (d_y - cen_y) + y >= 0 && (d_y - cen_y) + y < paint->paint->h)
             {
-                int32_t rel_x = (mX - cen_x) + x;
-                int32_t rel_y = (mY - cen_y) + y;
-                int32_t fr_x = (d_x - cen_x) + x;
-                int32_t fr_y = (d_y - cen_y) + y;
-
-                ((uint16_t *)scrn->pixels)[rel_x + rel_y * scrn->w] =
-                    ((uint16_t *)paint->paint->pixels)[fr_x + fr_y * paint->paint->w];
+                color_t col = Rend_GetPixel(paint->paint, (d_x - cen_x) + x, (d_y - cen_y) + y);
+                Rend_SetPixel(scrn, (mX - cen_x) + x, (mY - cen_y) + y, col.r, col.g, col.b);
             }
         }
     }
@@ -1807,19 +1800,18 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
     }         //while (!feof(fl))
 
     SDL_Surface *tmp = Loader_LoadGFX(filename, false, false, 0);
-
     if (!tmp)
         return 0;
 
     paint->paint = Rend_CreateSurface(paint->rectangle.w, paint->rectangle.h, 0);
 
-    SDL_Rect tr;
-    tr.x = paint->rectangle.x;
-    tr.y = paint->rectangle.y;
-    tr.w = paint->rectangle.w;
-    tr.h = paint->rectangle.h;
-
-    SDL_BlitSurface(tmp, &tr, paint->paint, NULL);
+    SDL_Rect rect = {
+        paint->rectangle.x,
+        paint->rectangle.y,
+        paint->rectangle.w,
+        paint->rectangle.h
+    };
+    SDL_BlitSurface(tmp, &rect, paint->paint, NULL);
     SDL_FreeSurface(tmp);
 
     return good;

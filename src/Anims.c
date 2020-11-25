@@ -79,17 +79,13 @@ void Anim_Process(animnode_t *mnod)
         {
             avi_renderframe(mnod->anim_avi->av, mnod->CurFr);
             avi_to_surf(mnod->anim_avi->av, mnod->anim_avi->img);
-            Rend_DrawScaledToSurf(
-                mnod->anim_avi->img,
-                mnod->w,
-                mnod->h,
-                Rend_GetLocationScreenImage(),
-                mnod->x,
-                mnod->y);
+
+            SDL_Rect rect = {mnod->x, mnod->y, mnod->w, mnod->h};
+            Rend_BlitSurface(mnod->anim_avi->img, NULL, Rend_GetLocationScreenImage(), &rect);
         }
         else if (mnod->anim_rlf)
         {
-            Rend_DrawImageToSurf(
+            Rend_BlitSurfaceXY(
                 mnod->anim_rlf->img[mnod->CurFr],
                 Rend_GetLocationScreenImage(),
                 mnod->x,
@@ -215,11 +211,12 @@ void Anim_RenderFrame(animnode_t *mnod, int16_t x, int16_t y, int16_t w, int16_t
 
         mnod->anim_avi->lastfrm = frame;
 
-        Rend_DrawScaledToSurf(mnod->anim_avi->img, w, h, Rend_GetLocationScreenImage(), x, y);
+        SDL_Rect rect = {x, y, w, h};
+        Rend_BlitSurface(mnod->anim_avi->img, NULL, Rend_GetLocationScreenImage(), &rect);
     }
     else if (mnod->anim_rlf)
     {
-        Rend_DrawImageToSurf(mnod->anim_rlf->img[frame], Rend_GetLocationScreenImage(), x, y);
+        Rend_BlitSurfaceXY(mnod->anim_rlf->img[frame], Rend_GetLocationScreenImage(), x, y);
     }
 }
 

@@ -118,9 +118,9 @@ SDL_Surface *Rend_GetGameScreen();
 SDL_Surface *Rend_GetScreen();
 
 void Rend_DrawImageToGameScreen(SDL_Surface *src, int x, int y);
-void Rend_DrawImageToScreen(SDL_Surface *src, int x, int y);
-void Rend_DrawImageToSurf(SDL_Surface *src, SDL_Surface *dst, int x, int y);
-void Rend_DrawScaledToSurf(SDL_Surface *src, int w, int h, SDL_Surface *dst, int x, int y);
+void Rend_BlitSurfaceToScreen(SDL_Surface *src, int x, int y);
+void Rend_BlitSurfaceXY(SDL_Surface *src, SDL_Surface *dst, int x, int y);
+void Rend_BlitSurface(SDL_Surface *src, SDL_Rect *src_rct, SDL_Surface *dst, SDL_Rect *dst_rct);
 void Rend_SetColorKey(SDL_Surface *surf, uint8_t r, uint8_t g, uint8_t b);
 
 int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s_y, float apml, float waveln, float spd);

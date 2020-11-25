@@ -51,7 +51,7 @@
 #define SLOT_TURN_OFF_ANIM 71 //NoAnimWhileTurning
 #define SLOT_WIN958 72
 #define SLOT_SHOWERRORDIALOG 73
-#define SLOT_DEBUGCHEATS 74 //if set to 1, we may type GOXXXX while game, and it will be changed location to XXXX \
+#define SLOT_DEBUGCHEATS 74 //if set to 1, we may type GOXXXX while game, and it will be changed location to XXXX
                             //To change - type DBGONOFF
 #define SLOT_JAPANESEFONTS 75
 #define SLOT_BRIGHTNESS 77

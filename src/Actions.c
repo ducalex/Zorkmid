@@ -82,7 +82,7 @@ static int action_set_partial_screen(char *params, int aSlot, pzllst_t *owner)
     SDL_Surface *tmp = Loader_LoadGFX(file, Rend_GetRenderer() == RENDER_PANA, (tmp2 > 0), tmp2);
     if (tmp)
     {
-        Rend_DrawImageToSurf(tmp, Rend_GetLocationScreenImage(), x, y);
+        Rend_BlitSurfaceXY(tmp, Rend_GetLocationScreenImage(), x, y);
         SDL_FreeSurface(tmp);
     }
     else
@@ -253,13 +253,9 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
 
         avi_to_surf(anm->av, anm->img);
 
-        Rend_DrawScaledToSurf(
-            anm->img,
-            ww,
-            hh,
-            Rend_GetScreen(),
-            GAMESCREEN_X + xx + GAMESCREEN_FLAT_X,
-            GAMESCREEN_Y + yy);
+        SDL_Rect dst_rct = {GAMESCREEN_X + xx + GAMESCREEN_FLAT_X, GAMESCREEN_Y + yy, ww, hh};
+
+        Rend_BlitSurface(anm->img, NULL, Rend_GetScreen(), &dst_rct);
 
         avi_update(anm->av);
 

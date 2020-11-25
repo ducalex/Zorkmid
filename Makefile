@@ -28,16 +28,16 @@ OBJS =  \
 	src/avi_duck/truemotion1.c
 
 linux: $(OBJS)
-	$(CC) -std=c99 -O3 -o $(TARGET) $(OBJS) $(LIBS) -I /usr/include/ -I /usr/include/SDL/
+	$(CC) -std=c99 -Wall -O3 -o $(TARGET) $(OBJS) $(LIBS) -I /usr/include/ -I /usr/include/SDL/
 
-linux_trace: $(OBJS)
-	$(CC) -std=c99 -DTRACE -Og -o $(TARGET) $(OBJS) $(LIBS) -I /usr/include/ -I /usr/include/SDL/
+linux_debug: $(OBJS)
+	$(CC) -std=c99 -DTRACE -Wall -Og -o $(TARGET) $(OBJS) $(LIBS) -I /usr/include/ -I /usr/include/SDL/
 
-win32_trace: $(OBJS)
-	$(CC_WIN) -std=c99 -DTRACE -Og -o $(TARGET).exe $(OBJS) $(LIBS_WIN) -I $(MINGW)/include/ -I $(MINGW)/include/SDL/
+win32_debug: $(OBJS)
+	$(CC_WIN) -std=c99 -DTRACE -Wall -Og -o $(TARGET).exe $(OBJS) $(LIBS_WIN) -I $(MINGW)/include/ -I $(MINGW)/include/SDL/
 
 win32: $(OBJS)
-	$(CC_WIN) -std=c99 -O3 -o $(TARGET).exe $(OBJS) $(LIBS_WIN) -I $(MINGW)/include/ -I $(MINGW)/include/SDL/
+	$(CC_WIN) -std=c99 -Wall -O3 -o $(TARGET).exe $(OBJS) $(LIBS_WIN) -I $(MINGW)/include/ -I $(MINGW)/include/SDL/
 
 clean:
 	rm -f $(TARGET) $(TARGET_DINGOO) *.o
