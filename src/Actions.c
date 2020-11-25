@@ -71,34 +71,23 @@ static int action_set_screen(char *params, int aSlot, pzllst_t *owner)
 
 static int action_set_partial_screen(char *params, int aSlot, pzllst_t *owner)
 {
-    int x, y /*,tmp1*/, tmp2;
     char xx[16], yy[16], tmp11[16], tmp22[16];
     char file[255];
     sscanf(params, "%s %s %s %s %s", xx, yy, file, tmp11, tmp22);
 
-    x = GetIntVal(xx);
-    y = GetIntVal(yy);
-    tmp2 = GetIntVal(tmp22);
+    int x = GetIntVal(xx);
+    int y = GetIntVal(yy);
+    int tmp2 = GetIntVal(tmp22);
 
-    SDL_Surface *tmp = NULL;
-
-    if (tmp2 > 0)
+    SDL_Surface *tmp = Loader_LoadGFX(file, Rend_GetRenderer() == RENDER_PANA, (tmp2 > 0), tmp2);
+    if (tmp)
     {
-        int r, g, b;
-        b = ((tmp2 >> 10) & 0x1F) * 8;
-        g = ((tmp2 >> 5) & 0x1F) * 8;
-        r = (tmp2 & 0x1F) * 8;
-        tmp = Loader_LoadFile_key(file, Rend_GetRenderer() == RENDER_PANA, Rend_MapScreenRGB(r, g, b));
+        Rend_DrawImageToSurf(tmp, Rend_GetLocationScreenImage(), x, y);
+        SDL_FreeSurface(tmp);
     }
     else
-        tmp = Loader_LoadFile(file, Rend_GetRenderer() == RENDER_PANA);
-
-    if (!tmp)
-        LOG_WARN("IMG_Load(%s): %s\n", params, IMG_GetError());
-    else
     {
-        Rend_DrawImageToGamescr(tmp, x, y);
-        SDL_FreeSurface(tmp);
+        LOG_WARN("Failed to load image '%s'\n", file);
     }
     return ACTION_NORMAL;
 }
@@ -154,7 +143,7 @@ static int action_change_location(char *params, int aSlot, pzllst_t *owner)
 
 static int action_dissolve(char *params, int aSlot, pzllst_t *owner)
 {
-    SDL_FillRect(Rend_GetGameScreen(), NULL, Rend_MapScreenRGB(0, 0, 0));
+    SDL_FillRect(Rend_GetGameScreen(), NULL, 0);
 
     return ACTION_NORMAL;
 }
@@ -220,41 +209,32 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
     // 0x2 - unknown
     char u2[16]; // skipline 0-off any other - on
 
-    int xx, yy, ww, hh, tmp;
-
-    const char *fil;
-
     sscanf(params, "%s %s %s %s %s %s %s", file, x, y, w, h, u1, u2);
 
-    xx = GetIntVal(x);
-    yy = GetIntVal(y);
-    ww = GetIntVal(w) - xx + 1;
-    hh = GetIntVal(h) - yy + 1;
-
-    char *ext = file + (strlen(file) - 3);
+    int xx = GetIntVal(x);
+    int yy = GetIntVal(y);
+    int ww = GetIntVal(w) - xx + 1;
+    int hh = GetIntVal(h) - yy + 1;
+    int tmp = 0;
 
     anim_avi_t *anm = NEW(anim_avi_t);
-    Mix_Chunk *aud = NULL;
     subtitles_t *subs = NULL;
 
-    fil = Loader_GetPath(file);
-
+    const char *fil = Loader_GetPath(file);
     if (fil == NULL)
         return ACTION_NORMAL;
 
     anm->av = avi_openfile(fil, 0);
-
-    anm->img = Rend_CreateSurface(anm->av->w, anm->av->h);
-    scaler_t *scl = Rend_CreateScaler(anm->img, ww, hh);
+    anm->img = Rend_CreateSurface(anm->av->w, anm->av->h, 0);
 
     if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
     {
-        strcpy(ext, "sub");
+        strcpy(file + (strlen(file) - 3), "sub");
         subs = Subtitles_Load(file);
     }
 
-    aud = avi_get_audio(anm->av);
-    if (aud != NULL)
+    Mix_Chunk *aud = avi_get_audio(anm->av);
+    if (aud)
     {
         tmp = Sound_GetFreeChannel();
         Mix_UnregisterAllEffects(tmp);
@@ -272,12 +252,18 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
             avi_stop(anm->av);
 
         avi_to_surf(anm->av, anm->img);
-        //DrawImage(anm->img,0,0);
-        Rend_DrawScalerToScreen(scl, GAMESCREEN_X + xx + GAMESCREEN_FLAT_X, GAMESCREEN_Y + yy); //it's direct rendering without game screen update
+
+        Rend_DrawScaledToSurf(
+            anm->img,
+            ww,
+            hh,
+            Rend_GetScreen(),
+            GAMESCREEN_X + xx + GAMESCREEN_FLAT_X,
+            GAMESCREEN_Y + yy);
 
         avi_update(anm->av);
 
-        if (subs != NULL)
+        if (subs)
             Subtitles_Process(subs, anm->av->cframe);
 
         Rend_ProcessSubs();
@@ -302,7 +288,6 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
 
     avi_close(anm->av);
     free(anm);
-    Rend_DeleteScaler(scl);
 
     return ACTION_NORMAL;
 }
@@ -353,19 +338,7 @@ static int action_animplay(char *params, int aSlot, pzllst_t *owner)
     glob->slot = aSlot;
     glob->owner = owner;
 
-    int mask2, r, g, b;
-
-    mask2 = GetIntVal(mask);
-
-    if (mask2 != -1 && mask2 != 0)
-    {
-        b = ((mask2 >> 10) & 0x1F) * 8;
-        g = ((mask2 >> 5) & 0x1F) * 8;
-        r = (mask2 & 0x1F) * 8;
-        mask2 = r | g << 8 | b << 16;
-    }
-
-    Anim_Load(nod, file, 0, 0, mask2, GetIntVal(framerate));
+    Anim_Load(nod, file, 0, 0, GetIntVal(mask), GetIntVal(framerate));
 
     Anim_Play(nod, GetIntVal(x),
                   GetIntVal(y),
@@ -720,13 +693,12 @@ static int action_ttytext(char *params, int aSlot, pzllst_t *owner)
 
     Text_GetStyle(&nod->nodes.tty_text->style, nod->nodes.tty_text->txtbuf);
     nod->nodes.tty_text->fnt = Loader_LoadFont(nod->nodes.tty_text->style.fontname, nod->nodes.tty_text->style.size);
+    nod->nodes.tty_text->img = Rend_CreateSurface(w, h, 0);
     nod->nodes.tty_text->w = w;
     nod->nodes.tty_text->h = h;
     nod->nodes.tty_text->x = x;
     nod->nodes.tty_text->y = y;
     nod->nodes.tty_text->delay = delay;
-
-    nod->nodes.tty_text->img = Rend_CreateSurface(w, h);
 
     SetgVarInt(nod->slot, 1);
     setGNode(nod->slot, nod);
@@ -1130,7 +1102,7 @@ static int action_rotate_to(char *params, int aSlot, pzllst_t *owner)
             oner = (topos - curX) / time;
     }
 
-    for (int32_t i = 0; i <= time; i++)
+    for (int i = 0; i <= time; i++)
     {
         if (i == time)
             curX = topos;

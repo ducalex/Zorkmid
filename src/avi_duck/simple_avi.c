@@ -395,7 +395,7 @@ Mix_Chunk *avi_get_audio(avi_file_t *av)
     {
         uint32_t asz = 0;
         uint32_t tmp = 0;
-        for (int32_t i = 0; i < av->achunk_cnt; i++)
+        for (int i = 0; i < av->achunk_cnt; i++)
             tmp += av->achunk[i].sz;
         asz = tmp;
 
@@ -410,7 +410,7 @@ Mix_Chunk *avi_get_audio(avi_file_t *av)
             raw[8] = (av->atrk->size << 16) | (av->atrk->size * av->atrk->channels / 8);
             raw[10] = asz;
             tmp = 0;
-            for (int32_t i = 0; i < av->achunk_cnt; i++)
+            for (int i = 0; i < av->achunk_cnt; i++)
             {
                 uint8_t *rw = (uint8_t *)(&raw[11]);
                 fseek(av->file, av->achunk[i].fof, SEEK_SET);
@@ -436,7 +436,7 @@ Mix_Chunk *avi_get_audio(avi_file_t *av)
             adpcm_context_t ctx;
             memset(&ctx, 0, sizeof(ctx));
 
-            for (int32_t i = 0; i < av->achunk_cnt; i++)
+            for (int i = 0; i < av->achunk_cnt; i++)
             {
                 uint8_t *rw = (uint8_t *)(&raw[11]);
                 fseek(av->file, av->achunk[i].fof, SEEK_SET);
@@ -502,12 +502,10 @@ void avi_to_surf(avi_file_t *av, SDL_Surface *srf)
     bool fullscreen = av->w == srf->w && av->h == srf->h;
 
     uint16_t *img = (uint16_t *)av->frame;
-    uint16_t color, r, g, b;
+    uint16_t color;
 
     float xperc = (float)av->w / (float)srf->w;
     float yperc = (float)av->h / (float)srf->h;
-
-    uint8_t *dst = (uint8_t *)srf->pixels;
 
     for (int y = 0; y < srf->h; y++)
     {
@@ -528,16 +526,13 @@ void avi_to_surf(avi_file_t *av, SDL_Surface *srf)
                     color = img[(int32_t)(x * yperc) * av->h + (int32_t)(y * xperc)];
             }
 
-            COLOR_SPLIT_RGB555(color, r, g, b);
+            // Video is 555 format
+            uint8_t r = (color >> 10) & 0x1F;
+            uint8_t g = (color >> 5) & 0x1F;
+            uint8_t b = (color >> 0) & 0x1F;
 
-            if (srf->format->BitsPerPixel == 32)
-                ((uint32_t*)dst)[x] = COLOR_JOIN_RGBA888(r * 8, g * 8, b * 8);
-            else if (srf->format->BitsPerPixel == 16)
-                ((uint16_t*)dst)[x] = COLOR_JOIN_RGB565(r, g << 1, b);
-            else if (srf->format->BitsPerPixel == 15)
-                ((uint16_t*)dst)[x] = COLOR_JOIN_RGB555(r, g, b);
+            Rend_SetPixel(srf, x, y, r << 3, g << 3, b << 3);
         }
-        dst += srf->pitch;
     }
 
     SDL_UnlockSurface(srf);

@@ -420,6 +420,9 @@ void GameUpdate()
         case SDL_QUIT:
             GameQuit();
             break;
+        case SDL_VIDEORESIZE:
+            Rend_SetVideoMode(event.resize.w, event.resize.h, -1, -1);
+            break;
         case SDL_KEYDOWN:
             SetHit(event.key.keysym.sym);
             break;
@@ -429,7 +432,7 @@ void GameUpdate()
     UpdateKeyboard();
 
     if ((KeyDown(SDLK_RALT) || KeyDown(SDLK_LALT)) && KeyHit(SDLK_RETURN))
-        Rend_SwitchFullscreen();
+        Rend_SetVideoMode(-1, -1, !FULLSCREEN, -1);
 }
 
 void game_timed_message(int32_t milsecs, const char *str)

@@ -1,17 +1,16 @@
 #ifndef RENDER_H_INCLUDED
 #define RENDER_H_INCLUDED
 
-#define RENDER_SURFACE SDL_SWSURFACE // SDL_HWSURFACE
-
-extern int GAME_W;
-extern int GAME_H;
-extern int GAME_BPP;
+extern int WINDOW_W;
+extern int WINDOW_H;
 extern int GAMESCREEN_W;
 extern int GAMESCREEN_P;
 extern int GAMESCREEN_H;
 extern int GAMESCREEN_X;
 extern int GAMESCREEN_Y;
 extern int GAMESCREEN_FLAT_X;
+extern int WIDESCREEN;
+extern int FULLSCREEN;
 
 #define GAMESCREEN_H_2 (GAMESCREEN_H >> 1)
 #define GAMESCREEN_W_2 (GAMESCREEN_W >> 1)
@@ -20,24 +19,13 @@ extern int GAMESCREEN_FLAT_X;
 #define RENDER_PANA 1
 #define RENDER_TILT 2
 
-#define COLOR_SPLIT_RGBA888(a, r, g, b) \
-    r = a & 0xFF;                \
-    g = (a >> 8) & 0xFF;         \
-    b = (a >> 16) & 0xFF;
-
-#define COLOR_SPLIT_RGB565(in, r, g, b) \
-    r = (in) & 0x1F;                   \
-    g = ((in) >> 5) & 0x3F;            \
-    b = ((in) >> 11) & 0x1F;
-
-#define COLOR_SPLIT_RGB555(a, r, g, b) \
-    r = a & 0x1F;                     \
-    g = (a >> 5) & 0x1F;              \
-    b = (a >> 10) & 0x1F;
-
-#define COLOR_JOIN_RGBA888(r, g, b) ((r) & 0xFF) | (((g) & 0xFF) << 8) | (((b) & 0xFF) << 16) | (0xFF << 24)
-#define COLOR_JOIN_RGB565(r, g, b) ((r) & 0x1F) | (((g) & 0x3F) << 5) | (((b) & 0x1F) << 11)
-#define COLOR_JOIN_RGB555(r, g, b) ((r) & 0x1F) | (((g) & 0x1F) << 5) | (((b) & 0x1F) << 10)
+typedef struct
+{
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+    uint32_t pixel;
+} color_t;
 
 typedef struct
 {
@@ -89,17 +77,6 @@ typedef struct
     int32_t lastfrm;
 } anim_avi_t;
 
-typedef struct
-{
-    int32_t *offsets;
-    uint16_t w;
-    uint16_t h;
-    SDL_Surface *surf;
-} scaler_t;
-
-void Rend_DrawImageToScr(SDL_Surface *scr, int x, int y);
-void Rend_DrawImageToGamescr(SDL_Surface *scr, int x, int y);
-void Rend_DrawAnimImageToGamescr(anim_surf_t *scr, int x, int y, int frame);
 bool Rend_LoadGamescr(const char *file);
 int Rend_GetMouseGameX();
 int Rend_GetMouseGameY();
@@ -116,23 +93,16 @@ void Rend_tilt_SetAngle(float angle);
 void Rend_tilt_SetLinscale(float linscale);
 float Rend_GetRendererAngle();
 float Rend_GetRendererLinscale();
-void Rend_DrawImageUpGamescr(SDL_Surface *scr, int x, int y);
-void Rend_DrawAnimImageUpGamescr(anim_surf_t *scr, int x, int y, int frame);
-void Rend_DrawScalerToGamescr(scaler_t *scl, int16_t x, int16_t y);
 int Rend_GetRenderer();
 void Rend_MouseInteractOfRender();
 void Rend_RenderFunc();
-void Rend_InitGraphics(bool fullscreen, bool widescreen);
-void Rend_SwitchFullscreen();
+void Rend_SetVideoMode(int w, int h, int full, int wide);
+void Rend_InitGraphics(int full, int wide);
 void Rend_SetDelay(int32_t delay);
-SDL_Surface *Rend_CreateSurface(uint16_t w, uint16_t h);
-SDL_Surface *Rend_GetLocationScreenImage();
-SDL_Surface *Rend_GetGameScreen();
 subrect_t *Rend_CreateSubRect(int x, int y, int w, int h);
 void Rend_DeleteSubRect(subrect_t *erect);
 void Rend_ProcessSubs();
 void Rend_DelaySubDelete(subrect_t *sub, int32_t time);
-uint32_t Rend_MapScreenRGB(int r, int g, int b);
 void Rend_ScreenFlip();
 void Rend_Delay(uint32_t delay_ms);
 action_res_t *Rend_CreateDistortNode();
@@ -141,34 +111,41 @@ int32_t Rend_DeleteDistortNode(action_res_t *nod);
 int Rend_DeleteRegion(action_res_t *nod);
 void Rend_SetGamma(float val);
 float Rend_GetGamma();
-void Rend_ConvertImage(SDL_Surface **tmp);
-void Rend_DrawImage(SDL_Surface *surf, int16_t x, int16_t y);
-void Rend_DrawImageToSurf(SDL_Surface *surf, int16_t x, int16_t y, SDL_Surface *dest);
-void Rend_SetColorKey(SDL_Surface *surf, int8_t r, int8_t g, int8_t b);
-void Rend_DrawAnimImageToSurf(anim_surf_t *anim, int x, int y, int frame, SDL_Surface *surf);
-void Rend_FreeAnimImage(anim_surf_t *anim);
-scaler_t *Rend_CreateScaler(SDL_Surface *src, uint16_t w, uint16_t h);
-void Rend_DeleteScaler(scaler_t *scal);
-void Rend_DrawScaler(scaler_t *scal, int16_t x, int16_t y, SDL_Surface *dst);
-void Rend_DrawScalerToScreen(scaler_t *scal, int16_t x, int16_t y);
+
+SDL_Surface *Rend_CreateSurface(int x, int y, int mode);
+SDL_Surface *Rend_GetLocationScreenImage();
+SDL_Surface *Rend_GetGameScreen();
+SDL_Surface *Rend_GetScreen();
+
+void Rend_DrawImageToGameScreen(SDL_Surface *src, int x, int y);
+void Rend_DrawImageToScreen(SDL_Surface *src, int x, int y);
+void Rend_DrawImageToSurf(SDL_Surface *src, SDL_Surface *dst, int x, int y);
+void Rend_DrawScaledToSurf(SDL_Surface *src, int w, int h, SDL_Surface *dst, int x, int y);
+void Rend_SetColorKey(SDL_Surface *surf, uint8_t r, uint8_t g, uint8_t b);
 
 int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s_y, float apml, float waveln, float spd);
 int32_t Rend_EF_Light_Setup(char *string, int32_t x, int32_t y, int32_t w, int32_t h, int32_t delay, int32_t steps);
 int32_t Rend_EF_9_Setup(char *mask, char *clouds, int32_t delay, int32_t x, int32_t y, int32_t w, int32_t h);
 
-static inline uint32_t Rend_GetPixel(SDL_Surface *surf, int x, int y)
+static inline color_t Rend_GetPixel(SDL_Surface *surf, int x, int y)
 {
     uint8_t *pixels = ((uint8_t *)surf->pixels) + y * surf->pitch;
+    color_t ret;
 
     if (surf->format->BitsPerPixel == 32)
-        return ((uint32_t *)pixels)[x];
+        ret.pixel = ((uint32_t *)pixels)[x];
     else
-        return ((uint16_t *)pixels)[x];
+        ret.pixel = ((uint16_t *)pixels)[x];
+
+    SDL_GetRGB(ret.pixel, surf->format, &ret.r, &ret.g, &ret.b);
+
+    return ret;
 }
 
-static inline void Rend_SetPixel(SDL_Surface *surf, int x, int y, uint8_t color)
+static inline void Rend_SetPixel(SDL_Surface *surf, int x, int y, uint8_t r, uint8_t g, uint8_t b)
 {
     uint8_t *pixels = (uint8_t *)surf->pixels + y * surf->pitch;
+    uint32_t color = SDL_MapRGB(surf->format, r, g, b);
 
     if (surf->format->BitsPerPixel == 32)
         ((uint32_t *)pixels)[x] = color;

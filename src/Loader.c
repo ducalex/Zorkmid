@@ -336,7 +336,7 @@ static Mix_Chunk *Load_ZGI(FManNode_t *file, char type)
 
     char low = tolower(type);
 
-    for (int32_t i = 0; i < 24; i++)
+    for (int i = 0; i < 24; i++)
         if (zg[i].chr == low)
         {
             indx = i;
@@ -592,94 +592,26 @@ static void de_lz(SDL_Surface *srf, uint8_t *src, uint32_t size, int32_t transpo
     SDL_UnlockSurface(srf);
 }
 
-static void flip_vertical(SDL_Surface *srf)
+static SDL_Surface *buf_to_surf(void *buf, int w, int h, bool transpose)
 {
-    SDL_LockSurface(srf);
-
-    uint8_t *a = (uint8_t *)srf->pixels;
-
-    int32_t num = srf->h / 2;
-    for (int32_t i = 0; i < num; i++)
-        for (int32_t j = 0; j < srf->pitch; j++)
-        {
-            a[i * srf->pitch + j] ^= a[(srf->h - i - 1) * srf->pitch + j];
-            a[(srf->h - i - 1) * srf->pitch + j] ^= a[i * srf->pitch + j];
-            a[i * srf->pitch + j] ^= a[(srf->h - i - 1) * srf->pitch + j];
-        }
-
-    SDL_UnlockSurface(srf);
-}
-
-static void flip_horizont(SDL_Surface *srf)
-{
-    SDL_LockSurface(srf);
-
-    if (srf->format->BitsPerPixel == 32)
-    {
-        int32_t num = srf->w / 2;
-        int32_t maxw = srf->w - 1;
-        for (int32_t i = 0; i < num; i++)
-            for (int32_t j = 0; j < srf->h; j++)
-            {
-                uint32_t *a = (uint32_t *)((uint8_t *)srf->pixels + j * srf->pitch);
-
-                a[i] ^= a[maxw - i];
-                a[maxw - i] ^= a[i];
-                a[i] ^= a[maxw - i];
-            }
-    }
-    else if (srf->format->BitsPerPixel == 16)
-    {
-        int32_t num = srf->w / 2;
-        int32_t maxw = srf->w - 1;
-        for (int32_t i = 0; i < num; i++)
-            for (int32_t j = 0; j < srf->h; j++)
-            {
-                uint16_t *a = (uint16_t *)((uint8_t *)srf->pixels + j * srf->pitch);
-
-                a[i] ^= a[maxw - i];
-                a[maxw - i] ^= a[i];
-                a[i] ^= a[maxw - i];
-            }
-    }
-    else if (srf->format->BitsPerPixel == 8)
-    {
-        int32_t num = srf->w / 2;
-        int32_t maxw = srf->w - 1;
-        for (int32_t i = 0; i < num; i++)
-            for (int32_t j = 0; j < srf->h; j++)
-            {
-                uint8_t *a = (uint8_t *)srf->pixels + j * srf->pitch;
-
-                a[i] ^= a[maxw - i];
-                a[maxw - i] ^= a[i];
-                a[i] ^= a[maxw - i];
-            }
-    }
-
-    SDL_UnlockSurface(srf);
-}
-
-static SDL_Surface *buf_to_surf(void *buf, int32_t w, int32_t h, int8_t transpose)
-{
-    SDL_Surface *srf = SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 16, 0x7C00, 0x3E0, 0x1F, 0);
+    SDL_Surface *srf = Rend_CreateSurface(w, h, 0);
 
     SDL_LockSurface(srf);
 
     bool need_correction = ((srf->w * srf->format->BytesPerPixel) != srf->pitch);
-    int32_t vpitch = srf->pitch / 2;
+    int vpitch = srf->pitch / 2;
 
-    if (transpose == 1)
+    if (transpose)
     {
         uint16_t *tmp = (uint16_t *)buf;
         uint16_t *tmp2 = (uint16_t *)srf->pixels;
 
         if (need_correction)
         {
-            int32_t idx = 0;
+            int idx = 0;
 
-            for (int32_t j = 0; j < h; j++)
-                for (int32_t i = 0; i < w; i++)
+            for (int j = 0; j < h; j++)
+                for (int i = 0; i < w; i++)
                 {
                     int32_t real_idx = ((idx / w) * vpitch) + (idx % w);
                     tmp2[real_idx] = tmp[i * h + j];
@@ -688,8 +620,8 @@ static SDL_Surface *buf_to_surf(void *buf, int32_t w, int32_t h, int8_t transpos
         }
         else
         {
-            for (int32_t j = 0; j < h; j++)
-                for (int32_t i = 0; i < w; i++)
+            for (int j = 0; j < h; j++)
+                for (int i = 0; i < w; i++)
                 {
                     *tmp2 = tmp[i * h + j];
                     tmp2++;
@@ -703,12 +635,12 @@ static SDL_Surface *buf_to_surf(void *buf, int32_t w, int32_t h, int8_t transpos
             uint16_t *tmp = (uint16_t *)buf;
             uint16_t *tmp2 = (uint16_t *)srf->pixels;
 
-            int32_t idx = 0;
+            int idx = 0;
 
-            for (int32_t j = 0; j < h; j++)
-                for (int32_t i = 0; i < w; i++)
+            for (int j = 0; j < h; j++)
+                for (int i = 0; i < w; i++)
                 {
-                    int32_t real_idx = ((idx / w) * vpitch) + (idx % w);
+                    int real_idx = ((idx / w) * vpitch) + (idx % w);
                     tmp2[real_idx] = tmp[j * w + i];
                     idx++;
                 }
@@ -722,7 +654,7 @@ static SDL_Surface *buf_to_surf(void *buf, int32_t w, int32_t h, int8_t transpos
     return srf;
 }
 
-static SDL_Surface *Load_gfx_File(const char *file, int8_t transpose, int8_t key, uint32_t ckey)
+SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, bool use_key, uint32_t key)
 {
     TRACE_LOADER("Load GFX file '%s'\n", file);
 
@@ -734,72 +666,37 @@ static SDL_Surface *Load_gfx_File(const char *file, int8_t transpose, int8_t key
         return NULL;
     }
 
-    SDL_Surface *srf = NULL;
-
     mfile_t *mfp = mfopen(mfil);
 
     uint32_t magic = ((uint32_t*)mfp->buf)[0];
+    int32_t wi = ((int32_t*)mfp->buf)[2];
+    int32_t hi = ((int32_t*)mfp->buf)[3];
 
-    if (magic == MAGIC_TGA)
+    if (magic != MAGIC_TGA)
+        Z_PANIC("File '%s' is not valid TGA\n", file);
+
+    if (transpose)
     {
-        int32_t wi = ((int32_t*)mfp->buf)[2];
-        int32_t hi = ((int32_t*)mfp->buf)[3];
-
-        if (transpose)
-        {
-            wi ^= hi;
-            hi ^= wi;
-            wi ^= hi;
-        }
-
-        srf = SDL_CreateRGBSurface(SDL_SWSURFACE, wi, hi, 16, 0x7C00, 0x3E0, 0x1F, 0);
-
-        de_lz(srf, mfp->buf + 0x10, mfp->size - 0x10, transpose);
+        wi ^= hi;
+        hi ^= wi;
+        wi ^= hi;
     }
-    else
-    {
-        LOG_WARN("File '%s' is not valid TGA\n", file);
 
-        srf = IMG_Load_RW(SDL_RWFromMem(mfp->buf, mfp->size), 0);
-        if (!srf)
-        {
-            uint16_t wi = ((uint16_t*)mfp->buf)[7];
-            uint16_t hi = ((uint16_t*)mfp->buf)[8];
+    SDL_Surface *srf = Rend_CreateSurface(wi, hi, 0);
 
-            if (transpose == 1)
-            {
-                srf = buf_to_surf(mfp->buf + 18, hi, wi, transpose);
-                flip_horizont(srf);
-            }
-            else
-            {
-                srf = buf_to_surf(mfp->buf + 18, wi, hi, transpose);
-                flip_vertical(srf);
-            }
-        }
-    }
+    de_lz(srf, mfp->buf + 0x10, mfp->size - 0x10, transpose);
 
     mfclose(mfp);
 
-    if (srf)
+    if (srf && use_key)
     {
-        Rend_ConvertImage(&srf);
-
-        if (key != 0)
-            SDL_SetColorKey(srf, SDL_SRCCOLORKEY, ckey);
+        int r = (key & 0x1F) * 8;
+        int g = ((key >> 5) & 0x1F) * 8;
+        int b = ((key >> 10) & 0x1F) * 8;
+        Rend_SetColorKey(srf, r, g, b);
     }
 
     return srf;
-}
-
-SDL_Surface *Loader_LoadFile(const char *file, int8_t transpose)
-{
-    return Load_gfx_File(file, transpose, 0, 0);
-}
-
-SDL_Surface *Loader_LoadFile_key(const char *file, int8_t transpose, uint32_t key)
-{
-    return Load_gfx_File(file, transpose, 1, key);
 }
 /*********************************** END TGZ_Support *******************************/
 
@@ -950,7 +847,7 @@ static void HRLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
     }
 }
 
-anim_surf_t *Loader_LoadRLF(const char *file, int8_t transpose, int32_t mask)
+anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask)
 {
     TRACE_LOADER("Load RLF file '%s'\n", file);
 
@@ -1011,10 +908,14 @@ anim_surf_t *Loader_LoadRLF(const char *file, int8_t transpose, int32_t mask)
             }
 
         atmp->img[i] = buf_to_surf(buf2, atmp->info.w, atmp->info.h, transpose);
-        Rend_ConvertImage(&atmp->img[i]);
 
         if (mask != 0 && mask != -1)
-            SDL_SetColorKey(atmp->img[i], SDL_SRCCOLORKEY, mask);
+        {
+            int b = ((mask >> 10) & 0x1F) * 8;
+            int g = ((mask >> 5) & 0x1F) * 8;
+            int r = (mask & 0x1F) * 8;
+            Rend_SetColorKey(atmp->img[i], r, g, b);
+        }
     }
 
     mfclose(f);
@@ -1040,7 +941,7 @@ void Loader_LoadZCR(const char *file, Cursor_t *cur)
         strcpy(tmp, file);
         int len = strlen(tmp);
 
-        cur->img = Loader_LoadFile_key(tmp, 0, Rend_MapScreenRGB(0, 0, 0));
+        cur->img = Loader_LoadGFX(tmp, false, true, 0x0000);
 
         if (cur->img == NULL)
             return;
@@ -1078,17 +979,14 @@ void Loader_LoadZCR(const char *file, Cursor_t *cur)
         cur->ox = x;
         cur->oy = y;
 
-        cur->img = SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 16, 0x7C00, 0x3E0, 0x1F, 0);
+        cur->img = Rend_CreateSurface(w, h, 0);
+        Rend_SetColorKey(cur->img, 0, 0, 0);
 
         SDL_LockSurface(cur->img);
 
         mfread(cur->img->pixels, 2 * w * h, f);
 
         SDL_UnlockSurface(cur->img);
-
-        Rend_ConvertImage(&cur->img);
-
-        SDL_SetColorKey(cur->img, SDL_SRCCOLORKEY, 0);
     }
     else
     {
@@ -1361,7 +1259,7 @@ char *mfgets(char *str, int32_t num, mfile_t *stream)
 
 static bool m_is_wide_char(mfile_t *file)
 {
-    for (int32_t i = 0; i < file->size - 2; i++)
+    for (size_t i = 0; i < file->size - 2; i++)
         if (file->buf[i] == 0 && file->buf[i + 2] == 0)
             return true;
 

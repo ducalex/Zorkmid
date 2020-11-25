@@ -53,7 +53,7 @@ static void control_slot_draw(ctrlnode_t *nod)
             else
                 sprintf(bff, "%d%sOBJ.TGA", tmp1, slut->distance_id);
 
-            slut->srf = Loader_LoadFile_key(bff, 0, Rend_MapScreenRGB(0, 0, 0));
+            slut->srf = Loader_LoadGFX(bff, 0, true, 0x0000);
 
             slut->loaded_img = tmp1;
         }
@@ -69,7 +69,7 @@ static void control_slot_draw(ctrlnode_t *nod)
             if ((slut->rectangle.h - slut->rectangle.y) > slut->srf->h)
                 drawy = slut->rectangle.y + ((slut->rectangle.h - slut->rectangle.y) - slut->srf->h) / 2;
 
-            Rend_DrawImageUpGamescr(slut->srf, drawx + GAMESCREEN_FLAT_X, drawy);
+            Rend_DrawImageToGameScreen(slut->srf, drawx + GAMESCREEN_FLAT_X, drawy);
         }
     }
     else
@@ -100,7 +100,7 @@ static void control_input_draw(ctrlnode_t *ct)
 
             inp->textchanged = false;
         }
-        Rend_DrawImageUpGamescr(inp->rect, inp->rectangle.x + GAMESCREEN_FLAT_X, inp->rectangle.y);
+        Rend_DrawImageToGameScreen(inp->rect, inp->rectangle.x + GAMESCREEN_FLAT_X, inp->rectangle.y);
     }
     else
         inp->textwidth = 0;
@@ -111,8 +111,11 @@ static void control_input_draw(ctrlnode_t *ct)
         {
             if (inp->cursor != NULL)
             {
-
-                Rend_DrawAnimImageUpGamescr(inp->cursor, inp->rectangle.x + GAMESCREEN_FLAT_X + inp->textwidth, inp->rectangle.y, inp->frame);
+                Rend_DrawImageToSurf(
+                    inp->cursor->img[inp->frame],
+                    Rend_GetGameScreen(),
+                    inp->rectangle.x + GAMESCREEN_FLAT_X + inp->textwidth,
+                    inp->rectangle.y);
 
                 inp->period -= GetDTime();
 
@@ -408,7 +411,6 @@ static void control_paint(ctrlnode_t *ct)
                 int32_t fr_x = (d_x - cen_x) + x;
                 int32_t fr_y = (d_y - cen_y) + y;
 
-                // Rend_SetPixel(scrn, rel_x, rel_y, Rend_GetPixel(scrn, fr_x, fr_y));
                 ((uint16_t *)scrn->pixels)[rel_x + rel_y * scrn->w] =
                     ((uint16_t *)paint->paint->pixels)[fr_x + fr_y * paint->paint->w];
             }
@@ -431,16 +433,16 @@ static void control_fist(ctrlnode_t *ct)
     if (!Rend_MouseInGamescr())
         return;
 
-    int32_t mX = Rend_GetMouseGameX();
-    int32_t mY = Rend_GetMouseGameY();
+    int mX = Rend_GetMouseGameX();
+    int mY = Rend_GetMouseGameY();
 
     if (fist->order != 0)
     {
-        for (int32_t i = 0; i < fist->fistnum; i++)
+        for (int i = 0; i < fist->fistnum; i++)
         {
             if (((fist->fiststatus >> i) & 1) == 1)
             {
-                for (int32_t j = 0; j < fist->fists_dwn[i].num_box; j++)
+                for (int j = 0; j < fist->fists_dwn[i].num_box; j++)
                     if (fist->fists_dwn[i].boxes[j].x <= mX &&
                         fist->fists_dwn[i].boxes[j].x2 >= mX &&
                         fist->fists_dwn[i].boxes[j].y <= mY &&
@@ -453,7 +455,7 @@ static void control_fist(ctrlnode_t *ct)
             }
             else
             {
-                for (int32_t j = 0; j < fist->fists_up[i].num_box; j++)
+                for (int j = 0; j < fist->fists_up[i].num_box; j++)
                     if (fist->fists_up[i].boxes[j].x <= mX &&
                         fist->fists_up[i].boxes[j].x2 >= mX &&
                         fist->fists_up[i].boxes[j].y <= mY &&
@@ -471,11 +473,11 @@ static void control_fist(ctrlnode_t *ct)
     }
     else
     {
-        for (int32_t i = fist->fistnum - 1; i >= 0; i--)
+        for (int i = fist->fistnum - 1; i >= 0; i--)
         {
             if (((fist->fiststatus >> i) & 1) == 1)
             {
-                for (int32_t j = 0; j < fist->fists_dwn[i].num_box; j++)
+                for (int j = 0; j < fist->fists_dwn[i].num_box; j++)
                     if (fist->fists_dwn[i].boxes[j].x <= mX &&
                         fist->fists_dwn[i].boxes[j].x2 >= mX &&
                         fist->fists_dwn[i].boxes[j].y <= mY &&
@@ -488,7 +490,7 @@ static void control_fist(ctrlnode_t *ct)
             }
             else
             {
-                for (int32_t j = 0; j < fist->fists_up[i].num_box; j++)
+                for (int j = 0; j < fist->fists_up[i].num_box; j++)
                     if (fist->fists_up[i].boxes[j].x <= mX &&
                         fist->fists_up[i].boxes[j].x2 >= mX &&
                         fist->fists_up[i].boxes[j].y <= mY &&
@@ -518,7 +520,7 @@ static void control_fist(ctrlnode_t *ct)
             uint32_t old_status = fist->fiststatus;
             fist->fiststatus ^= (1 << n_fist);
 
-            for (int32_t i = 0; i < fist->num_entries; i++)
+            for (int i = 0; i < fist->num_entries; i++)
                 if (fist->entries[i].strt == old_status &&
                     fist->entries[i].send == fist->fiststatus)
                 {
@@ -560,59 +562,6 @@ static void control_fist_draw(ctrlnode_t *ct)
                     SetgVarInt(fist->animation_id, 2);
             }
         }
-
-    /* if (fist->order != 0)
-     {
-         for(int32_t i=0;i<fist->fistnum;i++)
-         {
-             if (((fist->fiststatus >> i) & 1) == 1)
-             {
-                 for(int32_t j=0;j<fist->fists_dwn[i].num_box;j++)
-                     rectangleRGBA(Rend_GetGameScreen(),
-                                   fist->fists_dwn[i].boxes[j].x,
-                                   fist->fists_dwn[i].boxes[j].y,
-                                   fist->fists_dwn[i].boxes[j].x2,
-                                   fist->fists_dwn[i].boxes[j].y2,
-                                   255,0,0,255);
-             }
-             else
-             {
-                 for(int32_t j=0;j<fist->fists_up[i].num_box;j++)
-                     rectangleRGBA(Rend_GetGameScreen(),
-                                   fist->fists_up[i].boxes[j].x,
-                                   fist->fists_up[i].boxes[j].y,
-                                   fist->fists_up[i].boxes[j].x2,
-                                   fist->fists_up[i].boxes[j].y2,
-                                   255,0,0,255);
-             }
-         }
-     }
-     else
-     {
-         for(int32_t i=fist->fistnum-1;i>=0;i--)
-         {
-             if (((fist->fiststatus >> i) & 1) == 1)
-             {
-                 for(int32_t j=0;j<fist->fists_dwn[i].num_box;j++)
-                     rectangleRGBA(Rend_GetGameScreen(),
-                                   fist->fists_dwn[i].boxes[j].x,
-                                   fist->fists_dwn[i].boxes[j].y,
-                                   fist->fists_dwn[i].boxes[j].x2,
-                                   fist->fists_dwn[i].boxes[j].y2,
-                                   255,0,0,255);
-             }
-             else
-             {
-                 for(int32_t j=0;j<fist->fists_up[i].num_box;j++)
-                     rectangleRGBA(Rend_GetGameScreen(),
-                                   fist->fists_up[i].boxes[j].x,
-                                   fist->fists_up[i].boxes[j].y,
-                                   fist->fists_up[i].boxes[j].x2,
-                                   fist->fists_up[i].boxes[j].y2,
-                                   255,0,0,255);
-             }
-         }
-     }*/
 }
 
 static void control_hotmv(ctrlnode_t *ct)
@@ -696,7 +645,7 @@ static void control_titler_draw(ctrlnode_t *ct)
     titlernode_t *titler = ct->node.titler;
 
     if (titler->surface)
-        Rend_DrawImageUpGamescr(titler->surface, titler->rectangle.x + GAMESCREEN_FLAT_X, titler->rectangle.y);
+        Rend_DrawImageToGameScreen(titler->surface, titler->rectangle.x + GAMESCREEN_FLAT_X, titler->rectangle.y);
 }
 
 static void control_hotmv_draw(ctrlnode_t *ct)
@@ -1077,7 +1026,7 @@ static levernode_t *CreateLeverNode()
 static saveloadnode_t *CreateSaveNode()
 {
     saveloadnode_t *tmp = NEW(saveloadnode_t);
-    for (int32_t i = 0; i < MAX_SAVES; i++)
+    for (int i = 0; i < MAX_SAVES; i++)
         tmp->inputslot[i] = -1;
     return tmp;
 }
@@ -1316,8 +1265,8 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
                         token = strtok(NULL, find);
                     }
                     lev->hasout[t1] = 0;
-                    int32_t len = strlen(str);
-                    for (int32_t g = 0; g < len; g++)
+                    size_t len = strlen(str);
+                    for (size_t g = 0; g < len; g++)
                         if (tolower(str[g]) == 'p')
                         {
                             int32_t tr1, tr2;
@@ -1649,7 +1598,7 @@ static int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
                    &titler->rectangle.w,
                    &titler->rectangle.h);
 
-            titler->surface = Rend_CreateSurface(titler->rectangle.w - titler->rectangle.x + 1, titler->rectangle.h - titler->rectangle.y + 1);
+            titler->surface = Rend_CreateSurface(titler->rectangle.w - titler->rectangle.x + 1, titler->rectangle.h - titler->rectangle.y + 1, 0);
             Rend_SetColorKey(titler->surface, 0, 0, 0);
         }
         else if (str_starts_with(str, "string_resource_file") == 0)
@@ -1708,7 +1657,7 @@ static int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
                    &inp->rectangle.w,
                    &inp->rectangle.h);
 
-            inp->rect = Rend_CreateSurface(inp->rectangle.w - inp->rectangle.x, inp->rectangle.h - inp->rectangle.y);
+            inp->rect = Rend_CreateSurface(inp->rectangle.w - inp->rectangle.x, inp->rectangle.h - inp->rectangle.y, 0);
             Rend_SetColorKey(inp->rect, 0, 0, 0);
         }
         else if (str_starts_with(str, "aux_hotspot"))
@@ -1792,12 +1741,9 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "brush_file"))
         {
-            SDL_Surface *tmp = Loader_LoadFile(GetParams(str), 0);
+            SDL_Surface *tmp = Loader_LoadGFX(GetParams(str), false, false, 0);
             if (tmp)
             {
-                uint16_t *pixels = (uint16_t *)tmp->pixels;
-                uint16_t threshold = COLOR_JOIN_RGB565(0x7F >> 3, 0x7F >> 2, 0x7F >> 3); // RGBA 0x7F7F7F
-
                 paint->brush = NEW_ARRAY(uint8_t, tmp->w * tmp->h);
                 paint->b_w = tmp->w;
                 paint->b_h = tmp->h;
@@ -1806,10 +1752,10 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
 
                 for (int j = 0; j < paint->b_h; j++)
                     for (int i = 0; i < paint->b_w; i++)
-                        if (pixels[i + j * tmp->w] < threshold)
-                            paint->brush[i + j * tmp->w] = 0;
-                        else
-                            paint->brush[i + j * tmp->w] = 1;
+                    {
+                        color_t c = Rend_GetPixel(tmp, i, j);
+                        paint->brush[i + j * tmp->w] = (c.r >= 0x7F && c.g >= 0x7F && c.b >= 0x7F);
+                    }
 
                 SDL_UnlockSurface(tmp);
                 SDL_FreeSurface(tmp);
@@ -1860,12 +1806,12 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
         }     //if (str[0] == '}')
     }         //while (!feof(fl))
 
-    SDL_Surface *tmp = Loader_LoadFile(filename, 0);
+    SDL_Surface *tmp = Loader_LoadGFX(filename, false, false, 0);
 
     if (!tmp)
         return 0;
 
-    paint->paint = Rend_CreateSurface(paint->rectangle.w, paint->rectangle.h);
+    paint->paint = Rend_CreateSurface(paint->rectangle.w, paint->rectangle.h, 0);
 
     SDL_Rect tr;
     tr.x = paint->rectangle.x;
@@ -2183,15 +2129,15 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
                 {
                     if (t1 >= 0 && t1 < fist->num_entries)
                     {
-                        int32_t n1 = 0;
-                        int32_t len = strlen(s1);
-                        for (int32_t i = 0; i < len; i++)
+                        size_t n1 = 0;
+                        size_t len = strlen(s1);
+                        for (size_t i = 0; i < len; i++)
                             if (s1[i] != '0')
                                 n1 |= (1 << i);
 
-                        int32_t n2 = 0;
-                        int32_t tmp_len = strlen(s2);
-                        for (int32_t i = 0; i < tmp_len; i++)
+                        size_t n2 = 0;
+                        size_t tmp_len = strlen(s2);
+                        for (size_t i = 0; i < tmp_len; i++)
                             if (s2[i] != '0')
                                 n2 |= (1 << i);
 
@@ -2312,7 +2258,7 @@ static void ctrl_Delete_SlotNode(ctrlnode_t *nod)
 static void ctrl_Delete_InputNode(ctrlnode_t *nod)
 {
     if (nod->node.inp->cursor)
-        Rend_FreeAnimImage(nod->node.inp->cursor);
+        anim_DeleteAnimImage(nod->node.inp->cursor);
     if (nod->node.inp->rect)
         SDL_FreeSurface(nod->node.inp->rect);
     free(nod->node.inp);
@@ -2368,7 +2314,7 @@ static void ctrl_Delete_TitlerNode(ctrlnode_t *nod)
 {
     if (nod->node.titler->surface != NULL)
         SDL_FreeSurface(nod->node.titler->surface);
-    for (int32_t i = 0; i < CTRL_TITLER_MAX_STRINGS; i++)
+    for (int i = 0; i < CTRL_TITLER_MAX_STRINGS; i++)
         if (nod->node.titler->strings[i] != NULL)
             free(nod->node.titler->strings[i]);
     free(nod->node.titler);

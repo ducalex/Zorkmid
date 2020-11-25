@@ -332,16 +332,11 @@ static void Text_DrawWithJustify(char *txt, TTF_Font *fnt, SDL_Color clr, SDL_Su
     SDL_Surface *aaa = TTF_RenderUTF8_Solid(fnt, txt, clr);
 
     if (justify == TXT_JUSTIFY_LEFT)
-
-        Rend_DrawImageToSurf(aaa, 0, lineY - aaa->h, dst);
-
+        Rend_DrawImageToSurf(aaa, dst, 0, lineY - aaa->h);
     else if (justify == TXT_JUSTIFY_CENTER)
-
-        Rend_DrawImageToSurf(aaa, (dst->w - aaa->w) / 2, lineY - aaa->h, dst);
-
+        Rend_DrawImageToSurf(aaa, dst, (dst->w - aaa->w) / 2, lineY - aaa->h);
     else if (justify == TXT_JUSTIFY_RIGHT)
-
-        Rend_DrawImageToSurf(aaa, dst->w - aaa->w, lineY - aaa->h, dst);
+        Rend_DrawImageToSurf(aaa, dst, dst->w - aaa->w, lineY - aaa->h);
 
     SDL_FreeSurface(aaa);
 }
@@ -357,8 +352,8 @@ static void ttyscroll(ttytext_t *tty)
     int32_t scroll = 0;
     while (tty->dy - scroll > tty->h - tty->style.size)
         scroll += tty->style.size;
-    SDL_Surface *tmp = Rend_CreateSurface(tty->w, tty->h);
-    Rend_DrawImageToSurf(tty->img, 0, -scroll, tmp);
+    SDL_Surface *tmp = Rend_CreateSurface(tty->w, tty->h, 0);
+    Rend_DrawImageToSurf(tty->img, tmp, 0, -scroll);
     SDL_FreeSurface(tty->img);
     tty->img = tmp;
     tty->dy -= scroll;
@@ -379,7 +374,7 @@ static void outchartotty(uint16_t chr, ttytext_t *tty)
     if (tty->dy + tty->style.size + tty->style.size / 4 > tty->h)
         ttyscroll(tty);
 
-    Rend_DrawImageToSurf(tmp_surf, tty->dx, tty->dy + tty->style.size - maxy, tty->img);
+    Rend_DrawImageToSurf(tmp_surf, tty->img, tty->dx, tty->dy + tty->style.size - maxy);
 
     tty->dx += advice;
 
@@ -419,18 +414,17 @@ void Text_GetStyle(txt_style_t *style, const char *strin)
     int32_t strt = -1;
     int32_t endt = -1;
 
-    int32_t t_len = strlen(strin);
+    size_t t_len = strlen(strin);
 
-    for (int32_t i = 0; i < t_len; i++)
+    for (size_t i = 0; i < t_len; i++)
     {
         if (strin[i] == '<')
             strt = i;
         else if (strin[i] == '>')
         {
             endt = i;
-            if (strt != -1)
-                if ((endt - strt - 1) > 0)
-                    txt_parse_txt_params(style, strin + strt + 1, endt - strt - 1);
+            if (strt != -1 && (endt - strt - 1) > 0)
+                txt_parse_txt_params(style, strin + strt + 1, endt - strt - 1);
         }
     }
 }
@@ -617,24 +611,23 @@ void Text_DrawInOneLine(const char *text, SDL_Surface *dst)
     dy = 0;
     for (i = 0; i <= currentline; i++)
     {
-        int32_t j = 0;
-        int32_t width = 0;
+        int j = 0, width = 0;
         while (TxtSurfaces[i][j] != NULL)
         {
             width += TxtSurfaces[i][j]->w;
             j++;
         }
         dx = 0;
-        for (int32_t jj = 0; jj < j; jj++)
+        for (int jj = 0; jj < j; jj++)
         {
             if (TxtJustify[i] == TXT_JUSTIFY_LEFT)
-                Rend_DrawImageToSurf(TxtSurfaces[i][jj], dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
+                Rend_DrawImageToSurf(TxtSurfaces[i][jj], dst, dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h);
 
             else if (TxtJustify[i] == TXT_JUSTIFY_CENTER)
-                Rend_DrawImageToSurf(TxtSurfaces[i][jj], ((dst->w - width) >> 1) + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
+                Rend_DrawImageToSurf(TxtSurfaces[i][jj], dst, ((dst->w - width) >> 1) + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h);
 
             else if (TxtJustify[i] == TXT_JUSTIFY_RIGHT)
-                Rend_DrawImageToSurf(TxtSurfaces[i][jj], dst->w - width + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h, dst);
+                Rend_DrawImageToSurf(TxtSurfaces[i][jj], dst, dst->w - width + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h);
 
             dx += TxtSurfaces[i][jj]->w;
         }
@@ -643,7 +636,7 @@ void Text_DrawInOneLine(const char *text, SDL_Surface *dst)
     }
 
     for (i = 0; i < TXT_CFG_TEXTURES_LINES; i++)
-        for (int32_t j = 0; j < TXT_CFG_TEXTURES_PER_LINE; j++)
+        for (int j = 0; j < TXT_CFG_TEXTURES_PER_LINE; j++)
             if (TxtSurfaces[i][j] != NULL)
                 SDL_FreeSurface(TxtSurfaces[i][j]);
 }
@@ -757,7 +750,7 @@ int Text_ProcessTTYText(action_res_t *nod)
                 tty->txtpos += charsz;
             }
             tty->nexttime = tty->delay;
-            Rend_DrawImageToGamescr(tty->img, tty->x, tty->y);
+            Rend_DrawImageToSurf(tty->img, Rend_GetLocationScreenImage(), tty->x, tty->y);
         }
         else
         {

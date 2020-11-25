@@ -195,33 +195,29 @@ int MouseY()
     return My;
 }
 
+bool MouseUp(int btn)
+{
+    return ((Mstate & SDL_BUTTON(btn)) == 0 && (LMstate & SDL_BUTTON(btn)) == SDL_BUTTON(btn));
+}
+
 bool MouseDown(int btn)
 {
-    if (Mstate & SDL_BUTTON(btn))
-        return true;
-    else
-        return false;
+    return (Mstate & SDL_BUTTON(btn));
 }
 
 bool MouseHit(int btn)
 {
-    if ((LMstate & SDL_BUTTON(btn)) == 0 && (Mstate & SDL_BUTTON(btn)) == SDL_BUTTON(btn))
-        return true;
-    else
-        return false;
-}
-
-bool MouseUp(int btn)
-{
-    if ((Mstate & SDL_BUTTON(btn)) == 0 && (LMstate & SDL_BUTTON(btn)) == SDL_BUTTON(btn))
-        return true;
-    else
-        return false;
+    return ((LMstate & SDL_BUTTON(btn)) == 0 && (Mstate & SDL_BUTTON(btn)) == SDL_BUTTON(btn));
 }
 
 bool MouseDblClk()
 {
     return M_dbl_clk;
+}
+
+bool MouseMove()
+{
+    return (LMx != Mx || LMy != My);
 }
 
 void FlushMouseBtn(int btn)
@@ -230,13 +226,6 @@ void FlushMouseBtn(int btn)
     LMstate &= ~SDL_BUTTON(btn);
     if (btn == SDL_BUTTON_LEFT)
         M_dbl_clk = false;
-}
-
-bool MouseMove()
-{
-    if (LMx != Mx || LMy != My)
-        return true;
-    return false;
 }
 
 char *PrepareString(char *buf)

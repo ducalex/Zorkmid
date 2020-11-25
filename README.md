@@ -14,6 +14,7 @@ It is based on [ZEngine by Marisa-Chan](https://github.com/Marisa-Chan/Zengine).
 ### Prerequisites
 - GCC or MinGW
 - SDL, SDL_image, SDL_mixer, SDL_ttf
+- SDL_gfx
 
 ### Build
 - `make win32` or `make linux`

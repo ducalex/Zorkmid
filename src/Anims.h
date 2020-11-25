@@ -22,7 +22,6 @@ typedef struct animnode
     int32_t type; // AVI or RLF or MPG
     anim_surf_t *anim_rlf;
     anim_avi_t *anim_avi;
-    scaler_t *scal;
     int32_t playID;
     bool playing;
 } animnode_t;
@@ -55,6 +54,7 @@ int Anim_ProcessPrePlayNode(action_res_t *nod);
 int anim_DeleteAnimPlay(action_res_t *nod);
 int anim_DeleteAnimPreNod(action_res_t *nod);
 int anim_DeleteAnimPrePlayNode(action_res_t *nod);
+void anim_DeleteAnimImage(anim_surf_t *anim);
 void Anim_RenderFrame(animnode_t *mnod, int16_t x, int16_t y, int16_t w, int16_t h, int16_t frame);
 
 #endif // ANIMS_H_INCLUDED

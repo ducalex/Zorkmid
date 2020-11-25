@@ -30,7 +30,7 @@ int Mouse_GetCurrentObjCur();
 void Mouse_LoadObjCursor(int num);
 void Mouse_ShowCursor();
 void Mouse_HideCursor();
-int16_t Mouse_GetAngle(int16_t x, int16_t y, int16_t x2, int16_t y2);
+int Mouse_GetAngle(int x, int y, int x2, int y2);
 bool Mouse_InRect(int x, int y, int w, int h);
 
 #endif // MOUSE_H_INCLUDED

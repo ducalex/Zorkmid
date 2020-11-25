@@ -40,7 +40,7 @@ void Anim_Load(animnode_t *nod, char *filename, int u1, int u2, int32_t mask, in
         int w = nod->anim_avi->av->w;
         int h = nod->anim_avi->av->h;
 
-        nod->anim_avi->img = Rend_CreateSurface(w, h);
+        nod->anim_avi->img = Rend_CreateSurface(w, h, 0);
 
         if (nod->framerate == 0)
             nod->framerate = nod->anim_avi->av->header.mcrSecPframe / 1000; //~15fps
@@ -79,11 +79,21 @@ void Anim_Process(animnode_t *mnod)
         {
             avi_renderframe(mnod->anim_avi->av, mnod->CurFr);
             avi_to_surf(mnod->anim_avi->av, mnod->anim_avi->img);
-            Rend_DrawScalerToGamescr(mnod->scal, mnod->x, mnod->y);
+            Rend_DrawScaledToSurf(
+                mnod->anim_avi->img,
+                mnod->w,
+                mnod->h,
+                Rend_GetLocationScreenImage(),
+                mnod->x,
+                mnod->y);
         }
         else if (mnod->anim_rlf)
         {
-            Rend_DrawAnimImageToGamescr(mnod->anim_rlf, mnod->x, mnod->y, mnod->CurFr);
+            Rend_DrawImageToSurf(
+                mnod->anim_rlf->img[mnod->CurFr],
+                Rend_GetLocationScreenImage(),
+                mnod->x,
+                mnod->y);
         }
 
         mnod->CurFr++;
@@ -180,11 +190,6 @@ int Anim_Play(animnode_t *nod, int x, int y, int w, int h, int start, int end, i
 
     if (nod->anim_avi)
     {
-        if (nod->scal != NULL)
-            Rend_DeleteScaler(nod->scal);
-
-        nod->scal = Rend_CreateScaler(nod->anim_avi->img, nod->w, nod->h);
-
         avi_renderframe(nod->anim_avi->av, nod->start);
         avi_to_surf(nod->anim_avi->av, nod->anim_avi->img);
     }
@@ -210,31 +215,29 @@ void Anim_RenderFrame(animnode_t *mnod, int16_t x, int16_t y, int16_t w, int16_t
 
         mnod->anim_avi->lastfrm = frame;
 
-        if (mnod->scal)
-            if (mnod->scal->w != w || mnod->scal->h != h)
-            {
-                Rend_DeleteScaler(mnod->scal);
-                mnod->scal = NULL;
-            }
-
-        if (!mnod->scal)
-            mnod->scal = Rend_CreateScaler(mnod->anim_avi->img, w, h);
-
-        Rend_DrawScalerToGamescr(mnod->scal, x, y);
+        Rend_DrawScaledToSurf(mnod->anim_avi->img, w, h, Rend_GetLocationScreenImage(), x, y);
     }
     else if (mnod->anim_rlf)
     {
-        Rend_DrawAnimImageToGamescr(mnod->anim_rlf, x, y, frame);
+        Rend_DrawImageToSurf(mnod->anim_rlf->img[frame], Rend_GetLocationScreenImage(), x, y);
     }
+}
+
+void anim_DeleteAnimImage(anim_surf_t *anim)
+{
+    if (!anim)
+        return;
+
+    for (int i = 0; i < anim->info.frames; i++)
+        if (anim->img[i])
+            SDL_FreeSurface(anim->img[i]);
+
+    free(anim->img);
+    free(anim);
 }
 
 void anim_DeleteAnim(animnode_t *nod)
 {
-    if (nod->scal)
-    {
-        Rend_DeleteScaler(nod->scal);
-    }
-
     if (nod->anim_avi)
     {
         if (nod->anim_avi->img)
@@ -246,7 +249,7 @@ void anim_DeleteAnim(animnode_t *nod)
 
     if (nod->anim_rlf)
     {
-        Rend_FreeAnimImage(nod->anim_rlf);
+        anim_DeleteAnimImage(nod->anim_rlf);
     }
 
     free(nod);
