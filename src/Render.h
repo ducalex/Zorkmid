@@ -20,25 +20,24 @@ extern int GAMESCREEN_FLAT_X;
 #define RENDER_PANA 1
 #define RENDER_TILT 2
 
-#define COLOR_RGBA32(a, r, g, b) \
+#define COLOR_SPLIT_RGBA888(a, r, g, b) \
     r = a & 0xFF;                \
     g = (a >> 8) & 0xFF;         \
     b = (a >> 16) & 0xFF;
 
-#define COLOR_RGB16_565(a, r, g, b) \
-    r = a & 0x1F;                   \
-    g = (a >> 5) & 0x3F;            \
-    b = (a >> 11) & 0x1F;
+#define COLOR_SPLIT_RGB565(in, r, g, b) \
+    r = (in) & 0x1F;                   \
+    g = ((in) >> 5) & 0x3F;            \
+    b = ((in) >> 11) & 0x1F;
 
-#define COLOR_RGBA16_5551(a, r, g, b) \
+#define COLOR_SPLIT_RGB555(a, r, g, b) \
     r = a & 0x1F;                     \
     g = (a >> 5) & 0x1F;              \
     b = (a >> 10) & 0x1F;
 
-#define COLOR_RGBA16_4444(a, r, g, b) \
-    r = a & 0xF;                      \
-    g = (a >> 4) & 0xF;               \
-    b = (a >> 8) & 0xF;
+#define COLOR_JOIN_RGBA888(r, g, b) ((r) & 0xFF) | (((g) & 0xFF) << 8) | (((b) & 0xFF) << 16) | (0xFF << 24)
+#define COLOR_JOIN_RGB565(r, g, b) ((r) & 0x1F) | (((g) & 0x3F) << 5) | (((b) & 0x1F) << 11)
+#define COLOR_JOIN_RGB555(r, g, b) ((r) & 0x1F) | (((g) & 0x1F) << 5) | (((b) & 0x1F) << 10)
 
 typedef struct
 {
@@ -156,5 +155,25 @@ void Rend_DrawScalerToScreen(scaler_t *scal, int16_t x, int16_t y);
 int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s_y, float apml, float waveln, float spd);
 int32_t Rend_EF_Light_Setup(char *string, int32_t x, int32_t y, int32_t w, int32_t h, int32_t delay, int32_t steps);
 int32_t Rend_EF_9_Setup(char *mask, char *clouds, int32_t delay, int32_t x, int32_t y, int32_t w, int32_t h);
+
+static inline uint32_t Rend_GetPixel(SDL_Surface *surf, int x, int y)
+{
+    uint8_t *pixels = ((uint8_t *)surf->pixels) + y * surf->pitch;
+
+    if (surf->format->BitsPerPixel == 32)
+        return ((uint32_t *)pixels)[x];
+    else
+        return ((uint16_t *)pixels)[x];
+}
+
+static inline void Rend_SetPixel(SDL_Surface *surf, int x, int y, uint8_t color)
+{
+    uint8_t *pixels = (uint8_t *)surf->pixels + y * surf->pitch;
+
+    if (surf->format->BitsPerPixel == 32)
+        ((uint32_t *)pixels)[x] = color;
+    else
+        ((uint16_t *)pixels)[x] = color;
+}
 
 #endif // RENDER_H_INCLUDED

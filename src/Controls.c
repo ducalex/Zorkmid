@@ -351,7 +351,6 @@ static void control_slot(ctrlnode_t *ct)
 
 static void control_paint(ctrlnode_t *ct)
 {
-    bool mousein = false;
     paintnode_t *paint = ct->node.paint;
 
     if (!Rend_MouseInGamescr())
@@ -360,89 +359,67 @@ static void control_paint(ctrlnode_t *ct)
     int32_t mX = Rend_GetMouseGameX();
     int32_t mY = Rend_GetMouseGameY();
 
-    if (mX >= paint->rectangle.x &&
-        mX < paint->rectangle.x + paint->rectangle.w &&
-        mY >= paint->rectangle.y &&
-        mY < paint->rectangle.y + paint->rectangle.h)
-        mousein = true;
+    bool mousein = (mX >= paint->rectangle.x &&
+                    mX < paint->rectangle.x + paint->rectangle.w &&
+                    mY >= paint->rectangle.y &&
+                    mY < paint->rectangle.y + paint->rectangle.h);
 
-    if (mousein)
+    if (!mousein)
+        return;
+
+    if (!ctrl_eligeblity_slots(GetgVarInt(SLOT_INVENTORY_MOUSE), paint->eligible_objects, paint->eligable_cnt))
+        return;
+
+    if (Mouse_IsCurrentCur(CURSOR_IDLE))
+        Mouse_SetCursor(paint->cursor);
+
+    if (!MouseDown(SDL_BUTTON_LEFT))
+        return;
+
+    ctrl_setvenus(ct);
+
+    if (mX == paint->last_x || mY == paint->last_y)
+        return;
+
+    SDL_Surface *scrn = Rend_GetLocationScreenImage();
+    SDL_LockSurface(scrn);
+    SDL_LockSurface(paint->paint);
+
+    int32_t cen_x = 0; // paint->b_w / 2;
+    int32_t cen_y = 0; //paint->b_h / 2;
+
+    int32_t d_x = mX - paint->rectangle.x;
+    int32_t d_y = mY - paint->rectangle.y;
+
+    for (int y = 0; y < paint->b_h; y++)
     {
-        if (ctrl_eligeblity_slots(GetgVarInt(SLOT_INVENTORY_MOUSE), paint->eligible_objects, paint->eligable_cnt))
+        for (int x = 0; x < paint->b_w; x++)
         {
-            if (Mouse_IsCurrentCur(CURSOR_IDLE))
-                Mouse_SetCursor(paint->cursor);
+            if (paint->brush[x + y * paint->b_w] == 0)
+                continue;
 
-            if (MouseDown(SDL_BUTTON_LEFT))
+            if ((d_x - cen_x) + x >= 0 &&
+                (d_x - cen_x) + x < paint->paint->w &&
+                (d_y - cen_y) + y >= 0 &&
+                (d_y - cen_y) + y < paint->paint->h)
             {
+                int32_t rel_x = (mX - cen_x) + x;
+                int32_t rel_y = (mY - cen_y) + y;
+                int32_t fr_x = (d_x - cen_x) + x;
+                int32_t fr_y = (d_y - cen_y) + y;
 
-                ctrl_setvenus(ct);
-
-                if (mX != paint->last_x || mY != paint->last_y)
-                {
-                    SDL_Surface *scrn = Rend_GetLocationScreenImage();
-                    SDL_LockSurface(scrn);
-                    SDL_LockSurface(paint->paint);
-
-                    int32_t cen_x = 0; // paint->b_w / 2;
-                    int32_t cen_y = 0; //paint->b_h / 2;
-
-                    int32_t d_x = mX - paint->rectangle.x;
-                    int32_t d_y = mY - paint->rectangle.y;
-
-                    if (GAME_BPP == 32)
-                    {
-                        uint32_t *px = (uint32_t *)scrn->pixels;
-                        uint32_t *fr = (uint32_t *)paint->paint->pixels;
-
-                        for (int32_t y = 0; y < paint->b_h; y++)
-                            for (int32_t x = 0; x < paint->b_w; x++)
-                                if (paint->brush[x + y * paint->b_w] != 0)
-                                    if ((d_x - cen_x) + x >= 0 &&
-                                        (d_x - cen_x) + x < paint->paint->w &&
-                                        (d_y - cen_y) + y >= 0 &&
-                                        (d_y - cen_y) + y < paint->paint->h)
-                                    {
-                                        int32_t rel_x = (mX - cen_x) + x;
-                                        int32_t rel_y = (mY - cen_y) + y;
-                                        int32_t fr_x = (d_x - cen_x) + x;
-                                        int32_t fr_y = (d_y - cen_y) + y;
-                                        px[rel_x + rel_y * scrn->w] = fr[fr_x + fr_y * paint->paint->w];
-                                    }
-                    }
-                    else if (GAME_BPP == 16)
-                    {
-                        uint16_t *px = (uint16_t *)scrn->pixels;
-                        uint16_t *fr = (uint16_t *)paint->paint->pixels;
-
-                        for (int32_t y = 0; y < paint->b_h; y++)
-                            for (int32_t x = 0; x < paint->b_w; x++)
-                                if (paint->brush[x + y * paint->b_w] != 0)
-                                    if ((d_x - cen_x) + x >= 0 &&
-                                        (d_x - cen_x) + x < paint->paint->w &&
-                                        (d_y - cen_y) + y >= 0 &&
-                                        (d_y - cen_y) + y < paint->paint->h)
-                                    {
-                                        int32_t rel_x = (mX - cen_x) + x;
-                                        int32_t rel_y = (mY - cen_y) + y;
-                                        int32_t fr_x = (d_x - cen_x) + x;
-                                        int32_t fr_y = (d_y - cen_y) + y;
-                                        px[rel_x + rel_y * scrn->w] = fr[fr_x + fr_y * paint->paint->w];
-                                    }
-                    }
-                    else
-                    {
-                        printf("Write your code for %d bit mode in %s at %d line.\n", GAME_BPP, __FILE__, __LINE__);
-                    }
-                    SDL_UnlockSurface(scrn);
-                    SDL_UnlockSurface(paint->paint);
-
-                    paint->last_x = mX;
-                    paint->last_y = mY;
-                }
+                // Rend_SetPixel(scrn, rel_x, rel_y, Rend_GetPixel(scrn, fr_x, fr_y));
+                ((uint16_t *)scrn->pixels)[rel_x + rel_y * scrn->w] =
+                    ((uint16_t *)paint->paint->pixels)[fr_x + fr_y * paint->paint->w];
             }
         }
     }
+
+    SDL_UnlockSurface(scrn);
+    SDL_UnlockSurface(paint->paint);
+
+    paint->last_x = mX;
+    paint->last_y = mY;
 }
 
 static void control_fist(ctrlnode_t *ct)
@@ -1815,29 +1792,25 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "brush_file"))
         {
-            str = GetParams(str);
-            SDL_Surface *tmp = Loader_LoadFile(str, 0);
+            SDL_Surface *tmp = Loader_LoadFile(GetParams(str), 0);
             if (tmp)
             {
+                uint16_t *pixels = (uint16_t *)tmp->pixels;
+                uint16_t threshold = COLOR_JOIN_RGB565(0x7F >> 3, 0x7F >> 2, 0x7F >> 3); // RGBA 0x7F7F7F
+
                 paint->brush = NEW_ARRAY(uint8_t, tmp->w * tmp->h);
                 paint->b_w = tmp->w;
                 paint->b_h = tmp->h;
-                SDL_LockSurface(tmp);
-                if (GAME_BPP == 32)
-                {
-                    uint32_t *a = (uint32_t *)tmp->pixels;
 
-                    for (int32_t j = 0; j < paint->b_h; j++)
-                        for (int32_t i = 0; i < paint->b_w; i++)
-                            if (a[i + j * tmp->w] < 0x7F7F7F)
-                                paint->brush[i + j * tmp->w] = 0;
-                            else
-                                paint->brush[i + j * tmp->w] = 1;
-                }
-                else
-                {
-                    printf("Write your code for %d bit mode in %s at %d line.\n", GAME_BPP, __FILE__, __LINE__);
-                }
+                SDL_LockSurface(tmp);
+
+                for (int j = 0; j < paint->b_h; j++)
+                    for (int i = 0; i < paint->b_w; i++)
+                        if (pixels[i + j * tmp->w] < threshold)
+                            paint->brush[i + j * tmp->w] = 0;
+                        else
+                            paint->brush[i + j * tmp->w] = 1;
+
                 SDL_UnlockSurface(tmp);
                 SDL_FreeSurface(tmp);
             }
@@ -1889,21 +1862,19 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
 
     SDL_Surface *tmp = Loader_LoadFile(filename, 0);
 
-    if (tmp)
-    {
-        paint->paint = Rend_CreateSurface(paint->rectangle.w, paint->rectangle.h);
-
-        SDL_Rect tr;
-        tr.x = paint->rectangle.x;
-        tr.y = paint->rectangle.y;
-        tr.w = paint->rectangle.w;
-        tr.h = paint->rectangle.h;
-
-        SDL_BlitSurface(tmp, &tr, paint->paint, NULL);
-        SDL_FreeSurface(tmp);
-    }
-    else
+    if (!tmp)
         return 0;
+
+    paint->paint = Rend_CreateSurface(paint->rectangle.w, paint->rectangle.h);
+
+    SDL_Rect tr;
+    tr.x = paint->rectangle.x;
+    tr.y = paint->rectangle.y;
+    tr.w = paint->rectangle.w;
+    tr.h = paint->rectangle.h;
+
+    SDL_BlitSurface(tmp, &tr, paint->paint, NULL);
+    SDL_FreeSurface(tmp);
 
     return good;
 }

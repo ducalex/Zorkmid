@@ -5,7 +5,7 @@
 #define CUR_GAME GAME_ZGI
 // extern int CUR_GAME;
 
-#define ENABLE_TRACING
+// #define ENABLE_TRACING
 
 #include <stdbool.h>
 #include <stdint.h>

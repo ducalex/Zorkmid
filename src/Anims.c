@@ -79,9 +79,7 @@ void Anim_Process(animnode_t *mnod)
         {
             avi_renderframe(mnod->anim_avi->av, mnod->CurFr);
             avi_to_surf(mnod->anim_avi->av, mnod->anim_avi->img);
-            Rend_DrawScalerToGamescr(mnod->scal,
-                                     mnod->x,
-                                     mnod->y);
+            Rend_DrawScalerToGamescr(mnod->scal, mnod->x, mnod->y);
         }
         else if (mnod->anim_rlf)
         {

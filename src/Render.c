@@ -3,7 +3,7 @@
 //Graphics
 int GAME_W = 640;
 int GAME_H = 480;
-int GAME_BPP = 32;
+int GAME_BPP = 16;
 int GAMESCREEN_W = 640;
 int GAMESCREEN_P = 60;
 int GAMESCREEN_H = 344;

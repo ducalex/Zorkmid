@@ -492,158 +492,55 @@ void avi_stop(avi_file_t *av)
 
 void avi_to_surf(avi_file_t *av, SDL_Surface *srf)
 {
-    if (av->w == srf->w && av->h == srf->h)
+    if (av->pix_fmt != 16)
     {
-        if (srf->format->BitsPerPixel != 32)
-        {
-            printf("Not supported bit depth\n");
-            return;
-        }
-        SDL_LockSurface(srf);
-        if (av->pix_fmt == 16)
-        {
-            //fopen(av->)
-            uint16_t *img = (uint16_t *)av->frame;
-
-            if (av->translate == 0)
-            {
-                for (int32_t y = 0; y < srf->h; y++)
-                {
-                    uint32_t *line = (uint32_t *)((uint8_t *)srf->pixels + y * srf->pitch);
-                    for (int32_t x = 0; x < srf->w; x++)
-                    {
-                        uint8_t r, g, b;
-                        COLOR_RGBA16_5551(*img, b, g, r);
-                        r *= 8;
-                        g *= 8;
-                        b *= 8;
-                        line[x] = 0xFF000000 | r << 16 | g << 8 | b;
-                        img++;
-                    }
-                }
-            }
-            else
-            {
-                for (int32_t y = 0; y < srf->h; y++)
-                {
-                    uint32_t *line = (uint32_t *)((uint8_t *)srf->pixels + y * srf->pitch);
-                    for (int32_t x = 0; x < srf->w; x++)
-                    {
-                        uint8_t r, g, b;
-                        COLOR_RGBA16_5551(img[x * av->h + y], b, g, r);
-                        r *= 8;
-                        g *= 8;
-                        b *= 8;
-                        line[x] = 0xFF000000 | r << 16 | g << 8 | b;
-                    }
-                }
-            }
-        }
-        else
-        {
-            uint32_t *img = (uint32_t *)av->frame;
-            if (av->translate == 0)
-            {
-                for (int32_t y = 0; y < srf->h; y++)
-                {
-                    uint32_t *line = (uint32_t *)((uint8_t *)srf->pixels + y * srf->pitch);
-                    for (int32_t x = 0; x < srf->w; x++)
-                    {
-                        line[x] = *img;
-                        img++;
-                    }
-                }
-            }
-            else
-            {
-                for (int32_t y = 0; y < srf->h; y++)
-                {
-                    uint32_t *line = (uint32_t *)((uint8_t *)srf->pixels + y * srf->pitch);
-                    for (int32_t x = 0; x < srf->w; x++)
-                    {
-                        line[x] = img[x * av->h + y];
-                    }
-                }
-            }
-        }
-
-        SDL_UnlockSurface(srf);
+        Z_PANIC("AVI Bit depth %d not supported!\n", av->pix_fmt);
     }
-    else
+
+    SDL_LockSurface(srf);
+
+    bool fullscreen = av->w == srf->w && av->h == srf->h;
+
+    uint16_t *img = (uint16_t *)av->frame;
+    uint16_t color, r, g, b;
+
+    float xperc = (float)av->w / (float)srf->w;
+    float yperc = (float)av->h / (float)srf->h;
+
+    uint8_t *dst = (uint8_t *)srf->pixels;
+
+    for (int y = 0; y < srf->h; y++)
     {
-        if (srf->format->BitsPerPixel != 32)
+        for (int x = 0; x < srf->w; x++)
         {
-            printf("Not supported bit depth\n");
-            return;
-        }
-
-        float xperc = (float)av->w / (float)srf->w;
-        float yperc = (float)av->h / (float)srf->h;
-
-        SDL_LockSurface(srf);
-        if (av->pix_fmt == 16)
-        {
-            //fopen(av->)
-            uint16_t *img = (uint16_t *)av->frame;
-
-            if (av->translate == 0)
+            if (fullscreen)
             {
-                for (int32_t y = 0; y < srf->h; y++)
-                {
-                    uint32_t *line = (uint32_t *)((uint8_t *)srf->pixels + y * srf->pitch);
-                    for (int32_t x = 0; x < srf->w; x++)
-                    {
-                        uint8_t r, g, b;
-                        COLOR_RGBA16_5551(img[av->w * (int32_t)(y * yperc) + (int32_t)(x * xperc)], b, g, r);
-                        r *= 8;
-                        g *= 8;
-                        b *= 8;
-                        line[x] = 0xFF000000 | r << 16 | g << 8 | b;
-                    }
-                }
+                if (av->translate == 0)
+                    color = *img++;
+                else
+                    color = img[x * av->h + y];
             }
             else
             {
-                for (int32_t y = 0; y < srf->h; y++)
-                {
-                    uint32_t *line = (uint32_t *)((uint8_t *)srf->pixels + y * srf->pitch);
-                    for (int32_t x = 0; x < srf->w; x++)
-                    {
-                        uint8_t r, g, b;
-                        COLOR_RGBA16_5551(img[(int32_t)(x * yperc) * av->h + (int32_t)(y * xperc)], b, g, r);
-                        r *= 8;
-                        g *= 8;
-                        b *= 8;
-                        line[x] = 0xFF000000 | r << 16 | g << 8 | b;
-                    }
-                }
+                if (av->translate == 0)
+                    color = img[av->w * (int32_t)(y * yperc) + (int32_t)(x * xperc)];
+                else
+                    color = img[(int32_t)(x * yperc) * av->h + (int32_t)(y * xperc)];
             }
-        }
-        else
-        {
-            uint32_t *img = (uint32_t *)av->frame;
-            if (av->translate == 0)
-            {
-                for (int32_t y = 0; y < srf->h; y++)
-                {
-                    uint32_t *line = (uint32_t *)((uint8_t *)srf->pixels + y * srf->pitch);
-                    for (int32_t x = 0; x < srf->w; x++)
-                        line[x] = img[av->w * (int32_t)(y * yperc) + (int32_t)(x * xperc)];
-                }
-            }
-            else
-            {
-                for (int32_t y = 0; y < srf->h; y++)
-                {
-                    uint32_t *line = (uint32_t *)((uint8_t *)srf->pixels + y * srf->pitch);
-                    for (int32_t x = 0; x < srf->w; x++)
-                        line[x] = img[(int32_t)(x * yperc) * av->h + (int32_t)(y * xperc)];
-                }
-            }
-        }
 
-        SDL_UnlockSurface(srf);
+            COLOR_SPLIT_RGB555(color, r, g, b);
+
+            if (srf->format->BitsPerPixel == 32)
+                ((uint32_t*)dst)[x] = COLOR_JOIN_RGBA888(r * 8, g * 8, b * 8);
+            else if (srf->format->BitsPerPixel == 16)
+                ((uint16_t*)dst)[x] = COLOR_JOIN_RGB565(r, g << 1, b);
+            else if (srf->format->BitsPerPixel == 15)
+                ((uint16_t*)dst)[x] = COLOR_JOIN_RGB555(r, g, b);
+        }
+        dst += srf->pitch;
     }
+
+    SDL_UnlockSurface(srf);
 }
 
 void avi_close(avi_file_t *av)
@@ -651,28 +548,14 @@ void avi_close(avi_file_t *av)
     if (av->file)
         fclose(av->file);
 
-    if (av->frame)
-        free(av->frame);
-
-    if (av->buf)
-        free(av->buf);
-
     truemotion1_decode_end(av);
 
-    if (av->atrk)
-        free(av->atrk);
-
-    if (av->vtrk)
-        free(av->vtrk);
-
-    if (av->idx)
-        free(av->idx);
-
-    if (av->vfrm)
-        free(av->vfrm);
-
-    if (av->achunk)
-        free(av->achunk);
-
+    free(av->frame);
+    free(av->buf);
+    free(av->atrk);
+    free(av->vtrk);
+    free(av->idx);
+    free(av->vfrm);
+    free(av->achunk);
     free(av);
 }
