@@ -530,9 +530,9 @@ bool Rend_LoadGamescr(const char *file)
     if (scrbuf)
         SDL_FreeSurface(scrbuf);
 
-    scrbuf = Loader_LoadGFX(file, Rend_GetRenderer() == RENDER_PANA, false, 0);
+    scrbuf = Loader_LoadGFX(file, Rend_GetRenderer() == RENDER_PANA, -1);
 
-    SDL_FillRect(tempbuf, NULL, 0);
+    Rend_FillRect(tempbuf, NULL, 0, 0, 0);
 
     if (!scrbuf) // no errors if no screen
     {
@@ -668,7 +668,7 @@ void Rend_RenderFunc()
         return;
     }
 
-    SDL_FillRect(screen, NULL, 0);
+    Rend_FillRect(screen, NULL, 0, 0, 0);
 
     //pre-rendered
     if (Renderer == RENDER_FLAT)
@@ -1379,8 +1379,8 @@ int32_t Rend_EF_9_Setup(char *mask, char *clouds, int32_t delay, int32_t x, int3
 
     effect_t *ef = GetEffect(eftmp);
 
-    ef->effect.ef9.cloud = Loader_LoadGFX(clouds, false, false, 0);
-    ef->effect.ef9.mask = Loader_LoadGFX(mask, false, false, 0);
+    ef->effect.ef9.cloud = Loader_LoadGFX(clouds, false, -1);
+    ef->effect.ef9.mask = Loader_LoadGFX(mask, false, -1);
 
     if (ef->effect.ef9.cloud == NULL || ef->effect.ef9.mask == NULL)
     {
@@ -1606,4 +1606,9 @@ void Rend_BlitSurface(SDL_Surface *src, SDL_Rect *src_rct, SDL_Surface *dst, SDL
     {
         SDL_BlitSurface(src, src_rct, dst, dst_rct);
     }
+}
+
+void Rend_FillRect(SDL_Surface *surf, SDL_Rect *dst_rct, uint8_t r, uint8_t g, uint8_t b)
+{
+    SDL_FillRect(surf, dst_rct, SDL_MapRGB(surf->format, r, g, b));
 }

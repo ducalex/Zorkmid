@@ -104,7 +104,7 @@ void Subtitles_Process(subtitles_t *sub, int subtime)
 
     if (j == -1 && sub->currentsub != -1)
     {
-        SDL_FillRect(sub->SubRect->img, NULL, SDL_MapRGBA(sub->SubRect->img->format, 0, 0, 0, 255));
+        Rend_FillRect(sub->SubRect->img, NULL, 0, 0, 0);
         sub->currentsub = -1;
     }
 
@@ -113,7 +113,7 @@ void Subtitles_Process(subtitles_t *sub, int subtime)
         char *sss = sub->txt[sub->subs[j].sub];
         if (!str_empty(sss))
         {
-            SDL_FillRect(sub->SubRect->img, NULL, SDL_MapRGBA(sub->SubRect->img->format, 0, 0, 0, 255));
+            Rend_FillRect(sub->SubRect->img, NULL, 0, 0, 0);
             Text_DrawInOneLine(sss, sub->SubRect->img);
         }
         sub->currentsub = j;

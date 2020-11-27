@@ -13,7 +13,7 @@ It is based on [ZEngine by Marisa-Chan](https://github.com/Marisa-Chan/Zengine).
 
 ### Prerequisites
 - GCC or MinGW
-- SDL, SDL_image, SDL_mixer, SDL_ttf
+- SDL, SDL_mixer, SDL_ttf
 - SDL_gfx
 
 ### Build

@@ -79,7 +79,7 @@ static int action_set_partial_screen(char *params, int aSlot, pzllst_t *owner)
     int y = GetIntVal(yy);
     int tmp2 = GetIntVal(tmp22);
 
-    SDL_Surface *tmp = Loader_LoadGFX(file, Rend_GetRenderer() == RENDER_PANA, (tmp2 > 0), tmp2);
+    SDL_Surface *tmp = Loader_LoadGFX(file, Rend_GetRenderer() == RENDER_PANA, tmp2);
     if (tmp)
     {
         Rend_BlitSurfaceXY(tmp, Rend_GetLocationScreenImage(), x, y);
@@ -143,7 +143,7 @@ static int action_change_location(char *params, int aSlot, pzllst_t *owner)
 
 static int action_dissolve(char *params, int aSlot, pzllst_t *owner)
 {
-    SDL_FillRect(Rend_GetGameScreen(), NULL, 0);
+    Rend_FillRect(Rend_GetGameScreen(), NULL, 0, 0, 0);
 
     return ACTION_NORMAL;
 }

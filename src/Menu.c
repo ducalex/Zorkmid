@@ -80,16 +80,16 @@ void Menu_LoadGraphics()
         for (int i = 1; i < 4; i++)
         {
             sprintf(buf, "gmzau%2.2x1.tga", i);
-            menuback[i - 1][0] = Loader_LoadGFX(buf, false, false, 0);
+            menuback[i - 1][0] = Loader_LoadGFX(buf, false, -1);
             sprintf(buf, "gmzau%2.2x1.tga", i + 0x10);
-            menuback[i - 1][1] = Loader_LoadGFX(buf, false, false, 0);
+            menuback[i - 1][1] = Loader_LoadGFX(buf, false, -1);
         }
         for (int i = 0; i < 4; i++)
         {
             sprintf(buf, "gmzmu%2.2x1.tga", i);
-            menubar[i][0] = Loader_LoadGFX(buf, false, false, 0);
+            menubar[i][0] = Loader_LoadGFX(buf, false, -1);
             sprintf(buf, "gmznu%2.2x1.tga", i);
-            menubar[i][1] = Loader_LoadGFX(buf, false, false, 0);
+            menubar[i][1] = Loader_LoadGFX(buf, false, -1);
         }
 
         memset(menupicto, 0, sizeof(menupicto));
@@ -100,9 +100,9 @@ void Menu_LoadGraphics()
             for (int i = 0; i < menu_znemesis_but_frames; i++)
             {
                 sprintf(buf, "butfrm%d%d.tga", j, i);
-                menubut_znem[j - 1][i] = Loader_LoadGFX(buf, false, false, 0);
+                menubut_znem[j - 1][i] = Loader_LoadGFX(buf, false, -1);
             }
-        menubar_znem = Loader_LoadGFX("bar.tga", false, false, 0);
+        menubar_znem = Loader_LoadGFX("bar.tga", false, -1);
     }
 }
 
@@ -482,12 +482,12 @@ void Menu_Draw()
                             if (menupicto[itemnum][0] == NULL)
                             {
                                 sprintf(buf, "gmzwu%2.2x1.tga", itemnum);
-                                menupicto[itemnum][0] = Loader_LoadGFX(buf, 0, true, 0);
+                                menupicto[itemnum][0] = Loader_LoadGFX(buf, 0, 0);
                             }
                             if (menupicto[itemnum][1] == NULL)
                             {
                                 sprintf(buf, "gmzxu%2.2x1.tga", itemnum);
-                                menupicto[itemnum][1] = Loader_LoadGFX(buf, 0, true, 0);
+                                menupicto[itemnum][1] = Loader_LoadGFX(buf, 0, 0);
                             }
                             if (inrect)
                                 Rend_BlitSurfaceToScreen(menupicto[itemnum][1], menu_ScrollPos[menu_ITEM] + itemspace * i, 0);
@@ -521,12 +521,12 @@ void Menu_Draw()
                             if (menupicto[itemnum][0] == NULL)
                             {
                                 sprintf(buf, "gmzwu%2.2x1.tga", itemnum);
-                                menupicto[itemnum][0] = Loader_LoadGFX(buf, false, true, 0);
+                                menupicto[itemnum][0] = Loader_LoadGFX(buf, false, 0);
                             }
                             if (menupicto[itemnum][1] == NULL)
                             {
                                 sprintf(buf, "gmzxu%2.2x1.tga", itemnum);
-                                menupicto[itemnum][1] = Loader_LoadGFX(buf, false, true, 0);
+                                menupicto[itemnum][1] = Loader_LoadGFX(buf, false, 0);
                             }
                             if (inrect)
                                 Rend_BlitSurfaceToScreen(menupicto[itemnum][1], WINDOW_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0);

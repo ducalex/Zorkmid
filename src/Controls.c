@@ -53,7 +53,7 @@ static void control_slot_draw(ctrlnode_t *nod)
             else
                 sprintf(bff, "%d%sOBJ.TGA", tmp1, slut->distance_id);
 
-            slut->srf = Loader_LoadGFX(bff, 0, true, 0x0000);
+            slut->srf = Loader_LoadGFX(bff, 0, 0x0000);
 
             slut->loaded_img = tmp1;
         }
@@ -91,7 +91,7 @@ static void control_input_draw(ctrlnode_t *ct)
     {
         if (inp->textchanged)
         {
-            SDL_FillRect(inp->rect, NULL, 0);
+            Rend_FillRect(inp->rect, NULL, 0, 0, 0);
 
             if (!inp->readonly || !inp->focused)
                 inp->textwidth = Text_Draw(inp->text, &inp->string_init, inp->rect);
@@ -627,7 +627,7 @@ static void control_titler(ctrlnode_t *ct)
     if (titler->current_string != titler->next_string && titler->next_string >= 0 && titler->next_string < CTRL_TITLER_MAX_STRINGS)
     {
         titler->current_string = titler->next_string;
-        SDL_FillRect(titler->surface, NULL, SDL_MapRGBA(titler->surface->format, 0, 0, 0, 255));
+        Rend_FillRect(titler->surface, NULL, 0, 0, 0);
         if (titler->strings[titler->current_string] != NULL && titler->surface != NULL)
             Text_DrawInOneLine(titler->strings[titler->current_string], titler->surface);
     }
@@ -1734,7 +1734,7 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "brush_file"))
         {
-            SDL_Surface *tmp = Loader_LoadGFX(GetParams(str), false, false, 0);
+            SDL_Surface *tmp = Loader_LoadGFX(GetParams(str), false, -1);
             if (tmp)
             {
                 paint->brush = NEW_ARRAY(uint8_t, tmp->w * tmp->h);
@@ -1799,7 +1799,7 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
         }     //if (str[0] == '}')
     }         //while (!feof(fl))
 
-    SDL_Surface *tmp = Loader_LoadGFX(filename, false, false, 0);
+    SDL_Surface *tmp = Loader_LoadGFX(filename, false, -1);
     if (!tmp)
         return 0;
 

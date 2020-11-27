@@ -592,7 +592,7 @@ static void de_lz(SDL_Surface *srf, uint8_t *src, uint32_t size, int32_t transpo
     SDL_UnlockSurface(srf);
 }
 
-SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, bool use_key, uint32_t key)
+SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, int32_t key_555)
 {
     TRACE_LOADER("Load GFX file '%s'\n", file);
 
@@ -626,11 +626,11 @@ SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, bool use_key, uint
 
     mfclose(mfp);
 
-    if (srf && use_key)
+    if (srf && key_555 >= 0)
     {
-        int r = (key & 0x1F) * 8;
-        int g = ((key >> 5) & 0x1F) * 8;
-        int b = ((key >> 10) & 0x1F) * 8;
+        int r = (key_555 & 0x1F) * 8;
+        int g = ((key_555 >> 5) & 0x1F) * 8;
+        int b = ((key_555 >> 10) & 0x1F) * 8;
         Rend_SetColorKey(srf, r, g, b);
     }
 
@@ -785,7 +785,7 @@ static void HRLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
     }
 }
 
-anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask)
+anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555)
 {
     TRACE_LOADER("Load RLF file '%s'\n", file);
 
@@ -873,11 +873,11 @@ anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask)
 
         atmp->img[i] = srf;
 
-        if (mask != 0 && mask != -1)
+        if (mask_555 > 0)
         {
-            int b = ((mask >> 10) & 0x1F) * 8;
-            int g = ((mask >> 5) & 0x1F) * 8;
-            int r = (mask & 0x1F) * 8;
+            int b = ((mask_555 >> 10) & 0x1F) * 8;
+            int g = ((mask_555 >> 5) & 0x1F) * 8;
+            int r = (mask_555 & 0x1F) * 8;
             Rend_SetColorKey(atmp->img[i], r, g, b);
         }
     }
@@ -905,7 +905,7 @@ void Loader_LoadZCR(const char *file, Cursor_t *cur)
         strcpy(tmp, file);
         int len = strlen(tmp);
 
-        cur->img = Loader_LoadGFX(tmp, false, true, 0x0000);
+        cur->img = Loader_LoadGFX(tmp, false, 0x0000);
 
         if (cur->img == NULL)
             return;
