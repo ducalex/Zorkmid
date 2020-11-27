@@ -35,18 +35,16 @@ void Anim_Load(animnode_t *nod, char *filename, int u1, int u2, int32_t mask, in
     {
         nod->anim_avi = NEW(anim_avi_t);
         nod->anim_avi->av = avi_openfile(Loader_GetPath(filename), Rend_GetRenderer() == RENDER_PANA);
-        nod->anim_avi->lastfrm = -1;
-
-        int w = nod->anim_avi->av->w;
-        int h = nod->anim_avi->av->h;
-
-        nod->anim_avi->img = Rend_CreateSurface(w, h, 0);
 
         if (nod->framerate == 0)
             nod->framerate = nod->anim_avi->av->header.mcrSecPframe / 1000; //~15fps
 
-        nod->rel_h = h;
-        nod->rel_w = w;
+        nod->frames = nod->anim_avi->av->header.frames;
+        nod->rel_h = nod->anim_avi->av->w;
+        nod->rel_w = nod->anim_avi->av->h;
+
+        nod->anim_avi->img = Rend_CreateSurface(nod->rel_w, nod->rel_h, 0);
+        nod->anim_avi->lastfrm = -1;
     }
     else if (str_ends_with(filename, ".rlf"))
     {
@@ -55,6 +53,7 @@ void Anim_Load(animnode_t *nod, char *filename, int u1, int u2, int32_t mask, in
         if (nod->framerate == 0)
             nod->framerate = nod->anim_rlf->info.time;
 
+        nod->frames = nod->anim_rlf->info.frames;
         nod->rel_h = nod->anim_rlf->info.h;
         nod->rel_w = nod->anim_rlf->info.w;
     }
@@ -76,34 +75,35 @@ void Anim_Process(animnode_t *mnod)
 
     mnod->nexttick = mnod->framerate;
 
-    // if (mnod->CurFr < mnod->end)
-
-    if (mnod->anim_avi)
+    if (mnod->pos < mnod->end)
     {
-        avi_renderframe(mnod->anim_avi->av, mnod->CurFr);
-        avi_to_surf(mnod->anim_avi->av, mnod->anim_avi->img);
+        if (mnod->anim_avi)
+        {
+            avi_renderframe(mnod->anim_avi->av, mnod->pos);
+            avi_to_surf(mnod->anim_avi->av, mnod->anim_avi->img);
 
-        SDL_Rect rect = {mnod->x, mnod->y, mnod->w, mnod->h};
-        Rend_BlitSurface(mnod->anim_avi->img, NULL, Rend_GetLocationScreenImage(), &rect);
+            SDL_Rect rect = {mnod->x, mnod->y, mnod->w, mnod->h};
+            Rend_BlitSurface(mnod->anim_avi->img, NULL, Rend_GetLocationScreenImage(), &rect);
+        }
+        else if (mnod->anim_rlf)
+        {
+            Rend_BlitSurfaceXY(
+                mnod->anim_rlf->img[mnod->pos],
+                Rend_GetLocationScreenImage(),
+                mnod->x,
+                mnod->y);
+        }
+
+        mnod->pos++;
     }
-    else if (mnod->anim_rlf)
-    {
-        Rend_BlitSurfaceXY(
-            mnod->anim_rlf->img[mnod->CurFr],
-            Rend_GetLocationScreenImage(),
-            mnod->x,
-            mnod->y);
-    }
 
-    mnod->CurFr++;
-
-    if (mnod->CurFr >= mnod->end)
+    if (mnod->pos >= mnod->end)
     {
         mnod->loops++;
 
         if (mnod->loops < mnod->loopcnt || mnod->loopcnt == 0)
         {
-            mnod->CurFr = mnod->start;
+            mnod->pos = mnod->start;
         }
         else
         {
@@ -188,11 +188,10 @@ int Anim_Play(animnode_t *nod, int x, int y, int w, int h, int start, int end, i
 
     if (nod->anim_avi)
     {
-        avi_renderframe(nod->anim_avi->av, nod->start);
-        avi_to_surf(nod->anim_avi->av, nod->anim_avi->img);
+        nod->anim_avi->lastfrm = -1;
     }
 
-    nod->CurFr = nod->start;
+    nod->pos = nod->start;
     nod->loopcnt = loop;
 
     return nod->playID;

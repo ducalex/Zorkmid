@@ -13,13 +13,13 @@ typedef struct animnode
     int32_t rel_h;
     int32_t start;
     int32_t end;
+    int32_t pos;
     int32_t loopcnt;
     int32_t mask;
     int32_t framerate;
-    int32_t CurFr;
+    int32_t frames;
     int32_t nexttick;
     int32_t loops;
-    int32_t type; // AVI or RLF or MPG
     anim_surf_t *anim_rlf;
     anim_avi_t *anim_avi;
     int32_t playID;
