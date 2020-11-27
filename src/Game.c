@@ -437,7 +437,7 @@ void GameUpdate()
 
 void game_timed_message(int32_t milsecs, const char *str)
 {
-    subrect_t *zzz = Rend_CreateSubRect(SUB_DEF_RECT);
+    subrect_t *zzz = Rend_CreateSubRect(0, GAMESCREEN_H, GAMESCREEN_W, 68);
     Text_DrawInOneLine(str, zzz->img);
     Rend_DelaySubDelete(zzz, milsecs);
 }
@@ -454,7 +454,7 @@ void game_timed_debug_message(int32_t milsecs, const char *str)
 
 void game_delay_message(int32_t milsecs, const char *str)
 {
-    subrect_t *zzz = Rend_CreateSubRect(SUB_DEF_RECT);
+    subrect_t *zzz = Rend_CreateSubRect(0, GAMESCREEN_H, GAMESCREEN_W, 68);
     Text_DrawInOneLine(str, zzz->img);
     Rend_RenderFunc();
     Rend_ScreenFlip();
@@ -480,7 +480,7 @@ void game_delay_message(int32_t milsecs, const char *str)
 
 bool game_question_message(const char *str)
 {
-    subrect_t *zzz = Rend_CreateSubRect(SUB_DEF_RECT);
+    subrect_t *zzz = Rend_CreateSubRect(0, GAMESCREEN_H, GAMESCREEN_W, 68);
     Text_DrawInOneLine(str, zzz->img);
     Rend_RenderFunc();
     Rend_ScreenFlip();

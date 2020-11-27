@@ -64,7 +64,7 @@ typedef struct
 void Text_InitStyle(txt_style_t *style);
 void Text_GetStyle(txt_style_t *style, const char *strin);
 void Text_SetStyle(TTF_Font *font, txt_style_t *fnt_stl);
-int32_t Text_Draw(char *txt, txt_style_t *fnt_stl, SDL_Surface *dst);
+size_t Text_Draw(const char *txt, txt_style_t *fnt_stl, SDL_Surface *dst);
 void Text_DrawInOneLine(const char *text, SDL_Surface *dst);
 
 action_res_t *Text_CreateTTYText();

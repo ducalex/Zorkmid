@@ -1,10 +1,6 @@
 #ifndef SUBTITLES_H_INCLUDED
 #define SUBTITLES_H_INCLUDED
 
-#define SUB_DEF_RECT 0, 412, 640, 68
-#define SUB_CORRECT_VERT (-14)
-#define SUB_CORRECT_HORIZ 0
-
 typedef struct
 {
     int start;

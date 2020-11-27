@@ -1,39 +1,6 @@
 #include "System.h"
 
-static int8_t GetUtf8CharSize(char chr)
-{
-    if ((chr & 0x80) == 0)
-        return 1;
-    else if ((chr & 0xE0) == 0xC0)
-        return 2;
-    else if ((chr & 0xF0) == 0xE0)
-        return 3;
-    else if ((chr & 0xF8) == 0xF0)
-        return 4;
-    else if ((chr & 0xFC) == 0xF8)
-        return 5;
-    else if ((chr & 0xFE) == 0xFC)
-        return 6;
-
-    return 1;
-}
-
-static uint16_t ReadUtf8Char(char *chr)
-{
-    uint16_t result = 0;
-    if ((chr[0] & 0x80) == 0)
-        result = chr[0];
-    else if ((chr[0] & 0xE0) == 0xC0)
-        result = ((chr[0] & 0x1F) << 6) | (chr[1] & 0x3F);
-    else if ((chr[0] & 0xF0) == 0xE0)
-        result = ((chr[0] & 0x0F) << 12) | ((chr[1] & 0x3F) << 6) | (chr[2] & 0x3F);
-    else
-        result = chr[0];
-
-    return result;
-}
-
-static SDL_Surface *RenderUTF8(TTF_Font *fnt, char *text, txt_style_t *style)
+static SDL_Surface *RenderUTF8(TTF_Font *fnt, const char *text, txt_style_t *style)
 {
     Text_SetStyle(fnt, style);
     SDL_Color clr = {style->red, style->green, style->blue, 255};
@@ -90,23 +57,6 @@ static int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_
     {
         gooood = true;
 
-        //        if ( strCMP(token,"font") == 0 )
-        //        {
-        //            token = strtok(NULL,find);
-        //            if (token == NULL)
-        //                gooood = false;
-        //            else
-        //            {
-        //                if (strCMP(style->fontname,token) != 0)
-        //                {
-        //                    strcpy(style->fontname,token);
-        //                    retval |= TXT_RET_FNTCHG;
-        //                }
-        //
-        //            }
-        //
-        //        }
-        //        else
         if (str_starts_with(token, "blue"))
         {
             token = strtok(NULL, find);
@@ -327,20 +277,6 @@ static int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_
     return retval;
 }
 
-static void Text_DrawWithJustify(char *txt, TTF_Font *fnt, SDL_Color clr, SDL_Surface *dst, int lineY, int justify)
-{
-    SDL_Surface *aaa = TTF_RenderUTF8_Solid(fnt, txt, clr);
-
-    if (justify == TXT_JUSTIFY_LEFT)
-        Rend_BlitSurfaceXY(aaa, dst, 0, lineY - aaa->h);
-    else if (justify == TXT_JUSTIFY_CENTER)
-        Rend_BlitSurfaceXY(aaa, dst, (dst->w - aaa->w) / 2, lineY - aaa->h);
-    else if (justify == TXT_JUSTIFY_RIGHT)
-        Rend_BlitSurfaceXY(aaa, dst, dst->w - aaa->w, lineY - aaa->h);
-
-    SDL_FreeSurface(aaa);
-}
-
 static void ttynewline(ttytext_t *tty)
 {
     tty->dy += tty->style.size;
@@ -450,29 +386,28 @@ void Text_SetStyle(TTF_Font *font, txt_style_t *fnt_stl)
     TTF_SetFontStyle(font, temp_stl);
 }
 
-int32_t Text_Draw(char *txt, txt_style_t *fnt_stl, SDL_Surface *dst)
+size_t Text_Draw(const char *txt, txt_style_t *fnt_stl, SDL_Surface *dst)
 {
-    TTF_Font *temp_font = Loader_LoadFont(fnt_stl->fontname, fnt_stl->size);
-    if (!temp_font)
-    {
+    TTF_Font *fnt = Loader_LoadFont(fnt_stl->fontname, fnt_stl->size);
+    if (!fnt)
         Z_PANIC("TTF_OpenFont: %s\n", TTF_GetError());
-    }
 
-    SDL_FillRect(dst, NULL, 0);
+    Rend_FillRect(dst, NULL, 0, 0, 0);
 
-    SDL_Color clr = {fnt_stl->red, fnt_stl->green, fnt_stl->blue, 255};
+    SDL_Surface *aaa = RenderUTF8(fnt, txt, fnt_stl);
+    size_t width = aaa->w;
 
-    Text_SetStyle(temp_font, fnt_stl);
+    if (fnt_stl->justify == TXT_JUSTIFY_LEFT)
+        Rend_BlitSurfaceXY(aaa, dst, 0, fnt_stl->size - aaa->h);
+    else if (fnt_stl->justify == TXT_JUSTIFY_CENTER)
+        Rend_BlitSurfaceXY(aaa, dst, (dst->w - aaa->w) / 2, fnt_stl->size - aaa->h);
+    else if (fnt_stl->justify == TXT_JUSTIFY_RIGHT)
+        Rend_BlitSurfaceXY(aaa, dst, dst->w - aaa->w, fnt_stl->size - aaa->h);
 
-    int32_t w, h;
+    SDL_FreeSurface(aaa);
+    TTF_CloseFont(fnt);
 
-    TTF_SizeUTF8(temp_font, txt, &w, &h);
-
-    Text_DrawWithJustify(txt, temp_font, clr, dst, fnt_stl->size, fnt_stl->justify);
-
-    TTF_CloseFont(temp_font);
-
-    return w;
+    return width;
 }
 
 void Text_DrawInOneLine(const char *text, SDL_Surface *dst)
@@ -639,6 +574,41 @@ void Text_DrawInOneLine(const char *text, SDL_Surface *dst)
         for (int j = 0; j < TXT_CFG_TEXTURES_PER_LINE; j++)
             if (TxtSurfaces[i][j] != NULL)
                 SDL_FreeSurface(TxtSurfaces[i][j]);
+}
+
+/************** TTY **************/
+
+static int8_t GetUtf8CharSize(char chr)
+{
+    if ((chr & 0x80) == 0)
+        return 1;
+    else if ((chr & 0xE0) == 0xC0)
+        return 2;
+    else if ((chr & 0xF0) == 0xE0)
+        return 3;
+    else if ((chr & 0xF8) == 0xF0)
+        return 4;
+    else if ((chr & 0xFC) == 0xF8)
+        return 5;
+    else if ((chr & 0xFE) == 0xFC)
+        return 6;
+
+    return 1;
+}
+
+static uint16_t ReadUtf8Char(char *chr)
+{
+    uint16_t result = 0;
+    if ((chr[0] & 0x80) == 0)
+        result = chr[0];
+    else if ((chr[0] & 0xE0) == 0xC0)
+        result = ((chr[0] & 0x1F) << 6) | (chr[1] & 0x3F);
+    else if ((chr[0] & 0xF0) == 0xE0)
+        result = ((chr[0] & 0x0F) << 12) | ((chr[1] & 0x3F) << 6) | (chr[2] & 0x3F);
+    else
+        result = chr[0];
+
+    return result;
 }
 
 action_res_t *Text_CreateTTYText()

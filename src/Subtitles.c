@@ -50,10 +50,7 @@ subtitles_t *Subtitles_Load(char *filename)
         {
             int x, y, x2, y2;
             sscanf(str2, "%d %d %d %d", &x, &y, &x2, &y2);
-            tmp->SubRect = Rend_CreateSubRect(x + GAMESCREEN_X + SUB_CORRECT_HORIZ + GAMESCREEN_FLAT_X,
-                                                y + GAMESCREEN_Y + SUB_CORRECT_VERT,
-                                                x2 - x + 1,
-                                                y2 - y + 1);
+            tmp->SubRect = Rend_CreateSubRect(x, y, x2 - x + 1, y2 - y + 1);
         }
         else if (str_starts_with(str1, "TextFile"))
         {

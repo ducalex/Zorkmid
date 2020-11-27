@@ -781,7 +781,10 @@ void Rend_ProcessSubs()
             DeleteCurrent(sublist);
         }
         else
-            Rend_BlitSurfaceToScreen(subrec->img, subrec->x + GAMESCREEN_FLAT_X, subrec->y);
+            Rend_BlitSurfaceToScreen(
+                subrec->img,
+                subrec->x + GAMESCREEN_X + GAMESCREEN_FLAT_X,
+                subrec->y + GAMESCREEN_Y - 5);
 
         NextMList(sublist);
     }
