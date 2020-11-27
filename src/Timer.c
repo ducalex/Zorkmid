@@ -38,7 +38,7 @@ int Timer_ProcessNode(action_res_t *nod)
         return NODE_RET_DELETE;
     }
 
-    nod->nodes.node_timer -= GetDTime();
+    nod->nodes.node_timer -= Game_GetDTime();
 
     return NODE_RET_OK;
 }

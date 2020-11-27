@@ -152,7 +152,7 @@ void Loader_Init(const char *dir)
     BinNodesList = CreateMList();
     root = NEW(BinTreeNd_t);
     AddToMList(BinNodesList, root);
-    FindAssets(GetGamePath());
+    FindAssets(Game_GetPath());
 }
 
 const char *Loader_GetPath(const char *chr)
@@ -189,34 +189,6 @@ TTF_Font *Loader_LoadFont(char *name, int size)
 
 
 /*********************************** adpcm_Support *******************************/
-static const uint8_t wavHeader[0x2C] =
-    {
-        'R', 'I', 'F', 'F',
-        0, 0, 0, 0,
-        'W', 'A', 'V', 'E',
-        'f', 'm', 't', ' ',
-        0x10, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        'd', 'a', 't', 'a',
-        0, 0, 0, 0};
-
-static const int32_t t1[] = {-1, -1, -1, 1, 4, 7, 10, 12};
-static const int32_t t2[] = {0x0007, 0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E,
-                      0x0010, 0x0011, 0x0013, 0x0015, 0x0017, 0x0019, 0x001C, 0x001F,
-                      0x0022, 0x0025, 0x0029, 0x002D, 0x0032, 0x0037, 0x003C, 0x0042,
-                      0x0049, 0x0050, 0x0058, 0x0061, 0x006B, 0x0076, 0x0082, 0x008F,
-                      0x009D, 0x00AD, 0x00BE, 0x00D1, 0x00E6, 0x00FD, 0x0117, 0x0133,
-                      0x0151, 0x0173, 0x0198, 0x01C1, 0x01EE, 0x0220, 0x0256, 0x0292,
-                      0x02D4, 0x031C, 0x036C, 0x03C3, 0x0424, 0x048E, 0x0502, 0x0583,
-                      0x0610, 0x06AB, 0x0756, 0x0812, 0x08E0, 0x09C3, 0x0ABD, 0x0BD0,
-                      0x0CFF, 0x0E4C, 0x0FBA, 0x114C, 0x1307, 0x14EE, 0x1706, 0x1954,
-                      0x1BDC, 0x1EA5, 0x21B6, 0x2515, 0x28CA, 0x2CDF, 0x315B, 0x364B,
-                      0x3BB9, 0x41B2, 0x4844, 0x4F7E, 0x5771, 0x602F, 0x69CE, 0x7462,
-                      0x7FFF};
-
 static const struct
 {
     int8_t pkd;
@@ -253,211 +225,10 @@ static const struct
 static int znem_freq[16] = {0x1F40, 0x1F40, 0x1F40, 0x1F40, 0x2B11, 0x2B11,
                             0x2B11, 0x2B11, 0x5622, 0x5622, 0x5622, 0x5622,
                             0xAC44, 0xAC44, 0xAC44, 0xAC44};
-static int znem_bits[4] = {8, 8, 0x10, 0x10};
+static int znem_bits[4] = {0x08, 0x08, 0x10, 0x10};
 static int znem_stereo[2] = {0, 1};
 
-void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_t *ctx)
-{
-    uint8_t *m1;
-    uint16_t *m2;
-    m1 = (uint8_t *)in;
-    m2 = (uint16_t *)out;
-    uint32_t a, x, j = 0;
-    int32_t b, i, t[4] = {0, 0, 0, 0};
-
-    while (n)
-    {
-        a = *m1;
-        i = ctx ? ctx->t[ctx->j + 2] : t[j + 2];
-        x = t2[i];
-        b = 0;
-
-        if (a & 0x40)
-            b += x;
-        if (a & 0x20)
-            b += x >> 1;
-        if (a & 0x10)
-            b += x >> 2;
-        if (a & 8)
-            b += x >> 3;
-        if (a & 4)
-            b += x >> 4;
-        if (a & 2)
-            b += x >> 5;
-        if (a & 1)
-            b += x >> 6;
-
-        if (a & 0x80)
-            b = -b;
-
-        b += ctx ? ctx->t[ctx->j] : t[j];
-
-        if (b > 32767)
-            b = 32767;
-        else if (b < -32768)
-            b = -32768;
-
-        i += t1[(a >> 4) & 7];
-
-        if (i < 0)
-            i = 0;
-        else if (i > 88)
-            i = 88;
-
-        if (ctx)
-        {
-            ctx->t[ctx->j] = b;
-            ctx->t[ctx->j + 2] = i;
-            ctx->j = (ctx->j + 1) & stereo;
-        }
-        else
-        {
-            t[j] = b;
-            t[j + 2] = i;
-            j = (j + 1) & stereo;
-        }
-        *m2 = b;
-
-        m1++;
-        m2++;
-        n--;
-    }
-}
-
-static Mix_Chunk *Load_ZGI(FManNode_t *file, char type)
-{
-    int32_t freq;
-    int32_t bits;
-    int32_t stereo;
-    int32_t pkd;
-    int32_t size2;
-
-    int32_t indx = -1;
-
-    char low = tolower(type);
-
-    for (int i = 0; i < 24; i++)
-        if (zg[i].chr == low)
-        {
-            indx = i;
-            freq = zg[i].freq;
-            bits = zg[i].bits;
-            stereo = zg[i].stereo;
-            pkd = zg[i].pkd;
-
-            break;
-        }
-
-    if (indx == -1)
-        return NULL;
-
-    mfile_t *f = mfopen(file);
-
-    if (pkd == 1)
-        size2 = f->size * 2 + 0x2C;
-    else
-        size2 = f->size + 0x2C;
-
-    void *raw_w = malloc(size2);
-
-    memcpy(raw_w, wavHeader, 0x2C);
-
-    uint32_t *raw_i = (uint32_t *)raw_w;
-    raw_i[1] = size2 - 8;
-    raw_i[5] = ((stereo + 1) << 16) + 1;
-    raw_i[6] = freq;
-    if (bits == 16)
-    {
-        raw_i[7] = freq << (stereo + 1);
-        raw_i[8] = 0x100000 + (stereo + 1) * 2;
-    }
-    else
-    {
-        raw_i[7] = freq << stereo;
-        raw_i[8] = 0x100000 + stereo * 2;
-    }
-    raw_i[10] = size2 - 0x2C;
-
-    if (pkd == 1)
-        adpcm8_decode(f->buf, &raw_i[11], stereo, f->size, NULL);
-    else
-        memcpy(&raw_i[11], f->buf, f->size);
-
-    mfclose(f);
-
-    return Mix_LoadWAV_RW(SDL_RWFromMem(raw_w, size2), 1);
-}
-
-static Mix_Chunk *Load_ZNEM(FManNode_t *file, char type)
-{
-    int32_t freq;
-    int32_t bits;
-    int32_t stereo;
-    int32_t pkd;
-    int32_t size2;
-
-    char low = tolower(type);
-
-    if (low < 'p')
-    {
-        if (low >= 'j')
-            low--;
-    }
-    else
-    {
-        low -= 2;
-    }
-    if (low > '9')
-        low -= '\'';
-    low -= '0';
-
-    if (str_ends_with(file->name, "ifp") || type == '6')
-        pkd = 0;
-    else
-        pkd = 1;
-
-    freq = znem_freq[low % 16];
-    bits = znem_bits[low % 4];
-    stereo = znem_stereo[low % 2];
-
-    mfile_t *f = mfopen(file);
-
-    if (pkd == 1)
-        size2 = f->size * 2 + 0x2C;
-    else
-        size2 = f->size + 0x2C;
-
-    void *raw_w = malloc(size2);
-
-    memcpy(raw_w, wavHeader, 0x2C);
-
-    uint32_t *raw_i = (uint32_t *)raw_w;
-    raw_i[1] = size2 - 8;
-    raw_i[5] = ((stereo + 1) << 16) + 1;
-    raw_i[6] = freq;
-    if (bits == 16)
-    {
-        raw_i[7] = freq << (stereo + 1);
-        raw_i[8] = 0x100000 + (stereo + 1) * 2;
-    }
-    else
-    {
-        raw_i[7] = freq << stereo;
-        raw_i[8] = 0x100000 + stereo * 2;
-    }
-    raw_i[10] = size2 - 0x2C;
-
-    if (pkd == 1)
-        adpcm8_decode(f->buf, &raw_i[11], stereo, f->size, NULL);
-    else
-        memcpy(&raw_i[11], f->buf, f->size);
-
-    mfclose(f);
-
-    return Mix_LoadWAV_RW(SDL_RWFromMem(raw_w, size2), 1);
-}
-
-Mix_Chunk *Loader_LoadChunk(const char *file)
+Mix_Chunk *Loader_LoadSound(const char *file)
 {
     FManNode_t *mfp = Loader_FindNode(file);
     if (!mfp)
@@ -466,15 +237,66 @@ Mix_Chunk *Loader_LoadChunk(const char *file)
         return NULL;
     }
 
-    if (str_ends_with(mfp->name, "src") || str_ends_with(mfp->name, "raw") || str_ends_with(mfp->name, "ifp"))
+    Mix_Chunk *chunks;
+
+    if (str_ends_with(mfp->name, "wav"))
     {
-        if (CUR_GAME == GAME_ZGI)
-            return Load_ZGI(mfp, mfp->name[strlen(mfp->name) - 5]);
+        chunks = Mix_LoadWAV(file);
+    }
+    else if (CUR_GAME == GAME_ZGI)
+    {
+        char type = tolower(mfp->name[strlen(mfp->name) - 5]);
+        int index = -1;
+
+        for (int i = 0; i < 24; i++)
+            if (zg[i].chr == type)
+            {
+                index = i;
+                break;
+            }
+
+        if (index == -1)
+            return NULL;
+
+        mfile_t *f = mfopen(mfp);
+        chunks = wav_create(
+            f->buf,
+            f->size,
+            zg[index].stereo + 1,
+            zg[index].freq,
+            zg[index].bits,
+            zg[index].pkd);
+        mfclose(f);
+    }
+    else if (CUR_GAME == GAME_NEM)
+    {
+        char type = tolower(mfp->name[strlen(mfp->name) - 6]);
+
+        if (type < 'p')
+        {
+            if (type >= 'j')
+                type--;
+        }
         else
-            return Load_ZNEM(mfp, mfp->name[strlen(mfp->name) - 6]);
+            type -= 2;
+
+        if (type > '9')
+            type -= '\'';
+
+        type -= '0';
+
+        mfile_t *f = mfopen(mfp);
+        chunks = wav_create(
+            f->buf,
+            f->size,
+            znem_stereo[type % 2] + 1,
+            znem_freq[type % 16],
+            znem_bits[type % 4],
+            !(str_ends_with(mfp->name, "ifp") || type == '6'));
+        mfclose(f);
     }
 
-    return Mix_LoadWAV(file);
+    return chunks;
 }
 /*********************************** END adpcm_Support *******************************/
 

@@ -132,7 +132,7 @@ static int action_change_location(char *params, int aSlot, pzllst_t *owner)
     char tmp[4], tmp2[4], tmp3[4], tmp4[16];
     sscanf(params, "%c %c %c%c %s", tmp, tmp2, tmp3, tmp3 + 1, tmp4);
 
-    SetNeedLocate(tolower(tmp[0]), tolower(tmp2[0]), tolower(tmp3[0]), tolower(tmp3[1]), GetIntVal(tmp4));
+    Game_Relocate(tolower(tmp[0]), tolower(tmp2[0]), tolower(tmp3[0]), tolower(tmp3[1]), GetIntVal(tmp4));
 
     Rend_SetDelay(2);
 
@@ -234,11 +234,10 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
     Mix_Chunk *aud = avi_get_audio(anm->av);
     if (aud)
     {
-        tmp = Sound_GetFreeChannel();
-        Mix_UnregisterAllEffects(tmp);
-        Mix_PlayChannel(tmp, aud, 0);
-        Mix_Volume(tmp, 127);
+        tmp = Sound_Play(-1, aud, 0, 100);
     }
+
+    SDL_Rect dst_rct = {GAMESCREEN_X + xx + GAMESCREEN_FLAT_X, GAMESCREEN_Y + yy, ww, hh};
 
     avi_play(anm->av);
 
@@ -250,8 +249,6 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
             avi_stop(anm->av);
 
         avi_to_surf(anm->av, anm->img);
-
-        SDL_Rect dst_rct = {GAMESCREEN_X + xx + GAMESCREEN_FLAT_X, GAMESCREEN_Y + yy, ww, hh};
 
         Rend_BlitSurface(anm->img, NULL, Rend_GetScreen(), &dst_rct);
 
@@ -268,12 +265,12 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
         if (delay > 200 || delay < 0)
             delay = 15;
 
-        Delay(delay);
+        Game_Delay(delay);
     }
 
     if (aud != NULL)
     {
-        Mix_HaltChannel(tmp);
+        Sound_Stop(tmp);
         Mix_FreeChunk(aud);
     }
 
@@ -368,41 +365,25 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
     {
         int32_t instr = atoi(file);
         int32_t pitch = atoi(loop);
-        sprintf(fn, "%s/MIDI/%d/%d.wav", GetGamePath(), instr, pitch);
+        sprintf(fn, "%s/MIDI/%d/%d.wav", Game_GetPath(), instr, pitch);
         if (FileExists(fn))
         {
             nod->nodes.node_music->universe = universe;
             nod->nodes.node_music->chunk = Mix_LoadWAV(fn);
+            nod->nodes.node_music->volume = (read_params == 4) ? GetIntVal(vol) : 100;
+            nod->nodes.node_music->looped = (instr != 0);
+            nod->nodes.node_music->chn = Sound_Play(
+                -1,
+                nod->nodes.node_music->chunk,
+                instr == 0 ? 0 : -1,
+                nod->nodes.node_music->volume);
 
-            nod->nodes.node_music->chn = Sound_GetFreeChannel();
             if (nod->nodes.node_music->chn == -1)
             {
                 LOG_WARN("ERROR: NO CHANNELS! %s\n", params);
                 Sound_DeleteNode(nod);
                 return ACTION_NORMAL;
             }
-
-            Mix_UnregisterAllEffects(nod->nodes.node_music->chn);
-
-            if (read_params == 4)
-                nod->nodes.node_music->volume = GetIntVal(vol);
-            else
-                nod->nodes.node_music->volume = 100;
-
-            Mix_Volume(nod->nodes.node_music->chn, Sound_GetLogVol(nod->nodes.node_music->volume));
-
-            if (instr == 0)
-            {
-                Mix_PlayChannel(nod->nodes.node_music->chn, nod->nodes.node_music->chunk, 0);
-                nod->nodes.node_music->looped = false;
-            }
-            else
-            {
-                Mix_PlayChannel(nod->nodes.node_music->chn, nod->nodes.node_music->chunk, -1);
-                nod->nodes.node_music->looped = true;
-            }
-
-            Sound_LockChannel(nod->nodes.node_music->chn);
         }
         else
         {
@@ -416,22 +397,22 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
 
         char *ext = file + (strlen(file) - 3);
 
-        nod->nodes.node_music->chunk = Loader_LoadChunk(file);
+        nod->nodes.node_music->chunk = Loader_LoadSound(file);
 
         if (nod->nodes.node_music->chunk == NULL)
         {
             strcpy(ext, "raw");
-            nod->nodes.node_music->chunk = Loader_LoadChunk(file);
+            nod->nodes.node_music->chunk = Loader_LoadSound(file);
 
             if (nod->nodes.node_music->chunk == NULL)
             {
                 strcpy(ext, "ifp");
-                nod->nodes.node_music->chunk = Loader_LoadChunk(file);
+                nod->nodes.node_music->chunk = Loader_LoadSound(file);
 
                 if (nod->nodes.node_music->chunk == NULL)
                 {
                     strcpy(ext, "src");
-                    nod->nodes.node_music->chunk = Loader_LoadChunk(file);
+                    nod->nodes.node_music->chunk = Loader_LoadSound(file);
                 }
             }
         }
@@ -448,35 +429,21 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
             nod->nodes.node_music->sub = Text_LoadSubtitles(file);
         }
 
-        nod->nodes.node_music->chn = Sound_GetFreeChannel();
+        nod->nodes.node_music->volume = (read_params == 4) ? GetIntVal(vol) : 100;
+        nod->nodes.node_music->looped = (GetIntVal(loop) == 1);
+
+        nod->nodes.node_music->chn = Sound_Play(
+            -1,
+            nod->nodes.node_music->chunk,
+            nod->nodes.node_music->looped ? -1 : 0,
+            nod->nodes.node_music->volume);
+
         if (nod->nodes.node_music->chn == -1)
         {
             LOG_WARN("ERROR: NO CHANNELS! %s\n", params);
             Sound_DeleteNode(nod);
             return ACTION_NORMAL;
         }
-
-        Mix_UnregisterAllEffects(nod->nodes.node_music->chn);
-
-        if (read_params == 4)
-            nod->nodes.node_music->volume = GetIntVal(vol);
-        else
-            nod->nodes.node_music->volume = 100;
-
-        Mix_Volume(nod->nodes.node_music->chn, Sound_GetLogVol(nod->nodes.node_music->volume));
-
-        if (GetIntVal(loop) == 1)
-        {
-            Mix_PlayChannel(nod->nodes.node_music->chn, nod->nodes.node_music->chunk, -1);
-            nod->nodes.node_music->looped = true;
-        }
-        else
-        {
-            Mix_PlayChannel(nod->nodes.node_music->chn, nod->nodes.node_music->chunk, 0);
-            nod->nodes.node_music->looped = false;
-        }
-
-        Sound_LockChannel(nod->nodes.node_music->chn);
     }
 
     ScrSys_AddToActionsList(nod);
@@ -525,17 +492,9 @@ static int action_syncsound(char *params, int aSlot, pzllst_t *owner)
     tmp->owner = owner;
     tmp->slot = -1;
     //tmp->slot  = aSlot;
-
-    tmp->nodes.node_sync->chn = Sound_GetFreeChannel();
-
     tmp->nodes.node_sync->syncto = syncto;
-
-    if (GetGNode(syncto)->node_type == NODE_TYPE_ANIMPRE)
-    {
-        GetGNode(syncto)->nodes.node_animpre->framerate = FPS_DELAY; //~15fps hack
-    }
-
-    tmp->nodes.node_sync->chunk = Loader_LoadChunk(a3);
+    tmp->nodes.node_sync->chunk = Loader_LoadSound(a3);
+    tmp->nodes.node_sync->chn = Sound_Play(-1, tmp->nodes.node_sync->chunk, 0, 100);
 
     if (tmp->nodes.node_sync->chn == -1 || tmp->nodes.node_sync->chunk == NULL)
     {
@@ -544,19 +503,14 @@ static int action_syncsound(char *params, int aSlot, pzllst_t *owner)
         return ACTION_NORMAL;
     }
 
+    if (GetGNode(syncto)->node_type == NODE_TYPE_ANIMPRE)
+        GetGNode(syncto)->nodes.node_animpre->framerate = FPS_DELAY; //~15fps hack
+
     char *ext = a3 + (strlen(a3) - 3);
     strcpy(ext, "sub");
 
     if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
         tmp->nodes.node_sync->sub = Text_LoadSubtitles(a3);
-
-    Mix_UnregisterAllEffects(tmp->nodes.node_sync->chn);
-
-    Mix_Volume(tmp->nodes.node_sync->chn, Sound_GetLogVol(100));
-
-    Mix_PlayChannel(tmp->nodes.node_sync->chn, tmp->nodes.node_sync->chunk, 0);
-
-    Sound_LockChannel(tmp->nodes.node_sync->chn);
 
     ScrSys_AddToActionsList(tmp);
 
@@ -881,45 +835,41 @@ static int action_crossfade(char *params, int aSlot, pzllst_t *owner)
     if (item > 0)
     {
         action_res_t *tmp = GetGNode(item);
+        if (tmp && tmp->node_type == NODE_TYPE_MUSIC)
+        {
+            action_res_t *tnod = tmp;
 
-        if (tmp != NULL)
-            if (tmp->node_type == NODE_TYPE_MUSIC)
-            {
-                action_res_t *tnod = tmp;
+            tnod->nodes.node_music->crossfade = true;
 
-                tnod->nodes.node_music->crossfade = true;
+            if (GetIntVal(frVol1) >= 0)
+                tnod->nodes.node_music->volume = GetIntVal(frVol1);
 
-                if (GetIntVal(frVol1) >= 0)
-                    tnod->nodes.node_music->volume = GetIntVal(frVol1);
+            tnod->nodes.node_music->crossfade_params.times = ceil(GetIntVal(tim) / 33.3);
+            tnod->nodes.node_music->crossfade_params.deltavolume = ceil((GetIntVal(toVol) - tnod->nodes.node_music->volume) / (float)tnod->nodes.node_music->crossfade_params.times);
 
-                tnod->nodes.node_music->crossfade_params.times = ceil(GetIntVal(tim) / 33.3);
-                tnod->nodes.node_music->crossfade_params.deltavolume = ceil((GetIntVal(toVol) - tnod->nodes.node_music->volume) / (float)tnod->nodes.node_music->crossfade_params.times);
-
-                if (Mix_Playing(tnod->nodes.node_music->chn))
-                    Mix_Volume(tnod->nodes.node_music->chn, Sound_GetLogVol(tnod->nodes.node_music->volume));
-            }
+            if (Sound_Playing(tnod->nodes.node_music->chn))
+                Sound_SetVolume(tnod->nodes.node_music->chn, tnod->nodes.node_music->volume);
+        }
     }
 
     if (item2 > 0)
     {
         action_res_t *tmp = GetGNode(item2);
+        if (tmp && tmp->node_type == NODE_TYPE_MUSIC)
+        {
+            action_res_t *tnod = tmp;
 
-        if (tmp != NULL)
-            if (tmp->node_type == NODE_TYPE_MUSIC)
-            {
-                action_res_t *tnod = tmp;
+            tnod->nodes.node_music->crossfade = true;
 
-                tnod->nodes.node_music->crossfade = true;
+            if (GetIntVal(frVol2) >= 0)
+                tnod->nodes.node_music->volume = GetIntVal(frVol2);
 
-                if (GetIntVal(frVol2) >= 0)
-                    tnod->nodes.node_music->volume = GetIntVal(frVol2);
+            tnod->nodes.node_music->crossfade_params.times = ceil(GetIntVal(tim) / 33.3);
+            tnod->nodes.node_music->crossfade_params.deltavolume = ceil((GetIntVal(toVol2) - tnod->nodes.node_music->volume) / (float)tnod->nodes.node_music->crossfade_params.times);
 
-                tnod->nodes.node_music->crossfade_params.times = ceil(GetIntVal(tim) / 33.3);
-                tnod->nodes.node_music->crossfade_params.deltavolume = ceil((GetIntVal(toVol2) - tnod->nodes.node_music->volume) / (float)tnod->nodes.node_music->crossfade_params.times);
-
-                if (Mix_Playing(tnod->nodes.node_music->chn))
-                    Mix_Volume(tnod->nodes.node_music->chn, Sound_GetLogVol(tnod->nodes.node_music->volume));
-            }
+            if (Sound_Playing(tnod->nodes.node_music->chn))
+                Sound_SetVolume(tnod->nodes.node_music->chn, tnod->nodes.node_music->volume);
+        }
     }
 
     return ACTION_NORMAL;
@@ -989,16 +939,13 @@ static int action_attenuate(char *params, int aSlot, pzllst_t *owner)
     if (slot > 0)
     {
         action_res_t *tmp = GetGNode(slot);
-
-        if (tmp != NULL)
-            if (tmp->node_type == NODE_TYPE_MUSIC)
-            {
-
-                tmp->nodes.node_music->attenuate = att;
-                Mix_SetPosition(tmp->nodes.node_music->chn,
-                                tmp->nodes.node_music->pantrack_angle,
-                                tmp->nodes.node_music->attenuate);
-            }
+        if (tmp && tmp->node_type == NODE_TYPE_MUSIC)
+        {
+            tmp->nodes.node_music->attenuate = att;
+            Sound_SetPosition(tmp->nodes.node_music->chn,
+                              tmp->nodes.node_music->pantrack_angle,
+                              tmp->nodes.node_music->attenuate);
+        }
     }
 
     return ACTION_NORMAL;
@@ -1111,7 +1058,7 @@ static int action_rotate_to(char *params, int aSlot, pzllst_t *owner)
 
         Rend_RenderFunc();
         Rend_ScreenFlip();
-        Delay(500 / time);
+        Game_Delay(500 / time);
     }
 
     return ACTION_NORMAL;

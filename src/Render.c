@@ -1,7 +1,5 @@
 #include "System.h"
 
-#include <SDL/SDL_rotozoom.h>
-
 //Graphics
 int WINDOW_W = 0;
 int WINDOW_H = 0;
@@ -773,7 +771,7 @@ void Rend_ProcessSubs()
 
         if (subrec->timer >= 0)
         {
-            subrec->timer -= GetDTime();
+            subrec->timer -= Game_GetDTime();
             if (subrec->timer < 0)
                 subrec->todelete = true;
         }
@@ -1214,7 +1212,7 @@ static void Rend_EF_Light_Draw(effect_t *ef)
     if (!ef->effect.ef1.surface)
         return;
 
-    ef->time -= GetDTime();
+    ef->time -= Game_GetDTime();
 
     if (ef->time < 0)
     {
@@ -1323,7 +1321,7 @@ static void Rend_EF_Wave_Draw(effect_t *ef)
     if (!ef->effect.ef0.surface)
         return;
 
-    ef->time -= GetDTime();
+    ef->time -= Game_GetDTime();
 
     if (ef->time < 0)
     {
@@ -1438,7 +1436,7 @@ static void Rend_EF_9_Draw(effect_t *ef)
     if (!ef->effect.ef9.mapping)
         return;
 
-    ef->time -= GetDTime();
+    ef->time -= Game_GetDTime();
 
     if (ef->time < 0)
     {

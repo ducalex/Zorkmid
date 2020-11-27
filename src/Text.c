@@ -662,7 +662,7 @@ int Text_ProcessTTYText(action_res_t *nod)
     ttytext_t *tty = nod->nodes.tty_text;
     char buf[MINIBUFSZ];
 
-    tty->nexttime -= GetDTime();
+    tty->nexttime -= Game_GetDTime();
 
     if (tty->nexttime < 0)
     {

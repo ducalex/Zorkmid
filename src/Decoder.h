@@ -129,6 +129,12 @@ typedef struct
     uint8_t translate;
 } avi_file_t;
 
+typedef struct
+{
+    int32_t t[4];
+    uint32_t j;
+} adpcm_context_t;
+
 avi_file_t *avi_openfile(const char *fle, uint8_t transl);
 void avi_set_dem(avi_file_t *av, int32_t w, int32_t h);
 int8_t avi_renderframe(avi_file_t *av, int32_t frm);
@@ -138,5 +144,7 @@ void avi_to_surf(avi_file_t *av, SDL_Surface *srf);
 void avi_stop(avi_file_t *av);
 void avi_update(avi_file_t *av);
 void avi_close(avi_file_t *av);
+
+Mix_Chunk *wav_create(void *data, size_t data_len, int channels, int freq, int bits, int adpcm);
 
 #endif // SIMPLE_AVI_H_INCLUDED

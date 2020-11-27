@@ -48,7 +48,6 @@
 //#include "libavutil/mem.h"
 
 #include "truemotion1data.h"
-#include "simple_avi.h"
 
 #define FF_BUFFER_HINTS_VALID 0x01    // Buffer hints value is meaningful (if 0 ignore).
 #define FF_BUFFER_HINTS_READABLE 0x02 // Codec will read from buffer.

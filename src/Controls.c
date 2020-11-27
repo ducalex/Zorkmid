@@ -117,7 +117,7 @@ static void control_input_draw(ctrlnode_t *ct)
                     inp->rectangle.x + GAMESCREEN_FLAT_X + inp->textwidth,
                     inp->rectangle.y);
 
-                inp->period -= GetDTime();
+                inp->period -= Game_GetDTime();
 
                 if (inp->period <= 0)
                 {
@@ -540,7 +540,7 @@ static void control_fist_draw(ctrlnode_t *ct)
     if (fist->frame_cur >= 0 && fist->frame_end >= 0)
         if (fist->frame_cur <= fist->frame_end)
         {
-            fist->frame_time -= GetDTime();
+            fist->frame_time -= Game_GetDTime();
 
             if (fist->frame_time <= 0)
             {
@@ -565,7 +565,7 @@ static void control_hotmv(ctrlnode_t *ct)
 
     if (hotm->cycle < hotm->num_cycles)
     {
-        hotm->frame_time -= GetDTime();
+        hotm->frame_time -= Game_GetDTime();
         if (hotm->frame_time <= 0)
         {
             hotm->frame_time = hotm->anm->framerate;
@@ -715,7 +715,7 @@ static void control_safe_draw(ctrlnode_t *ct)
     if (safe->cur_frame == safe->to_frame)
         return;
 
-    safe->frame_time -= GetDTime();
+    safe->frame_time -= Game_GetDTime();
 
     if (safe->frame_time <= 0)
     {
@@ -812,7 +812,7 @@ static void control_save(ctrlnode_t *ct)
                         sprintf(fln, CTRL_SAVE_SAVES, i + 1);
                         if (FileExists(fln))
                         {
-                            if (game_question_message(GetGameString(SYSTEM_STR_SAVEEXIST)))
+                            if (game_question_message(Game_GetString(SYSTEM_STR_SAVEEXIST)))
                                 tosave = true;
                             else
                                 tosave = false;
@@ -831,14 +831,14 @@ static void control_save(ctrlnode_t *ct)
                             fclose(f);
 
                             ScrSys_SaveGame(fln);
-                            game_delay_message(1500, GetGameString(SYSTEM_STR_SAVED));
-                            SetNeedLocate('0', '0', '0', '0', 0);
+                            game_delay_message(1500, Game_GetString(SYSTEM_STR_SAVED));
+                            Game_Relocate('0', '0', '0', '0', 0);
                             break;
                         }
                     }
                     else
                     {
-                        game_timed_message(2000, GetGameString(SYSTEM_STR_SAVEEMPTY));
+                        game_timed_message(2000, Game_GetString(SYSTEM_STR_SAVEEMPTY));
                     }
                 }
                 else
@@ -885,7 +885,7 @@ static void control_lever(ctrlnode_t *ct)
             {
                 if (lev->autoseq_frm < lev->hasout[lev->autoseq])
                 {
-                    lev->autoseq_time -= GetDTime();
+                    lev->autoseq_time -= Game_GetDTime();
 
                     if (lev->autoseq_time < 0)
                     {
@@ -949,7 +949,7 @@ static void control_lever(ctrlnode_t *ct)
         lev->last_mouse_y = MouseY();
     }
 
-    lev->mouse_count -= GetDTime();
+    lev->mouse_count -= Game_GetDTime();
 }
 
 static pushnode_t *CreatePushNode()
@@ -1673,13 +1673,13 @@ static int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "string_init"))
         {
-            const char *tmp = GetGameString(atoi(GetParams(str)));
+            const char *tmp = Game_GetString(atoi(GetParams(str)));
             if (tmp != NULL)
                 Text_GetStyle(&inp->string_init, tmp);
         }
         else if (str_starts_with(str, "chooser_init_string"))
         {
-            const char *tmp = GetGameString(atoi(GetParams(str)));
+            const char *tmp = Game_GetString(atoi(GetParams(str)));
             if (tmp != NULL)
                 Text_GetStyle(&inp->string_chooser_init, tmp);
         }

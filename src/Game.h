@@ -58,16 +58,18 @@ void GameLoop();
 void GameUpdate();
 void GameQuit();
 void GameInit(const char *path);
-void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X);
+void Game_Relocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X);
 
-const char *GetGamePath();
+const char *Game_GetPath();
 const char *GetGameTitle();
-const char *GetGameString(int32_t indx);
+const char *Game_GetString(int indx);
 
-float GetFps();
-bool GetBeat();
-uint32_t GetDTime();
-void Delay(uint32_t ms);
+float Game_GetFps();
+bool Game_GetBeat();
+uint32_t Game_GetDTime();
+
+#define Game_Delay(ms) SDL_Delay(ms)
+#define Game_GetTime() SDL_GetTicks()
 
 void FlushKeybKey(SDLKey key);
 void FlushMouseBtn(int btn);

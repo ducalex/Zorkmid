@@ -1,11 +1,4 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <inttypes.h>
-#include <ctype.h>
-
-#include "../System.h"
-
-#include "simple_avi.h"
+#include "System.h"
 
 int truemotion1_decode_init(avi_file_t *fil);
 int truemotion1_decode_frame(avi_file_t *avctx, void *pkt, int pkt_sz);
@@ -36,16 +29,33 @@ void avi_build_vlist(avi_file_t *av);
 
 #define MKTAG16(a0, a1) ((uint16_t)((a0) | ((a1) << 8)))
 
-static char char2num(char c)
-{
-    c = tolower((char)c);
-    return (c >= 'a' && c <= 'f') ? c - 'a' + 10 : c - '0';
-}
+static const int32_t t1[] = {-1, -1, -1, 1, 4, 7, 10, 12};
+static const int32_t t2[] = {0x0007, 0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E,
+                      0x0010, 0x0011, 0x0013, 0x0015, 0x0017, 0x0019, 0x001C, 0x001F,
+                      0x0022, 0x0025, 0x0029, 0x002D, 0x0032, 0x0037, 0x003C, 0x0042,
+                      0x0049, 0x0050, 0x0058, 0x0061, 0x006B, 0x0076, 0x0082, 0x008F,
+                      0x009D, 0x00AD, 0x00BE, 0x00D1, 0x00E6, 0x00FD, 0x0117, 0x0133,
+                      0x0151, 0x0173, 0x0198, 0x01C1, 0x01EE, 0x0220, 0x0256, 0x0292,
+                      0x02D4, 0x031C, 0x036C, 0x03C3, 0x0424, 0x048E, 0x0502, 0x0583,
+                      0x0610, 0x06AB, 0x0756, 0x0812, 0x08E0, 0x09C3, 0x0ABD, 0x0BD0,
+                      0x0CFF, 0x0E4C, 0x0FBA, 0x114C, 0x1307, 0x14EE, 0x1706, 0x1954,
+                      0x1BDC, 0x1EA5, 0x21B6, 0x2515, 0x28CA, 0x2CDF, 0x315B, 0x364B,
+                      0x3BB9, 0x41B2, 0x4844, 0x4F7E, 0x5771, 0x602F, 0x69CE, 0x7462,
+                      0x7FFF};
 
-char getStreamIndex(uint32_t tag)
-{
-    return char2num((tag >> 24) & 0xFF) << 4 | char2num((tag >> 16) & 0xFF);
-}
+static const uint8_t wavHeader[0x2C] =
+    {
+        'R', 'I', 'F', 'F',
+        0, 0, 0, 0,
+        'W', 'A', 'V', 'E',
+        'f', 'm', 't', ' ',
+        0x10, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        'd', 'a', 't', 'a',
+        0, 0, 0, 0};
 
 static uint16_t getStreamType(uint32_t tag)
 {
@@ -59,13 +69,6 @@ uint32_t readu32(FILE *file)
     return tmp;
 }
 
-int32_t reads32(FILE *file)
-{
-    int32_t tmp = 0;
-    fread(&tmp, 4, 1, file);
-    return tmp;
-}
-
 uint16_t readu16(FILE *file)
 {
     uint16_t tmp = 0;
@@ -73,11 +76,72 @@ uint16_t readu16(FILE *file)
     return tmp;
 }
 
-int16_t reads16(FILE *file)
+static void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_t *ctx)
 {
-    int16_t tmp = 0;
-    fread(&tmp, 2, 1, file);
-    return tmp;
+    uint8_t *m1;
+    uint16_t *m2;
+    m1 = (uint8_t *)in;
+    m2 = (uint16_t *)out;
+    uint32_t a, x, j = 0;
+    int32_t b, i, t[4] = {0, 0, 0, 0};
+
+    while (n)
+    {
+        a = *m1;
+        i = ctx ? ctx->t[ctx->j + 2] : t[j + 2];
+        x = t2[i];
+        b = 0;
+
+        if (a & 0x40)
+            b += x;
+        if (a & 0x20)
+            b += x >> 1;
+        if (a & 0x10)
+            b += x >> 2;
+        if (a & 8)
+            b += x >> 3;
+        if (a & 4)
+            b += x >> 4;
+        if (a & 2)
+            b += x >> 5;
+        if (a & 1)
+            b += x >> 6;
+
+        if (a & 0x80)
+            b = -b;
+
+        b += ctx ? ctx->t[ctx->j] : t[j];
+
+        if (b > 32767)
+            b = 32767;
+        else if (b < -32768)
+            b = -32768;
+
+        i += t1[(a >> 4) & 7];
+
+        if (i < 0)
+            i = 0;
+        else if (i > 88)
+            i = 88;
+
+        if (ctx)
+        {
+            ctx->t[ctx->j] = b;
+            ctx->t[ctx->j + 2] = i;
+            ctx->j = (ctx->j + 1) & stereo;
+        }
+        else
+        {
+            t[j] = b;
+            t[j + 2] = i;
+            j = (j + 1) & stereo;
+        }
+        *m2 = b;
+
+        m1++;
+        m2++;
+        n--;
+    }
 }
 
 static int32_t avi_parse_handle(avi_file_t *av, uint32_t tag)
@@ -115,8 +179,8 @@ static int32_t avi_parse_handle(avi_file_t *av, uint32_t tag)
             fseek(av->file, listSize, SEEK_CUR);
         }
     }
-
     break;
+
     case ID_AVIH:
         av->header.size = readu32(av->file);
         av->header.mcrSecPframe = readu32(av->file);
@@ -131,6 +195,7 @@ static int32_t avi_parse_handle(avi_file_t *av, uint32_t tag)
         av->header.height = readu32(av->file);
         fseek(av->file, 16, SEEK_CUR);
         break;
+
     case ID_STRH:
     {
         avi_strm_hdr_t hdr;
@@ -210,6 +275,7 @@ static int32_t avi_parse_handle(avi_file_t *av, uint32_t tag)
         fseek(av->file, (junkSize + 1) & (~0x1), SEEK_CUR);
     }
     break;
+
     case ID_IDX1:
     {
         uint32_t cnt = readu32(av->file) / 16;
@@ -229,6 +295,16 @@ static int32_t avi_parse_handle(avi_file_t *av, uint32_t tag)
     return 0;
 }
 
+static int avi_get_offset(avi_file_t *av, uint32_t virt)
+{
+    for (uint32_t i = 0; i < av->movi_cnt; i++)
+    {
+        if (virt >= av->movi[i].offset && virt < av->movi[i].offset + av->movi[i].ssize)
+            return av->movi[i].fofset + (virt - av->movi[i].offset);
+    }
+    return 0;
+}
+
 avi_file_t *avi_openfile(const char *fle, uint8_t transl)
 {
     FILE *file = fopen(fle, "rb");
@@ -237,21 +313,13 @@ avi_file_t *avi_openfile(const char *fle, uint8_t transl)
 
     avi_file_t *tmp = NEW(avi_file_t);
 
-    tmp->file = file;
-
-    uint32_t tch = 0;
-    //    uint32_t ntag;
-
-    tch = readu32(file);
-
-    if (tch != ID_RIFF)
+    if (readu32(file) != ID_RIFF)
         goto ERROR;
 
+    tmp->file = file;
     tmp->size = readu32(file);
 
-    tch = readu32(file);
-
-    if (tch != ID_AVI)
+    if (readu32(file) != ID_AVI)
         goto ERROR;
 
     while (!feof(file))
@@ -294,16 +362,6 @@ void avi_set_dem(avi_file_t *av, int32_t w, int32_t h)
     }
 }
 
-int32_t avi_get_off(avi_file_t *av, uint32_t virt)
-{
-    for (uint32_t i = 0; i < av->movi_cnt; i++)
-    {
-        if (virt >= av->movi[i].offset && virt < av->movi[i].offset + av->movi[i].ssize)
-            return av->movi[i].fofset + (virt - av->movi[i].offset);
-    }
-    return 0;
-}
-
 void avi_build_vlist(avi_file_t *av)
 {
     int32_t cnt = 0;
@@ -326,14 +384,14 @@ void avi_build_vlist(avi_file_t *av)
     for (uint32_t i = 0; i < av->idx_cnt; i++)
         if (getStreamType(av->idx[i].id) == MKTAG16('d', 'c'))
         {
-            av->vfrm[cnt].fof = avi_get_off(av, av->idx[i].offset) + 4;
+            av->vfrm[cnt].fof = avi_get_offset(av, av->idx[i].offset) + 4;
             av->vfrm[cnt].sz = av->idx[i].size;
             av->vfrm[cnt].kfrm = (av->idx[i].flags & 0x10) != 0;
             cnt++;
         }
         else if (getStreamType(av->idx[i].id) == MKTAG16('w', 'b'))
         {
-            av->achunk[acnt].fof = avi_get_off(av, av->idx[i].offset) + 4;
+            av->achunk[acnt].fof = avi_get_offset(av, av->idx[i].offset) + 4;
             av->achunk[acnt].sz = av->idx[i].size;
             acnt++;
         }
@@ -375,83 +433,65 @@ int8_t avi_renderframe(avi_file_t *av, int32_t frm)
     return -1;
 }
 
-static const uint8_t wavHeader[0x2C] =
-    {
-        'R', 'I', 'F', 'F',
-        0, 0, 0, 0,
-        'W', 'A', 'V', 'E',
-        'f', 'm', 't', ' ',
-        0x10, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        'd', 'a', 't', 'a',
-        0, 0, 0, 0};
-
 Mix_Chunk *avi_get_audio(avi_file_t *av)
 {
-    if (av->atrk)
+    if (!av || !av->atrk)
+        return NULL;
+
+    uint32_t asz = 0;
+    uint32_t tmp = 0;
+    for (int i = 0; i < av->achunk_cnt; i++)
+        asz += av->achunk[i].sz;
+
+    if (av->atrk->tag == 0x1) // PCM
     {
-        uint32_t asz = 0;
-        uint32_t tmp = 0;
+        size_t buffer_size = asz + sizeof(wavHeader);
+        uint32_t *raw = (uint32_t *)malloc(buffer_size);
+        memcpy(raw, wavHeader, sizeof(wavHeader));
+        raw[7] = av->atrk->channels * raw[6] * av->atrk->size / 8;
+        raw[8] = (av->atrk->size << 16) | (av->atrk->size * av->atrk->channels / 8);
+        raw[10] = asz;
+        tmp = 0;
         for (int i = 0; i < av->achunk_cnt; i++)
+        {
+            uint8_t *rw = (uint8_t *)(&raw[11]);
+            fseek(av->file, av->achunk[i].fof, SEEK_SET);
+            fread(rw + tmp, av->achunk[i].sz, 1, av->file);
             tmp += av->achunk[i].sz;
-        asz = tmp;
-
-        if (av->atrk->tag == 0x1) // PCM
-        {
-            uint32_t *raw = (uint32_t *)malloc(asz + 0x2C);
-            memcpy(raw, wavHeader, 0x2C);
-            raw[1] = asz - 8 + 0x2C;
-            raw[5] = (av->atrk->channels << 16) | 0x01;
-            raw[6] = av->atrk->samplesPerSec;
-            raw[7] = av->atrk->channels * raw[6] * av->atrk->size / 8;
-            raw[8] = (av->atrk->size << 16) | (av->atrk->size * av->atrk->channels / 8);
-            raw[10] = asz;
-            tmp = 0;
-            for (int i = 0; i < av->achunk_cnt; i++)
-            {
-                uint8_t *rw = (uint8_t *)(&raw[11]);
-                fseek(av->file, av->achunk[i].fof, SEEK_SET);
-                fread(rw + tmp, av->achunk[i].sz, 1, av->file);
-                tmp += av->achunk[i].sz;
-            }
-
-            return Mix_LoadWAV_RW(SDL_RWFromMem(raw, asz + 0x2C), 1);
         }
-        else if (av->atrk->tag == 0x11) // Intel's DVI ADPCM
-        {
-            uint32_t *raw = (uint32_t *)malloc(asz * 2 + 0x2C);
-            memcpy(raw, wavHeader, 0x2C);
-            raw[1] = asz * 2 - 8 + 0x2C;
-            raw[5] = (av->atrk->channels << 16) | 0x01;
-            raw[6] = av->atrk->samplesPerSec;
-            raw[7] = av->atrk->channels * raw[6] * av->atrk->size / 4;
-            raw[8] = (av->atrk->size * av->atrk->channels << 16) | (av->atrk->size * av->atrk->channels / 4);
-            //raw[8] = 0x100000 | (av->atrk->size*av->atrk->channels/8);
-            raw[10] = asz * 2;
-            tmp = 0;
 
-            adpcm_context_t ctx;
-            memset(&ctx, 0, sizeof(ctx));
-
-            for (int i = 0; i < av->achunk_cnt; i++)
-            {
-                uint8_t *rw = (uint8_t *)(&raw[11]);
-                fseek(av->file, av->achunk[i].fof, SEEK_SET);
-                fread(av->buf, av->achunk[i].sz, 1, av->file);
-                adpcm8_decode(av->buf, rw + tmp, (av->atrk->channels - 1), av->achunk[i].sz, &ctx);
-                tmp += av->achunk[i].sz * 2;
-            }
-
-            return Mix_LoadWAV_RW(SDL_RWFromMem(raw, asz * 2 + 0x2C), 1);
-        }
-        else
-        {
-            printf("auds tag: %x\n", av->atrk->tag);
-        }
+        return Mix_LoadWAV_RW(SDL_RWFromMem(raw, buffer_size), 1);
     }
+    else if (av->atrk->tag == 0x11) // Intel's DVI ADPCM
+    {
+        size_t buffer_size = asz * 2 + sizeof(wavHeader);
+        uint32_t *raw = (uint32_t *)malloc(buffer_size);
+        memcpy(raw, wavHeader, sizeof(wavHeader));
+        raw[1] = buffer_size - 8;
+        raw[5] = (av->atrk->channels << 16) | 0x01;
+        raw[6] = av->atrk->samplesPerSec;
+        raw[7] = av->atrk->channels * raw[6] * av->atrk->size / 4;
+        raw[8] = (av->atrk->size * av->atrk->channels << 16) | (av->atrk->size * av->atrk->channels / 4);
+        //raw[8] = 0x100000 | (av->atrk->size*av->atrk->channels/8);
+        raw[10] = asz * 2;
+        tmp = 0;
+
+        adpcm_context_t ctx;
+        memset(&ctx, 0, sizeof(ctx));
+
+        for (int i = 0; i < av->achunk_cnt; i++)
+        {
+            uint8_t *rw = (uint8_t *)(&raw[11]);
+            fseek(av->file, av->achunk[i].fof, SEEK_SET);
+            fread(av->buf, av->achunk[i].sz, 1, av->file);
+            adpcm8_decode(av->buf, rw + tmp, (av->atrk->channels - 1), av->achunk[i].sz, &ctx);
+            tmp += av->achunk[i].sz * 2;
+        }
+
+        return Mix_LoadWAV_RW(SDL_RWFromMem(raw, buffer_size), 1);
+    }
+
+    printf("auds tag: %x\n", av->atrk->tag);
     return NULL;
 }
 
@@ -462,14 +502,14 @@ void avi_play(avi_file_t *av)
 
     avi_renderframe(av, 0);
 
-    av->stime = SDL_GetTicks();
+    av->stime = Game_GetTime();
 }
 
 void avi_update(avi_file_t *av)
 {
     if (av->status == AVI_PLAY)
     {
-        float ss = SDL_GetTicks() - av->stime;
+        float ss = Game_GetTime() - av->stime;
         uint32_t nwf = (ss / ((float)(av->header.mcrSecPframe) / 1000.0));
 
         if (nwf >= av->header.frames)
@@ -553,4 +593,35 @@ void avi_close(avi_file_t *av)
     free(av->vfrm);
     free(av->achunk);
     free(av);
+}
+
+Mix_Chunk *wav_create(void *data, size_t data_len, int channels, int freq, int bits, int adpcm)
+{
+    size_t final_size = sizeof(wavHeader) + (adpcm ? data_len * 2 : data_len);
+
+    uint32_t *buffer = malloc(final_size);
+
+    memcpy(buffer, wavHeader, sizeof(wavHeader));
+
+    buffer[1] = final_size - 8;
+    buffer[5] = (channels << 16) + 1;
+    buffer[6] = freq;
+    if (bits == 16)
+    {
+        buffer[7] = freq << channels;
+        buffer[8] = 0x100000 + channels * 2;
+    }
+    else
+    {
+        buffer[7] = freq << (channels-1);
+        buffer[8] = 0x100000 + (channels-1) * 2;
+    }
+    buffer[10] = final_size - sizeof(wavHeader);
+
+    if (adpcm)
+        adpcm8_decode(data, &buffer[11], channels > 1, data_len, NULL);
+    else
+        memcpy(&buffer[11], data, data_len);
+
+    return Mix_LoadWAV_RW(SDL_RWFromMem(buffer, final_size), 1);
 }

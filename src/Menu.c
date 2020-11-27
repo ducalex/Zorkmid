@@ -126,7 +126,7 @@ void Menu_Update()
 
                     if (!menu_Scrolled[menu_ITEM])
                     {
-                        float scrl = (menu_zgi_inv_w / GetFps()) / menu_SCROLL_TIME_INV;
+                        float scrl = (menu_zgi_inv_w / Game_GetFps()) / menu_SCROLL_TIME_INV;
 
                         if (scrl == 0)
                             scrl = 1.0;
@@ -174,7 +174,7 @@ void Menu_Update()
 
                     if (!menu_Scrolled[menu_MAGIC])
                     {
-                        float scrl = (menu_zgi_inv_w / GetFps()) / menu_SCROLL_TIME_INV;
+                        float scrl = (menu_zgi_inv_w / Game_GetFps()) / menu_SCROLL_TIME_INV;
 
                         if (scrl == 0)
                             scrl = 1.0;
@@ -215,7 +215,7 @@ void Menu_Update()
 
                 if (!menu_Scrolled[menu_MAIN])
                 {
-                    float scrl = (menu_MAIN_EL_H / GetFps()) / menu_SCROLL_TIME;
+                    float scrl = (menu_MAIN_EL_H / Game_GetFps()) / menu_SCROLL_TIME;
 
                     if (scrl == 0)
                         scrl = 1.0;
@@ -250,7 +250,7 @@ void Menu_Update()
                     {
                         mouse_on_item = menu_MAIN_IMAGE_PREF;
                         if (MouseUp(MOUSE_BTN_LEFT))
-                            SetNeedLocate(PrefWorld, PrefRoom, PrefNode, PrefView, 0);
+                            Game_Relocate(PrefWorld, PrefRoom, PrefNode, PrefView, 0);
                     }
 
                 //LOAD
@@ -262,7 +262,7 @@ void Menu_Update()
                     {
                         mouse_on_item = menu_MAIN_IMAGE_REST;
                         if (MouseUp(MOUSE_BTN_LEFT))
-                            SetNeedLocate(LoadWorld, LoadRoom, LoadNode, LoadView, 0);
+                            Game_Relocate(LoadWorld, LoadRoom, LoadNode, LoadView, 0);
                     }
 
                 //SAVE
@@ -274,7 +274,7 @@ void Menu_Update()
                     {
                         mouse_on_item = menu_MAIN_IMAGE_SAVE;
                         if (MouseUp(MOUSE_BTN_LEFT))
-                            SetNeedLocate(SaveWorld, SaveRoom, SaveNode, SaveView, 0);
+                            Game_Relocate(SaveWorld, SaveRoom, SaveNode, SaveView, 0);
                     }
 
                 break;
@@ -327,7 +327,7 @@ void Menu_Update()
 
             if (!scrolled_znem)
             {
-                float scrl = (menubar_znem->h / GetFps()) / menu_SCROLL_TIME;
+                float scrl = (menubar_znem->h / Game_GetFps()) / menu_SCROLL_TIME;
 
                 if (scrl == 0)
                     scrl = 1.0;
@@ -367,7 +367,7 @@ void Menu_Update()
                     if (MouseUp(MOUSE_BTN_LEFT))
                     {
                         butframe_znem[menu_MAIN_IMAGE_PREF] = menu_znemesis_but_clk_frm;
-                        SetNeedLocate(PrefWorld, PrefRoom, PrefNode, PrefView, 0);
+                        Game_Relocate(PrefWorld, PrefRoom, PrefNode, PrefView, 0);
                     }
                 }
 
@@ -382,7 +382,7 @@ void Menu_Update()
                     if (MouseUp(MOUSE_BTN_LEFT))
                     {
                         butframe_znem[menu_MAIN_IMAGE_REST] = menu_znemesis_but_clk_frm;
-                        SetNeedLocate(LoadWorld, LoadRoom, LoadNode, LoadView, 0);
+                        Game_Relocate(LoadWorld, LoadRoom, LoadNode, LoadView, 0);
                     }
                 }
 
@@ -397,7 +397,7 @@ void Menu_Update()
                     if (MouseUp(MOUSE_BTN_LEFT))
                     {
                         butframe_znem[menu_MAIN_IMAGE_SAVE] = menu_znemesis_but_clk_frm;
-                        SetNeedLocate(SaveWorld, SaveRoom, SaveNode, SaveView, 0);
+                        Game_Relocate(SaveWorld, SaveRoom, SaveNode, SaveView, 0);
                     }
                 }
 
@@ -410,7 +410,7 @@ void Menu_Update()
             {
                 if (butframe_znem[mouse_on_item] < menu_znemesis_but_max_frm)
                 {
-                    znem_but_anim -= GetDTime();
+                    znem_but_anim -= Game_GetDTime();
 
                     if (znem_but_anim < 0)
                     {
@@ -433,7 +433,7 @@ void Menu_Update()
 
             if (scrollpos_znem > -menubar_znem->h)
             {
-                float scrl = (menubar_znem->h / GetFps()) / menu_SCROLL_TIME;
+                float scrl = (menubar_znem->h / Game_GetFps()) / menu_SCROLL_TIME;
 
                 if (scrl == 0)
                     scrl = 1.0;

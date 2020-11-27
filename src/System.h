@@ -19,6 +19,7 @@
 #include <SDL/SDL_ttf.h>
 #include <SDL/SDL_audio.h>
 #include <SDL/SDL_mixer.h>
+#include <SDL/SDL_rotozoom.h>
 
 #define STRBUFSIZE 0x400
 #define MINIBUFSZ  32
@@ -97,7 +98,7 @@ const char *str_ltrim(const char *str);
 char *str_trim(const char *str);
 char **str_split(const char *str, const char *delim);
 
-#include "avi_duck/simple_avi.h"
+#include "Decoder.h"
 #include "Anims.h"
 #include "Game.h"
 #include "Render.h"

@@ -14,18 +14,32 @@ static uint32_t GetChanTime(int i)
 {
     if (i >= 0 && i < channels)
         if (channel_status[i])
-            return SDL_GetTicks() - channel_time[i];
+            return Game_GetTime() - channel_time[i];
     return 0;
 }
 
-int Sound_GetLogVol(uint8_t linear)
+static int GetFreeChannel()
 {
-    if (linear < 101)
-        return log_volume[linear];
-    else if (linear > 100)
-        return log_volume[100];
-    else
-        return 0;
+    for (int i = 0; i < channels; i++)
+        if (channel_status[i] == false)
+            return i;
+
+    return -1;
+}
+
+static void LockChannel(int i)
+{
+    if (i >= 0 && i < channels)
+    {
+        channel_status[i] = true;
+        channel_time[i] = Game_GetTime();
+    }
+}
+
+static void UnlockChannel(int i)
+{
+    if (i >= 0 && i < channels)
+        channel_status[i] = false;
 }
 
 void Sound_Init()
@@ -45,28 +59,56 @@ void Sound_DeInit()
     Mix_CloseAudio();
 }
 
-int Sound_GetFreeChannel()
+int Sound_Play(int channel, Mix_Chunk *chunk, int loops, int volume)
 {
-    for (int i = 0; i < channels; i++)
-        if (channel_status[i] == false)
-            return i;
+    if (channel == -1)
+        channel = GetFreeChannel();
 
-    return -1;
-}
-
-void Sound_LockChannel(int i)
-{
-    if (i >= 0 && i < channels)
+    if (channel >= 0)
     {
-        channel_status[i] = true;
-        channel_time[i] = SDL_GetTicks();
+        Mix_UnregisterAllEffects(channel);
+
+        if (volume >= 0)
+            Sound_SetVolume(channel, volume);
+
+        LockChannel(channel);
+
+        Mix_PlayChannel(channel, chunk, loops);
     }
+
+    return channel;
 }
 
-void Sound_UnLockChannel(int i)
+int Sound_Stop(int channel)
 {
-    if (i >= 0 && i < channels)
-        channel_status[i] = false;
+    if (Mix_Playing(channel))
+        Mix_HaltChannel(channel);
+
+    Mix_UnregisterAllEffects(channel);
+    UnlockChannel(channel);
+
+    return 0;
+}
+
+int Sound_Playing(int channel)
+{
+    return Mix_Playing(channel);
+}
+
+int Sound_Pause(int channel)
+{
+    Mix_Pause(channel);
+    return 0;
+}
+
+int Sound_SetVolume(int channel, int volume)
+{
+    return Mix_Volume(channel, log_volume[(volume > 100) ? 100 : volume]);
+}
+
+int Sound_SetPosition(int channel, int angle, int distance)
+{
+    return Mix_SetPosition(channel, angle, distance);
 }
 
 action_res_t *Sound_CreateNode(int type)
@@ -107,11 +149,7 @@ int Sound_DeleteNode(action_res_t *nod)
     case NODE_TYPE_MUSIC:
         if (nod->nodes.node_music->chn >= 0)
         {
-            if (Mix_Playing(nod->nodes.node_music->chn))
-                Mix_HaltChannel(nod->nodes.node_music->chn);
-
-            Mix_UnregisterAllEffects(nod->nodes.node_music->chn);
-            Sound_UnLockChannel(nod->nodes.node_music->chn);
+            Sound_Stop(nod->nodes.node_music->chn);
         }
 
         Mix_FreeChunk(nod->nodes.node_music->chunk);
@@ -132,11 +170,7 @@ int Sound_DeleteNode(action_res_t *nod)
     case NODE_TYPE_SYNCSND:
         if (nod->nodes.node_sync->chn >= 0)
         {
-            if (Mix_Playing(nod->nodes.node_sync->chn))
-                Mix_HaltChannel(nod->nodes.node_sync->chn);
-
-            Mix_UnregisterAllEffects(nod->nodes.node_sync->chn);
-            Sound_UnLockChannel(nod->nodes.node_sync->chn);
+            Sound_Stop(nod->nodes.node_sync->chn);
         }
         Mix_FreeChunk(nod->nodes.node_sync->chunk);
 
@@ -175,7 +209,7 @@ int Sound_ProcessNode(action_res_t *nod)
     {
         musicnode_t *mnod = nod->nodes.node_music;
 
-        if (!Mix_Playing(mnod->chn))
+        if (!Sound_Playing(mnod->chn))
         {
             Sound_DeleteNode(nod);
             return NODE_RET_DELETE;
@@ -186,11 +220,11 @@ int Sound_ProcessNode(action_res_t *nod)
         if (mnod->crossfade)
         {
             mnod->crossfade = (mnod->crossfade_params.times > 0);
-            if (mnod->crossfade && GetBeat())
+            if (mnod->crossfade && Game_GetBeat())
             {
                 mnod->volume += mnod->crossfade_params.deltavolume;
-                if (Mix_Playing(mnod->chn))
-                    Mix_Volume(mnod->chn, Sound_GetLogVol(mnod->volume));
+                if (Sound_Playing(mnod->chn))
+                    Sound_SetVolume(mnod->chn, mnod->volume);
                 mnod->crossfade_params.times--;
             }
         }
@@ -235,7 +269,7 @@ int Sound_ProcessNode(action_res_t *nod)
         if (mnod->sub != NULL)
             Text_ProcessSubtitles(mnod->sub, GetChanTime(mnod->chn) / 100);
 
-        if (!Mix_Playing(mnod->chn) || GetGNode(mnod->syncto) == NULL)
+        if (!Sound_Playing(mnod->chn) || GetGNode(mnod->syncto) == NULL)
         {
             Sound_DeleteNode(nod);
             return NODE_RET_DELETE;

@@ -11,13 +11,12 @@ static char *GamePath = "./";
 
 static const char **GameStrings;
 
-static uint32_t CurrentTime = 0;
+static uint32_t LastTick = 0;
 static uint32_t DeltaTime = 0;
 
-static uint64_t mtime = 0;   // Game timer ticks [after ~23 milliards years will came overflow of this var, don't play so long]
-static bool btime = false;   // Indicates new Tick
+static bool beat = false;   // Indicates new Tick
 static uint64_t reltime = 0; // Realtime ticks for calculate game ticks
-static int tofps = 0;
+static int frame_time = 0;
 
 static uint32_t time = 0;
 static int32_t frames = 0;
@@ -37,69 +36,59 @@ static bool M_dbl_clk = false;
 //Resets game timer and set next realtime point to incriment game timer
 static void TimerInit(float throttle)
 {
-    mtime = 0;
-    btime = false;
+    beat = false;
     frames = 0;
     fps = 1;
-    tofps = ceil((1000.0 - (float)(DELAY << 1)) / (throttle));
-    reltime = SDL_GetTicks() + tofps;
+    frame_time = ceil((1000.0 - (float)(DELAY << 1)) / (throttle));
+    reltime = Game_GetTime() + frame_time;
 }
 
 //Process game timer.
 static void TimerTick()
 {
-    if (reltime < SDL_GetTicks()) //New tick
-    {
-        mtime++;
-        btime = true;
-        reltime = SDL_GetTicks() + tofps;
-    }
-    else //No new tick
-    {
-        btime = false;
-    }
+    uint32_t cur_time = Game_GetTime();
 
-    Delay(DELAY);
+    beat = reltime < cur_time; // New tick
+    if (beat)
+        reltime = cur_time + frame_time;
+
+    Game_Delay(DELAY);
+
+    cur_time = Game_GetTime();
 
     //
-    uint32_t tmptime = SDL_GetTicks();
-    if (CurrentTime != 0)
-        DeltaTime = tmptime - CurrentTime;
-    CurrentTime = tmptime;
+    if (LastTick != 0)
+        DeltaTime = cur_time - LastTick;
+    LastTick = cur_time;
 
     // FPS
-    if (SDL_GetTicks() > time)
+    if (cur_time > time)
     {
         fps = frames;
         if (fps == 0)
             fps = 1;
         frames = 0;
-        time = SDL_GetTicks() + 1000;
+        time = cur_time + 1000;
     }
     frames++;
 }
 
 //Resturn true if new tick appeared
-bool GetBeat()
+bool Game_GetBeat()
 {
-    return btime;
+    return beat;
 }
 
-uint32_t GetDTime()
+uint32_t Game_GetDTime()
 {
     if (DeltaTime == 0)
         DeltaTime = 1;
     return DeltaTime;
 }
 
-float GetFps()
+float Game_GetFps()
 {
     return fps;
-}
-
-void Delay(uint32_t ms)
-{
-    SDL_Delay(ms);
 }
 
 void FlushKeybKey(SDLKey key)
@@ -107,7 +96,7 @@ void FlushKeybKey(SDLKey key)
     KeyHits[key] = 0;
     Keys[key] = 0;
     if (lastkey == key)
-        lastkey = SDLK_FIRST;
+        lastkey = SDLK_UNKNOWN;
 }
 
 SDLKey GetLastKey()
@@ -184,7 +173,7 @@ static void FlushKeyHits()
 {
     AnyHit = false;
     memset(KeyHits, 0, sizeof(KeyHits));
-    lastkey = SDLK_FIRST;
+    lastkey = SDLK_UNKNOWN;
 }
 
 static void SetKeyHit(SDLKey key)
@@ -287,9 +276,9 @@ static void UpdateKeyboard()
 
     if (MouseHit(MOUSE_BTN_LEFT))
     {
-        if ((uint32_t)M_dbl_time < SDL_GetTicks())
+        if ((uint32_t)M_dbl_time < Game_GetTime())
         {
-            M_dbl_time = SDL_GetTicks() + DBL_CLK_TIME;
+            M_dbl_time = Game_GetTime() + DBL_CLK_TIME;
         }
         else
         {
@@ -303,7 +292,7 @@ static void LoadGameStrings(void)
 {
     const char *file = (CUR_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR");
     char filename[PATHBUFSIZ];
-    sprintf(filename, "%s/%s", GetGamePath(), file);
+    sprintf(filename, "%s/%s", Game_GetPath(), file);
     GameStrings = (const char **)Loader_LoadSTR(filename);
 }
 
@@ -314,12 +303,12 @@ static void SetGamePath(const char *path)
         GamePath[strlen(GamePath - 1)] = 0;
 }
 
-const char *GetGameString(int32_t indx)
+const char *Game_GetString(int32_t indx)
 {
     return GameStrings[indx & 0xFF];
 }
 
-const char *GetGamePath()
+const char *Game_GetPath()
 {
     return GamePath;
 }
@@ -337,7 +326,7 @@ const char *GetGameTitle()
     }
 }
 
-void SetNeedLocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X)
+void Game_Relocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X)
 {
     NeedToLoadScript = true;
     Need_Locate.World = tolower(w);
@@ -439,14 +428,14 @@ void EasterEggsAndDebug()
 
         if (CheckKeyboardMessage("KILLMENOW", 9))
         {
-            SetNeedLocate('g', 'j', 'd', 'e', 0);
+            Game_Relocate('g', 'j', 'd', 'e', 0);
             SetgVarInt(2201, 35);
         }
 
         if (CheckKeyboardMessage("MIKESPANTS", 10))
         {
             NeedToLoadScript = true;
-            SetNeedLocate('g', 'j', 't', 'm', 0);
+            Game_Relocate('g', 'j', 't', 'm', 0);
         }
     }
 
@@ -454,7 +443,7 @@ void EasterEggsAndDebug()
     {
         if (CheckKeyboardMessage("CHLOE", 5))
         {
-            SetNeedLocate('t', 'm', '2', 'g', 0);
+            Game_Relocate('t', 'm', '2', 'g', 0);
             SetgVarInt(224, 1);
         }
 
@@ -469,13 +458,13 @@ void EasterEggsAndDebug()
 
         if (CheckKeyboardMessage("IDKFA", 5))
         {
-            SetNeedLocate('t', 'w', '3', 'f', 0);
+            Game_Relocate('t', 'w', '3', 'f', 0);
             SetgVarInt(249, 1);
         }
 
         if (CheckKeyboardMessage("309NEWDORMA", 11))
         {
-            SetNeedLocate('g', 'j', 'g', 'j', 0);
+            Game_Relocate('g', 'j', 'g', 'j', 0);
         }
 
         if (CheckKeyboardMessage("HELLOSAILOR", 11))
@@ -492,7 +481,7 @@ void EasterEggsAndDebug()
 
     if (CheckKeyboardMessage("FRAME", 5))
     {
-        sprintf(message_buffer, "FPS: %.2f", GetFps());
+        sprintf(message_buffer, "FPS: %.2f", Game_GetFps());
         game_timed_debug_message(3000, message_buffer);
     }
 
@@ -507,7 +496,7 @@ void EasterEggsAndDebug()
     if (GetgVarInt(SLOT_DEBUGCHEATS) == 1)
         if (CheckKeyboardMessage("GO????", 6))
         {
-            SetNeedLocate(GetKeyBuffered(3),
+            Game_Relocate(GetKeyBuffered(3),
                           GetKeyBuffered(2),
                           GetKeyBuffered(1),
                           GetKeyBuffered(0), 0);
@@ -531,7 +520,7 @@ void GameLoop()
         SetgVarInt(SLOT_MOUSE_DOWN, 0);
 
     if (KeyAnyHit())
-        if (GetLastKey() != SDLK_FIRST)
+        if (GetLastKey() != SDLK_UNKNOWN)
             SetgVarInt(SLOT_KEY_PRESS, GetWinKey(GetLastKey()));
 
     if (Rend_MouseInGamescr())
@@ -596,15 +585,15 @@ void GameLoop()
     {
         if (KeyHit(SDLK_s) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
             if (Menu_GetVal() & MENU_BAR_SAVE)
-                SetNeedLocate(SaveWorld, SaveRoom, SaveNode, SaveView, 0);
+                Game_Relocate(SaveWorld, SaveRoom, SaveNode, SaveView, 0);
 
         if (KeyHit(SDLK_r) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
             if (Menu_GetVal() & MENU_BAR_RESTORE)
-                SetNeedLocate(LoadWorld, LoadRoom, LoadNode, LoadView, 0);
+                Game_Relocate(LoadWorld, LoadRoom, LoadNode, LoadView, 0);
 
         if (KeyHit(SDLK_p) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
             if (Menu_GetVal() & MENU_BAR_SETTINGS)
-                SetNeedLocate(PrefWorld, PrefRoom, PrefNode, PrefView, 0);
+                Game_Relocate(PrefWorld, PrefRoom, PrefNode, PrefView, 0);
 
         if (KeyHit(SDLK_q) && (KeyDown(SDLK_LCTRL) || KeyDown(SDLK_RCTRL)))
             if (Menu_GetVal() & MENU_BAR_EXIT)
@@ -674,7 +663,7 @@ void game_delay_message(int32_t milsecs, const char *str)
     Rend_RenderFunc();
     Rend_ScreenFlip();
 
-    int32_t cur_time = SDL_GetTicks();
+    int32_t cur_time = Game_GetTime();
     int32_t nexttime = cur_time + milsecs;
 
     FlushKeybKey(SDLK_RETURN);
@@ -684,10 +673,10 @@ void game_delay_message(int32_t milsecs, const char *str)
     while (!KeyDown(SDLK_SPACE) && !KeyDown(SDLK_RETURN) && !KeyDown(SDLK_ESCAPE) && nexttime > cur_time)
     {
         GameUpdate();
-        cur_time = SDL_GetTicks();
+        cur_time = Game_GetTime();
         Rend_RenderFunc();
         Rend_ScreenFlip();
-        Delay(DELAY);
+        Game_Delay(DELAY);
     }
 
     Rend_DeleteSubRect(zzz);
@@ -709,7 +698,7 @@ bool game_question_message(const char *str)
         GameUpdate();
         Rend_RenderFunc();
         Rend_ScreenFlip();
-        Delay(DELAY);
+        Game_Delay(DELAY);
     }
 
     Rend_DeleteSubRect(zzz);
@@ -719,6 +708,6 @@ bool game_question_message(const char *str)
 
 void game_try_quit()
 {
-    if (game_question_message(GetGameString(SYSTEM_STR_EXITPROMT)))
+    if (game_question_message(Game_GetString(SYSTEM_STR_EXITPROMT)))
         GameQuit();
 }

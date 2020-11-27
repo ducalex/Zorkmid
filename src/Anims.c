@@ -176,7 +176,7 @@ void Anim_Process(animnode_t *mnod)
     if (!mnod->playing || !mnod)
         return;
 
-    mnod->nexttick -= GetDTime();
+    mnod->nexttick -= Game_GetDTime();
 
     if (mnod->nexttick > 0)
         return;

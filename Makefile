@@ -23,8 +23,8 @@ OBJS =  \
 	src/System.c\
 	src/Text.c\
 	src/Timer.c\
-	src/avi_duck/simple_avi.c\
-	src/avi_duck/truemotion1.c
+	src/Decoder.c\
+	src/codecs/truemotion1.c
 
 linux: $(OBJS)
 	$(CC) -std=c99 -Wall -O3 -o $(TARGET) $(OBJS) $(LIBS) -I /usr/include/ -I /usr/include/SDL/

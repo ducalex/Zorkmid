@@ -40,10 +40,12 @@ typedef struct
 
 void Sound_Init();
 void Sound_DeInit();
-int Sound_GetFreeChannel();
-void Sound_LockChannel(int i);
-void Sound_UnLockChannel(int i);
-int Sound_GetLogVol(uint8_t linear);
+int Sound_Play(int channel, Mix_Chunk *chunk, int loops, int volume);
+int Sound_Playing(int channel);
+int Sound_Pause(int channel);
+int Sound_Stop(int channel);
+int Sound_SetVolume(int channel, int volume);
+int Sound_SetPosition(int channel, int angle, int distance);
 
 action_res_t *Sound_CreateNode(int type);
 int Sound_DeleteNode(action_res_t *nod);

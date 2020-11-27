@@ -21,12 +21,6 @@ typedef struct
 
 typedef struct
 {
-    int32_t t[4];
-    uint32_t j;
-} adpcm_context_t;
-
-typedef struct
-{
     char *name;
     char *path;
     zfs_file_t *zfs;
@@ -50,14 +44,13 @@ void Loader_Init(const char *dir);
 FManNode_t *Loader_FindNode(const char *chr);
 const char *Loader_GetPath(const char *chr);
 TTF_Font *Loader_LoadFont(char *name, int size);
-Mix_Chunk *Loader_LoadChunk(const char *file);
+Mix_Chunk *Loader_LoadSound(const char *file);
 SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, int32_t key_555);
 anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555);
 char **Loader_LoadSTR(const char *file);
 char **Loader_LoadSTR_m(mfile_t *mfp);
 void Loader_LoadZCR(const char *file, Cursor_t *cur);
 void Loader_OpenZFS(const char *file);
-void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_t *ctx);
 
 mfile_t *mfopen(FManNode_t *nod);
 int32_t mfsize(FManNode_t *nod);
