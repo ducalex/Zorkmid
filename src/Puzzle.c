@@ -5,12 +5,12 @@ static void DeletePuzzleNode(puzzlenode_t *nod)
     LOG_DEBUG("Deleting Puzzle #%d\n", nod->slot);
 
     StartMList(nod->CritList);
-    while (!eofMList(nod->CritList))
+    while (!EndOfMList(nod->CritList))
     {
         MList *criteries = (MList *)DataMList(nod->CritList);
 
         StartMList(criteries);
-        while (!eofMList(criteries))
+        while (!EndOfMList(criteries))
         {
             free(DataMList(criteries));
             NextMList(criteries);
@@ -22,7 +22,7 @@ static void DeletePuzzleNode(puzzlenode_t *nod)
     DeleteMList(nod->CritList);
 
     StartMList(nod->ResList);
-    while (!eofMList(nod->ResList))
+    while (!EndOfMList(nod->ResList))
     {
         func_node_t *fun = (func_node_t *)DataMList(nod->ResList);
         if (fun->param != NULL)
@@ -47,7 +47,7 @@ pzllst_t *Puzzle_CreateList(const char *name)
 void Puzzle_FlushList(pzllst_t *lst)
 {
     StartMList(lst->_list);
-    while (!eofMList(lst->_list))
+    while (!EndOfMList(lst->_list))
     {
         DeletePuzzleNode((puzzlenode_t *)DataMList(lst->_list));
         NextMList(lst->_list);
@@ -271,7 +271,7 @@ static bool ProcessCriteries(MList *lst)
     bool tmp = true;
 
     StartMList(lst);
-    while (!eofMList(lst))
+    while (!EndOfMList(lst))
     {
         crit_node_t *critnd = (crit_node_t *)DataMList(lst);
 
@@ -321,7 +321,7 @@ int Puzzle_TryExec(puzzlenode_t *pzlnod) //, pzllst_t *owner)
         bool match = false;
 
         StartMList(pzlnod->CritList);
-        while (!eofMList(pzlnod->CritList))
+        while (!EndOfMList(pzlnod->CritList))
         {
             MList *criteries = (MList *)DataMList(pzlnod->CritList);
 
@@ -342,7 +342,7 @@ int Puzzle_TryExec(puzzlenode_t *pzlnod) //, pzllst_t *owner)
     SetgVarInt(pzlnod->slot, 1);
 
     StartMList(pzlnod->ResList);
-    while (!eofMList(pzlnod->ResList))
+    while (!EndOfMList(pzlnod->ResList))
     {
         func_node_t *fun = (func_node_t *)DataMList(pzlnod->ResList);
         if (Actions_Run(fun->action, fun->param, fun->slot, pzlnod->owner) == ACTION_BREAK)

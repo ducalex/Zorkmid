@@ -155,35 +155,36 @@ pzllst_t *GetUni();
 pzllst_t *Getworld();
 pzllst_t *Getroom();
 pzllst_t *Getview();
-MList *Getctrl();
-MList *GetAction_res_List();
+MList *GetControlsList();
+MList *GetActionsList();
 
-action_res_t *getGNode(int32_t indx);
-void setGNode(int32_t indx, action_res_t *data);
-
-void SetgVarInt(int32_t indx, int var);
-int GetgVarInt(int32_t indx);
+action_res_t *GetGNode(uint32_t indx);
+void SetGNode(uint32_t indx, action_res_t *data);
+void SetgVarInt(uint32_t indx, int var);
+int GetgVarInt(uint32_t indx);
 void SetDirectgVarInt(uint32_t indx, int var);
 int *GetDirectgVarInt(uint32_t indx);
 
 void ScrSys_Init();
 void ScrSys_LoadScript(pzllst_t *lst, FManNode_t *filename, bool control, MList *controlst);
-action_res_t *ScrSys_CreateActRes(int type);
-void ScrSys_AddToActResList(void *);
-void ScrSys_ProcessActResList();
-void ScrSys_FlushActResList();
-int ScrSys_DeleteNode(action_res_t *nod);
+void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X, bool force_all);
 uint8_t ScrSys_GetFlag(uint32_t indx);
 void ScrSys_SetFlag(uint32_t indx, uint8_t newval);
-void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X, bool force_all);
 void ScrSys_ExecPuzzleList(pzllst_t *lst);
 void ScrSys_FlushResourcesByOwner(pzllst_t *owner);
 void ScrSys_FlushResourcesByType(int type);
 bool ScrSys_BreakExec();
 void ScrSys_SetBreak();
+
+void ScrSys_AddToActionsList(void *);
+void ScrSys_ProcessActionsList();
+void ScrSys_FlushActionsList();
+int ScrSys_DeleteActionNode(action_res_t *nod);
+
+void ScrSys_PrepareSaveBuffer();
 void ScrSys_SaveGame(char *file);
 void ScrSys_LoadGame(char *file);
-void ScrSys_PrepareSaveBuffer();
+
 void ScrSys_LoadPreferences();
 void ScrSys_SavePreferences();
 

@@ -56,27 +56,6 @@ typedef struct
     float param1;
 } distort_t;
 
-typedef struct
-{
-    SDL_Surface **img;
-    struct info
-    {
-        uint32_t w;
-        uint32_t h;
-        uint32_t time;
-        uint32_t frames;
-    } info;
-} anim_surf_t;
-
-typedef struct
-{
-    SDL_Surface *img;
-    avi_file_t *av;
-    bool pld;
-    bool loop;
-    int32_t lastfrm;
-} anim_avi_t;
-
 bool Rend_LoadGamescr(const char *file);
 int Rend_GetMouseGameX();
 int Rend_GetMouseGameY();
@@ -104,13 +83,12 @@ void Rend_DeleteSubRect(subrect_t *erect);
 void Rend_ProcessSubs();
 void Rend_DelaySubDelete(subrect_t *sub, int32_t time);
 void Rend_ScreenFlip();
-void Rend_Delay(uint32_t delay_ms);
-action_res_t *Rend_CreateDistortNode();
-int32_t Rend_ProcessDistortNode(action_res_t *nod);
-int32_t Rend_DeleteDistortNode(action_res_t *nod);
-int Rend_DeleteRegion(action_res_t *nod);
 void Rend_SetGamma(float val);
 float Rend_GetGamma();
+
+action_res_t *Rend_CreateNode(int type);
+int Rend_ProcessNode(action_res_t *nod);
+int Rend_DeleteNode(action_res_t *nod);
 
 SDL_Surface *Rend_CreateSurface(int x, int y, int mode);
 SDL_Surface *Rend_GetLocationScreenImage();

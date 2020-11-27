@@ -16,14 +16,13 @@ OBJS =  \
 	src/Menu.c\
 	src/Mouse.c\
 	src/main.c\
-	src/mylist.c\
 	src/Puzzle.c\
 	src/Render.c\
 	src/Scripting.c\
  	src/Sound.c\
-	src/Subtitles.c\
 	src/System.c\
 	src/Text.c\
+	src/Timer.c\
 	src/avi_duck/simple_avi.c\
 	src/avi_duck/truemotion1.c
 

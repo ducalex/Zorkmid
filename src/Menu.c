@@ -152,7 +152,7 @@ void Menu_Update()
                         {
                             mouse_on_item = i;
 
-                            if (MouseUp(SDL_BUTTON_LEFT))
+                            if (MouseUp(MOUSE_BTN_LEFT))
                             {
                                 int32_t mouse_item = GetgVarInt(SLOT_INVENTORY_MOUSE);
                                 if (mouse_item >= 0 && mouse_item < 0xE0)
@@ -200,7 +200,7 @@ void Menu_Update()
                         if (Mouse_InRect(WINDOW_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0, menu_zgi_inv_hot_w, menu_zgi_inv_h))
                         {
                             mouse_on_item = i;
-                            if (MouseUp(SDL_BUTTON_LEFT))
+                            if (MouseUp(MOUSE_BTN_LEFT))
                                 if (GetgVarInt(SLOT_INVENTORY_MOUSE) == 0 || GetgVarInt(SLOT_INVENTORY_MOUSE) >= 0xE0)
                                     if (GetgVarInt(SLOT_SPELL_1 + i) != 0)
                                         SetgVarInt(SLOT_USER_CHOSE_THIS_SPELL, itemnum);
@@ -237,7 +237,7 @@ void Menu_Update()
                                      menu_MAIN_EL_H))
                     {
                         mouse_on_item = menu_MAIN_IMAGE_EXIT;
-                        if (MouseUp(SDL_BUTTON_LEFT))
+                        if (MouseUp(MOUSE_BTN_LEFT))
                             game_try_quit();
                     }
 
@@ -249,7 +249,7 @@ void Menu_Update()
                                      menu_MAIN_EL_H))
                     {
                         mouse_on_item = menu_MAIN_IMAGE_PREF;
-                        if (MouseUp(SDL_BUTTON_LEFT))
+                        if (MouseUp(MOUSE_BTN_LEFT))
                             SetNeedLocate(PrefWorld, PrefRoom, PrefNode, PrefView, 0);
                     }
 
@@ -261,7 +261,7 @@ void Menu_Update()
                                      menu_MAIN_EL_H))
                     {
                         mouse_on_item = menu_MAIN_IMAGE_REST;
-                        if (MouseUp(SDL_BUTTON_LEFT))
+                        if (MouseUp(MOUSE_BTN_LEFT))
                             SetNeedLocate(LoadWorld, LoadRoom, LoadNode, LoadView, 0);
                     }
 
@@ -273,7 +273,7 @@ void Menu_Update()
                                      menu_MAIN_EL_H))
                     {
                         mouse_on_item = menu_MAIN_IMAGE_SAVE;
-                        if (MouseUp(SDL_BUTTON_LEFT))
+                        if (MouseUp(MOUSE_BTN_LEFT))
                             SetNeedLocate(SaveWorld, SaveRoom, SaveNode, SaveView, 0);
                     }
 
@@ -349,7 +349,7 @@ void Menu_Update()
                                  menu_MAIN_EL_H))
                 {
                     mouse_on_item = menu_MAIN_IMAGE_EXIT;
-                    if (MouseUp(SDL_BUTTON_LEFT))
+                    if (MouseUp(MOUSE_BTN_LEFT))
                     {
                         butframe_znem[menu_MAIN_IMAGE_EXIT] = menu_znemesis_but_clk_frm;
                         game_try_quit();
@@ -364,7 +364,7 @@ void Menu_Update()
                                  menu_MAIN_EL_H))
                 {
                     mouse_on_item = menu_MAIN_IMAGE_PREF;
-                    if (MouseUp(SDL_BUTTON_LEFT))
+                    if (MouseUp(MOUSE_BTN_LEFT))
                     {
                         butframe_znem[menu_MAIN_IMAGE_PREF] = menu_znemesis_but_clk_frm;
                         SetNeedLocate(PrefWorld, PrefRoom, PrefNode, PrefView, 0);
@@ -379,7 +379,7 @@ void Menu_Update()
                                  menu_MAIN_EL_H))
                 {
                     mouse_on_item = menu_MAIN_IMAGE_REST;
-                    if (MouseUp(SDL_BUTTON_LEFT))
+                    if (MouseUp(MOUSE_BTN_LEFT))
                     {
                         butframe_znem[menu_MAIN_IMAGE_REST] = menu_znemesis_but_clk_frm;
                         SetNeedLocate(LoadWorld, LoadRoom, LoadNode, LoadView, 0);
@@ -394,7 +394,7 @@ void Menu_Update()
                                  menu_MAIN_EL_H))
                 {
                     mouse_on_item = menu_MAIN_IMAGE_SAVE;
-                    if (MouseUp(SDL_BUTTON_LEFT))
+                    if (MouseUp(MOUSE_BTN_LEFT))
                     {
                         butframe_znem[menu_MAIN_IMAGE_SAVE] = menu_znemesis_but_clk_frm;
                         SetNeedLocate(SaveWorld, SaveRoom, SaveNode, SaveView, 0);

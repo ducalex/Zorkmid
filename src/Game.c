@@ -1,5 +1,9 @@
 #include "Game.h"
 
+#define DELAY 10
+#define DBL_CLK_TIME 250
+#define KEYBUFLEN 14
+
 static Location_t Need_Locate;
 static bool NeedToLoadScript = false;
 static int8_t NeedToLoadScriptDelay = CHANGELOCATIONDELAY;
@@ -19,7 +23,16 @@ static uint32_t time = 0;
 static int32_t frames = 0;
 static int32_t fps = 1;
 
-#define DELAY 10
+/* Input variables */
+static bool KeyHits[SDLK_LAST]; // Array with hitted keys (once per press)
+static bool AnyHit = false;  // it's indicate what any key was pressed
+static uint8_t *Keys;        // Array with pressed keys (while pressed)
+static SDLKey lastkey;
+static SDLKey keybbuf[KEYBUFLEN];
+static int32_t Mx, My, LMx, LMy;
+static uint8_t LMstate, Mstate;
+static int32_t M_dbl_time;
+static bool M_dbl_clk = false;
 
 //Resets game timer and set next realtime point to incriment game timer
 static void TimerInit(float throttle)
@@ -46,7 +59,7 @@ static void TimerTick()
         btime = false;
     }
 
-    Rend_Delay(DELAY);
+    Delay(DELAY);
 
     //
     uint32_t tmptime = SDL_GetTicks();
@@ -84,12 +97,221 @@ float GetFps()
     return fps;
 }
 
+void Delay(uint32_t ms)
+{
+    SDL_Delay(ms);
+}
+
+void FlushKeybKey(SDLKey key)
+{
+    KeyHits[key] = 0;
+    Keys[key] = 0;
+    if (lastkey == key)
+        lastkey = SDLK_FIRST;
+}
+
+SDLKey GetLastKey()
+{
+    return lastkey;
+}
+
+bool KeyHit(SDLKey key)
+{
+    return key < SDLK_LAST ? KeyHits[key] : false;
+}
+
+bool KeyAnyHit()
+{
+    return AnyHit;
+}
+
+bool KeyDown(SDLKey key)
+{
+    return key < SDLK_LAST ? Keys[key] : false;
+}
+
+int MouseX()
+{
+    return Mx;
+}
+
+int MouseY()
+{
+    return My;
+}
+
+bool MouseUp(int btn)
+{
+    return ((Mstate & btn) == 0 && (LMstate & btn) == btn);
+}
+
+bool MouseDown(int btn)
+{
+    return (Mstate & btn);
+}
+
+bool MouseHit(int btn)
+{
+    return ((LMstate & btn) == 0 && (Mstate & btn) == btn);
+}
+
+bool MouseDblClk()
+{
+    return M_dbl_clk;
+}
+
+bool MouseMove()
+{
+    return (LMx != Mx || LMy != My);
+}
+
+void FlushMouseBtn(int btn)
+{
+    Mstate &= ~btn;
+    LMstate &= ~btn;
+    if (btn == SDL_BUTTON_LEFT)
+        M_dbl_clk = false;
+}
+
+static SDLKey GetKeyBuffered(int indx)
+{
+    if (indx > KEYBUFLEN)
+        return 0;
+    return keybbuf[KEYBUFLEN - indx - 1];
+}
+
+static void FlushKeyHits()
+{
+    AnyHit = false;
+    memset(KeyHits, 0, sizeof(KeyHits));
+    lastkey = SDLK_FIRST;
+}
+
+static void SetKeyHit(SDLKey key)
+{
+    AnyHit = true;
+    KeyHits[key] = 1;
+    lastkey = key;
+    for (int i = 0; i < KEYBUFLEN - 1; i++)
+        keybbuf[i] = keybbuf[i + 1];
+    keybbuf[KEYBUFLEN - 1] = key;
+}
+
+static uint8_t GetWinKey(SDLKey key)
+{
+    if (key >= SDLK_0 && key <= SDLK_9)
+        return 0x30 + (key - SDLK_0);
+
+    if (key >= SDLK_a && key <= SDLK_z)
+        return 0x41 + (key - SDLK_a);
+
+    if (key >= SDLK_KP0 && key <= SDLK_KP9)
+        return 0x60 + (key - SDLK_KP0);
+
+    if (key >= SDLK_F1 && key <= SDLK_F12)
+        return 0x70 + (key - SDLK_F1);
+
+    switch (key)
+    {
+    case SDLK_BACKSPACE: return 8;
+    case SDLK_TAB: return 9;
+    case SDLK_CLEAR: return 12;
+    case SDLK_RETURN: return 13;
+    // case SDLK_MENU: return 18;
+    case SDLK_CAPSLOCK: return 20;
+    case SDLK_ESCAPE: return 27;
+    case SDLK_SPACE: return 32;
+    case SDLK_PAGEUP: return 33;
+    case SDLK_PAGEDOWN: return 34;
+    case SDLK_END: return 35;
+    case SDLK_HOME: return 36;
+    case SDLK_LEFT: return 37;
+    case SDLK_UP: return 38;
+    case SDLK_RIGHT: return 39;
+    case SDLK_DOWN: return 40;
+    case SDLK_PRINT: return 42;
+    case SDLK_INSERT: return 45;
+    case SDLK_DELETE: return 46;
+    case SDLK_HELP: return 47;
+    case SDLK_KP_MULTIPLY: return 0x6A;
+    case SDLK_KP_PLUS: return 0x6B;
+    case SDLK_KP_MINUS: return 0x6D;
+    case SDLK_KP_PERIOD: return 0x6E;
+    case SDLK_KP_DIVIDE: return 0x6F;
+    case SDLK_NUMLOCK: return 0x90;
+    case SDLK_SCROLLOCK: return 0x91;
+    case SDLK_LSHIFT: return 0xA0;
+    case SDLK_RSHIFT: return 0xA1;
+    case SDLK_LCTRL: return 0xA2;
+    case SDLK_RCTRL: return 0xA3;
+    case SDLK_MENU: return 0xA5;
+    case SDLK_LEFTBRACKET: return 0xDB;
+    case SDLK_RIGHTBRACKET: return 0xDD;
+    case SDLK_SEMICOLON: return 0xBA;
+    // case SDLK_BACKSLASH: return 0xDC;
+    case SDLK_QUOTE: return 0xDE;
+    case SDLK_SLASH: return 0xBF;
+    case SDLK_BACKSLASH: return 0xC0;
+    case SDLK_COMMA: return 0xBC;
+    case SDLK_PERIOD: return 0xBE;
+    case SDLK_MINUS: return 0xBD;
+    case SDLK_PLUS: return 0xBB;
+    default: return 0;
+    }
+}
+
+static bool CheckKeyboardMessage(const char *msg, int len)
+{
+    if (len > KEYBUFLEN)
+        return false;
+
+    for (int i = 0; i < len; i++)
+    {
+        int ki = GetWinKey(keybbuf[KEYBUFLEN - i - 1]);
+        if (msg[len - i - 1] != ki && msg[len - i - 1] != '?')
+            return false;
+    }
+
+    return true;
+}
+
+static void UpdateKeyboard()
+{
+    Keys = SDL_GetKeyState(NULL);
+
+    M_dbl_clk = false;
+    LMstate = Mstate;
+    LMx = Mx;
+    LMy = My;
+    Mstate = SDL_GetMouseState(&Mx, &My);
+
+    if (MouseHit(MOUSE_BTN_LEFT))
+    {
+        if ((uint32_t)M_dbl_time < SDL_GetTicks())
+        {
+            M_dbl_time = SDL_GetTicks() + DBL_CLK_TIME;
+        }
+        else
+        {
+            M_dbl_time = 0;
+            M_dbl_clk = true;
+        }
+    }
+}
+
 static void LoadGameStrings(void)
 {
     const char *file = (CUR_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR");
     char filename[PATHBUFSIZ];
     sprintf(filename, "%s/%s", GetGamePath(), file);
     GameStrings = (const char **)Loader_LoadSTR(filename);
+}
+
+static void SetGamePath(const char *path)
+{
+    GamePath = strdup(path);
+    while (GamePath[strlen(GamePath - 1)] == '/' || GamePath[strlen(GamePath - 1)] == '\\')
+        GamePath[strlen(GamePath - 1)] = 0;
 }
 
 const char *GetGameString(int32_t indx)
@@ -100,13 +322,6 @@ const char *GetGameString(int32_t indx)
 const char *GetGamePath()
 {
     return GamePath;
-}
-
-void SetGamePath(const char *path)
-{
-    GamePath = strdup(path);
-    while (GamePath[strlen(GamePath - 1)] == '/' || GamePath[strlen(GamePath - 1)] == '\\')
-        GamePath[strlen(GamePath - 1)] = 0;
 }
 
 const char *GetGameTitle()
@@ -321,19 +536,19 @@ void GameLoop()
 
     if (Rend_MouseInGamescr())
     {
-        if (MouseUp(SDL_BUTTON_RIGHT))
+        if (MouseUp(MOUSE_BTN_RIGHT))
             SetgVarInt(SLOT_MOUSE_RIGHT_CLICK, 1);
 
         if (CUR_GAME == GAME_NEM)
-            if (MouseUp(SDL_BUTTON_RIGHT))
+            if (MouseUp(MOUSE_BTN_RIGHT))
                 Inventory_Cycle();
 
         if (GetgVarInt(SLOT_MOUSE_RIGHT_CLICK) != 1)
-            if (MouseDown(SDL_BUTTON_LEFT))
+            if (MouseDown(MOUSE_BTN_LEFT))
                 SetgVarInt(SLOT_MOUSE_DOWN, 1);
     }
 
-    ScrSys_ProcessActResList();
+    ScrSys_ProcessActionsList();
 
     if (!ScrSys_BreakExec())
         ScrSys_ExecPuzzleList(Getworld());
@@ -356,7 +571,7 @@ void GameLoop()
             Rend_MouseInteractOfRender();
 
         if (!ScrSys_BreakExec())
-            Controls_ProcessList(Getctrl());
+            Controls_ProcessList(GetControlsList());
 
         if (!ScrSys_BreakExec())
             Rend_RenderFunc();
@@ -411,7 +626,7 @@ void GameUpdate()
     SDL_Event event;
 
     TimerTick();
-    FlushHits();
+    FlushKeyHits();
 
     while (SDL_PollEvent(&event))
     {
@@ -424,7 +639,7 @@ void GameUpdate()
             Rend_SetVideoMode(event.resize.w, event.resize.h, -1, -1);
             break;
         case SDL_KEYDOWN:
-            SetHit(event.key.keysym.sym);
+            SetKeyHit(event.key.keysym.sym);
             break;
         }
     }
@@ -472,7 +687,7 @@ void game_delay_message(int32_t milsecs, const char *str)
         cur_time = SDL_GetTicks();
         Rend_RenderFunc();
         Rend_ScreenFlip();
-        Rend_Delay(5);
+        Delay(DELAY);
     }
 
     Rend_DeleteSubRect(zzz);
@@ -494,7 +709,7 @@ bool game_question_message(const char *str)
         GameUpdate();
         Rend_RenderFunc();
         Rend_ScreenFlip();
-        Rend_Delay(5);
+        Delay(DELAY);
     }
 
     Rend_DeleteSubRect(zzz);

@@ -3,6 +3,27 @@
 
 #include "System.h"
 
+typedef struct
+{
+    SDL_Surface **img;
+    struct info
+    {
+        uint32_t w;
+        uint32_t h;
+        uint32_t time;
+        uint32_t frames;
+    } info;
+} anim_surf_t;
+
+typedef struct
+{
+    SDL_Surface *img;
+    avi_file_t *av;
+    bool pld;
+    bool loop;
+    int32_t lastfrm;
+} anim_avi_t;
+
 typedef struct animnode
 {
     int32_t x;
@@ -40,21 +61,15 @@ typedef struct anim_preplay_node
     animnode_t *point; //pointer for direct access
 } anim_preplay_node_t;
 
-action_res_t *Anim_CreateAnimPlayNode();
-action_res_t *Anim_CreateAnimPreNode();
-action_res_t *Anim_CreateAnimPlayPreNode();
+action_res_t *Anim_CreateNode(int type);
+int Anim_ProcessNode(action_res_t *nod);
+int Anim_DeleteNode(action_res_t *nod);
 
-void Anim_Process(animnode_t *nod);
 void Anim_Load(animnode_t *nod, char *filename, int u1, int u2, int32_t mask, int framerate);
-void anim_DeleteAnim(animnode_t *nod);
 int Anim_Play(animnode_t *nod, int x, int y, int w, int h, int start, int end, int loop);
-int Anim_ProcessPlayNode(action_res_t *nod);
-int Anim_ProcessPreNode(action_res_t *nod);
-int Anim_ProcessPrePlayNode(action_res_t *nod);
-int anim_DeleteAnimPlay(action_res_t *nod);
-int anim_DeleteAnimPreNod(action_res_t *nod);
-int anim_DeleteAnimPrePlayNode(action_res_t *nod);
-void anim_DeleteAnimImage(anim_surf_t *anim);
-void Anim_RenderFrame(animnode_t *mnod, int16_t x, int16_t y, int16_t w, int16_t h, int16_t frame);
+void Anim_RenderFrame(animnode_t *mnod, int x, int y, int w, int h, int frame);
+void Anim_Process(animnode_t *nod);
+void Anim_DeleteAnim(animnode_t *nod);
+void Anim_DeleteAnimImage(anim_surf_t *anim);
 
 #endif // ANIMS_H_INCLUDED

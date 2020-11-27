@@ -61,6 +61,22 @@ typedef struct
     char path[PATHBUFSIZ];
 } graph_font_t;
 
+typedef struct
+{
+    int start;
+    int stop;
+    int sub;
+} subtitle_t;
+
+typedef struct
+{
+    subrect_t *SubRect;
+    subtitle_t *subs; // Subtitle indices
+    char **txt;           // Subtitles text
+    int count;          // Subtittles count
+    int currentsub;
+} subtitles_t;
+
 void Text_InitStyle(txt_style_t *style);
 void Text_GetStyle(txt_style_t *style, const char *strin);
 void Text_SetStyle(TTF_Font *font, txt_style_t *fnt_stl);
@@ -70,5 +86,9 @@ void Text_DrawInOneLine(const char *text, SDL_Surface *dst);
 action_res_t *Text_CreateTTYText();
 int Text_DeleteTTYText(action_res_t *nod);
 int Text_ProcessTTYText(action_res_t *nod);
+
+subtitles_t *Text_LoadSubtitles(char *filename);
+void Text_ProcessSubtitles(subtitles_t *sub, int subtime);
+void Text_DeleteSubtitles(subtitles_t *sub);
 
 #endif // TEXT_H_INCLUDED

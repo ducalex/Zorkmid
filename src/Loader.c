@@ -171,7 +171,7 @@ TTF_Font *Loader_LoadFont(char *name, int size)
     graph_font_t *fnt = NULL;
 
     StartMList(FontList);
-    while (!eofMList(FontList))
+    while (!EndOfMList(FontList))
     {
         fnt = (graph_font_t *)DataMList(FontList);
         if (str_equals(fnt->name, name)) // str_starts_with

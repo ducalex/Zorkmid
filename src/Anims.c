@@ -1,24 +1,132 @@
-#include "Anims.h"
+#include "System.h"
 
-action_res_t *Anim_CreateAnimPlayNode()
+action_res_t *Anim_CreateNode(int type)
 {
-    action_res_t *tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPLAY);
-    tmp->nodes.node_anim = NEW(animnode_t);
+    action_res_t *tmp = NEW(action_res_t);
+
+    tmp->node_type = type;
+
+    switch (type)
+    {
+    case NODE_TYPE_ANIMPLAY:
+        tmp->nodes.node_anim = NEW(animnode_t);
+        break;
+    case NODE_TYPE_ANIMPRE:
+        tmp->nodes.node_animpre = NEW(animnode_t);
+        break;
+    case NODE_TYPE_ANIMPRPL:
+        tmp->nodes.node_animpreplay = NEW(anim_preplay_node_t);
+        break;
+    default:
+        Z_PANIC("Invalid anim node type %d\n", type);
+    }
+
     return tmp;
 }
 
-action_res_t *Anim_CreateAnimPreNode()
+int Anim_ProcessNode(action_res_t *nod)
 {
-    action_res_t *tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPRE);
-    tmp->nodes.node_animpre = NEW(animnode_t);
-    return tmp;
+    if (!nod)
+        return NODE_RET_NO;
+
+    if (nod->node_type == NODE_TYPE_ANIMPLAY)
+    {
+        Anim_Process(nod->nodes.node_anim);
+
+        if (!nod->nodes.node_anim->playing)
+        {
+            Anim_DeleteNode(nod);
+            return NODE_RET_DELETE;
+        }
+    }
+    else if (nod->node_type == NODE_TYPE_ANIMPRE)
+    {
+        Anim_Process(nod->nodes.node_animpre);
+    }
+    else if (nod->node_type == NODE_TYPE_ANIMPRPL)
+    {
+        anim_preplay_node_t *pre = nod->nodes.node_animpreplay;
+
+        if (pre->playerid == 0)
+        {
+            pre->playerid = Anim_Play(pre->point, pre->x, pre->y, pre->w, pre->h,
+                                      pre->start, pre->end, pre->loop);
+            SetgVarInt(pre->pointingslot, 1);
+            if (nod->slot > 0)
+                SetgVarInt(nod->slot, 1);
+        }
+        else
+        {
+            if (!pre->point->playing)
+            {
+                SetgVarInt(nod->slot, 2);
+                SetgVarInt(nod->nodes.node_animpreplay->pointingslot, 2);
+                Anim_DeleteNode(nod);
+                return NODE_RET_DELETE;
+            }
+        }
+    }
+    return NODE_RET_OK;
 }
 
-action_res_t *Anim_CreateAnimPlayPreNode()
+int Anim_DeleteNode(action_res_t *nod)
 {
-    action_res_t *tmp = ScrSys_CreateActRes(NODE_TYPE_ANIMPRPL);
-    tmp->nodes.node_animpreplay = NEW(anim_preplay_node_t);
-    return tmp;
+    if (!nod)
+        return NODE_RET_NO;
+
+    if (nod->node_type == NODE_TYPE_ANIMPLAY)
+    {
+        Anim_DeleteAnim(nod->nodes.node_anim);
+
+        if (nod->slot > 0)
+        {
+            SetgVarInt(nod->slot, 2);
+            SetGNode(nod->slot, NULL);
+        }
+        free(nod);
+
+        return NODE_RET_DELETE;
+    }
+    else if (nod->node_type == NODE_TYPE_ANIMPRE)
+    {
+        MList *lst = GetActionsList();
+        PushMList(lst);
+        StartMList(lst);
+        while (!EndOfMList(lst))
+        {
+            action_res_t *nod2 = (action_res_t *)DataMList(lst);
+
+            if (nod2->node_type == NODE_TYPE_ANIMPRPL)
+            {
+                if (nod2->nodes.node_animpreplay->pointingslot == nod->slot)
+                    nod2->need_delete = true;
+            }
+
+            NextMList(lst);
+        }
+        PopMList(lst);
+
+        SetGNode(nod->slot, NULL);
+        Anim_DeleteAnim(nod->nodes.node_animpre);
+        free(nod);
+
+        return NODE_RET_DELETE;
+    }
+    else if (nod->node_type ==  NODE_TYPE_ANIMPRPL)
+    {
+        if (nod->slot > 0)
+        {
+            SetgVarInt(nod->slot, 2);
+            SetGNode(nod->slot, NULL);
+        }
+        SetgVarInt(nod->nodes.node_animpreplay->pointingslot, 2);
+        free(nod->nodes.node_animpreplay);
+        free(nod);
+
+        return NODE_RET_DELETE;
+    }
+
+    return NODE_RET_NO;
 }
 
 void Anim_Load(animnode_t *nod, char *filename, int u1, int u2, int32_t mask, int framerate)
@@ -112,66 +220,6 @@ void Anim_Process(animnode_t *mnod)
     }
 }
 
-int Anim_ProcessPlayNode(action_res_t *nod)
-{
-    if (nod->node_type != NODE_TYPE_ANIMPLAY)
-        return NODE_RET_OK;
-
-    Anim_Process(nod->nodes.node_anim);
-
-    if (!nod->nodes.node_anim->playing)
-    {
-        anim_DeleteAnimPlay(nod);
-        return NODE_RET_DELETE;
-    }
-
-    return NODE_RET_OK;
-}
-
-int Anim_ProcessPreNode(action_res_t *nod)
-{
-    if (nod->node_type != NODE_TYPE_ANIMPRE)
-        return NODE_RET_OK;
-
-    Anim_Process(nod->nodes.node_animpre);
-
-    return NODE_RET_OK;
-}
-
-int Anim_ProcessPrePlayNode(action_res_t *nod)
-{
-    if (nod->node_type != NODE_TYPE_ANIMPRPL)
-        return NODE_RET_OK;
-
-    anim_preplay_node_t *pre = nod->nodes.node_animpreplay;
-
-    if (pre->playerid == 0)
-    {
-        pre->playerid = Anim_Play(pre->point, pre->x,
-                                      pre->y,
-                                      pre->w,
-                                      pre->h,
-                                      pre->start,
-                                      pre->end,
-                                      pre->loop);
-        SetgVarInt(pre->pointingslot, 1);
-        if (nod->slot > 0)
-            SetgVarInt(nod->slot, 1);
-    }
-    else
-    {
-        if (!pre->point->playing)
-        {
-            SetgVarInt(nod->slot, 2);
-            SetgVarInt(nod->nodes.node_animpreplay->pointingslot, 2);
-            anim_DeleteAnimPrePlayNode(nod);
-            return NODE_RET_DELETE;
-        }
-    }
-
-    return NODE_RET_OK;
-}
-
 int Anim_Play(animnode_t *nod, int x, int y, int w, int h, int start, int end, int loop)
 {
     static int AnimID = 1;
@@ -197,7 +245,7 @@ int Anim_Play(animnode_t *nod, int x, int y, int w, int h, int start, int end, i
     return nod->playID;
 }
 
-void Anim_RenderFrame(animnode_t *mnod, int16_t x, int16_t y, int16_t w, int16_t h, int16_t frame)
+void Anim_RenderFrame(animnode_t *mnod, int x, int y, int w, int h, int frame)
 {
     if (!mnod)
         return;
@@ -221,7 +269,7 @@ void Anim_RenderFrame(animnode_t *mnod, int16_t x, int16_t y, int16_t w, int16_t
     }
 }
 
-void anim_DeleteAnimImage(anim_surf_t *anim)
+void Anim_DeleteAnimImage(anim_surf_t *anim)
 {
     if (!anim)
         return;
@@ -234,7 +282,7 @@ void anim_DeleteAnimImage(anim_surf_t *anim)
     free(anim);
 }
 
-void anim_DeleteAnim(animnode_t *nod)
+void Anim_DeleteAnim(animnode_t *nod)
 {
     if (nod->anim_avi)
     {
@@ -247,75 +295,8 @@ void anim_DeleteAnim(animnode_t *nod)
 
     if (nod->anim_rlf)
     {
-        anim_DeleteAnimImage(nod->anim_rlf);
+        Anim_DeleteAnimImage(nod->anim_rlf);
     }
 
     free(nod);
-}
-
-int anim_DeleteAnimPlay(action_res_t *nod)
-{
-    if (nod->node_type != NODE_TYPE_ANIMPLAY)
-        return NODE_RET_NO;
-
-    anim_DeleteAnim(nod->nodes.node_anim);
-
-    if (nod->slot > 0)
-    {
-        SetgVarInt(nod->slot, 2);
-        setGNode(nod->slot, NULL);
-    }
-
-    free(nod);
-
-    return NODE_RET_DELETE;
-}
-
-int anim_DeleteAnimPreNod(action_res_t *nod)
-{
-    if (nod->node_type != NODE_TYPE_ANIMPRE)
-        return NODE_RET_NO;
-
-    MList *lst = GetAction_res_List();
-    pushMList(lst);
-    StartMList(lst);
-    while (!eofMList(lst))
-    {
-        action_res_t *nod2 = (action_res_t *)DataMList(lst);
-
-        if (nod2->node_type == NODE_TYPE_ANIMPRPL)
-        {
-            if (nod2->nodes.node_animpreplay->pointingslot == nod->slot)
-                nod2->need_delete = true;
-        }
-
-        NextMList(lst);
-    }
-    popMList(lst);
-
-    setGNode(nod->slot, NULL);
-
-    anim_DeleteAnim(nod->nodes.node_animpre);
-    free(nod);
-
-    return NODE_RET_DELETE;
-}
-
-int anim_DeleteAnimPrePlayNode(action_res_t *nod)
-{
-    if (nod->node_type != NODE_TYPE_ANIMPRPL)
-        return NODE_RET_NO;
-
-    if (nod->slot > 0)
-    {
-        SetgVarInt(nod->slot, 2);
-        setGNode(nod->slot, NULL);
-    }
-
-    SetgVarInt(nod->nodes.node_animpreplay->pointingslot, 2);
-
-    free(nod->nodes.node_animpreplay);
-    free(nod);
-
-    return NODE_RET_DELETE;
 }

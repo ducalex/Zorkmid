@@ -19,16 +19,16 @@ static int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_
 
     const char *find = " ";
 
-    //font with "item what i want"
+    // font with "item what i want"
     const char *fontitem = str_find(buf, "font");
     if (fontitem != NULL)
     {
-        fontitem += 5; //to next item
+        fontitem += 5; // to next item
         if (fontitem[0] == '"')
         {
             fontitem++;
 
-            int32_t len = 0;
+            size_t len = 0;
             while (fontitem[len] != '"' && fontitem[len] >= ' ')
             {
                 style->fontname[len] = fontitem[len];
@@ -38,7 +38,7 @@ static int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_
         }
         else
         {
-            int32_t len = 0;
+            size_t len = 0;
             while (fontitem[len] > ' ')
             {
                 style->fontname[len] = fontitem[len];
@@ -623,9 +623,12 @@ static uint16_t ReadUtf8Char(char *chr)
 
 action_res_t *Text_CreateTTYText()
 {
-    action_res_t *tmp = ScrSys_CreateActRes(NODE_TYPE_TTYTEXT);
+    action_res_t *tmp = NEW(action_res_t);
+
+    tmp->node_type = NODE_TYPE_TTYTEXT;
     tmp->nodes.tty_text = NEW(ttytext_t);
     Text_InitStyle(&tmp->nodes.tty_text->style);
+
     return tmp;
 }
 
@@ -643,7 +646,7 @@ int Text_DeleteTTYText(action_res_t *nod)
     if (nod->slot > 0)
     {
         SetgVarInt(nod->slot, 2);
-        setGNode(nod->slot, NULL);
+        SetGNode(nod->slot, NULL);
     }
 
     free(nod);
@@ -740,4 +743,125 @@ int Text_ProcessTTYText(action_res_t *nod)
     }
 
     return NODE_RET_OK;
+}
+
+
+subtitles_t *Text_LoadSubtitles(char *filename)
+{
+    char buf[STRBUFSIZE];
+    int subscount = 0;
+
+    FManNode_t *fil = Loader_FindNode(filename);
+    if (!fil)
+        return NULL;
+
+    subtitles_t *tmp = NEW(subtitles_t);
+    tmp->currentsub = -1;
+
+    mfile_t *f = mfopen(fil);
+    while (!mfeof(f))
+    {
+        mfgets(buf, STRBUFSIZE, f);
+
+        char *str1 = (char*)str_ltrim(buf); // without left spaces, paramname
+        char *str2 = strchr(str1, ':');     // params
+
+        if (str2)
+        {
+            *str2 = 0;
+            str2++;
+        }
+
+        if (str_empty(str2))
+            continue;
+
+        for (int i = strlen(str2) - 1; i >= 0; i--)
+            if (str2[i] == '~' || str2[i] == 0x0A || str2[i] == 0x0D)
+                str2[i] = 0x0;
+
+        if (str_starts_with(str1, "Initialization"))
+        {
+            ;
+        }
+        else if (str_starts_with(str1, "Rectangle"))
+        {
+            int x, y, x2, y2;
+            sscanf(str2, "%d %d %d %d", &x, &y, &x2, &y2);
+            tmp->SubRect = Rend_CreateSubRect(x, y, x2 - x + 1, y2 - y + 1);
+        }
+        else if (str_starts_with(str1, "TextFile"))
+        {
+            FManNode_t *fil2 = Loader_FindNode(str2);
+            if (fil2 == NULL)
+            {
+                free(tmp);
+                return NULL;
+            }
+
+            tmp->txt = Loader_LoadSTR_m(mfopen(fil2));
+            subscount = 0;
+            while (tmp->txt[subscount])
+                subscount++;
+            tmp->subs = NEW_ARRAY(subtitle_t, subscount);
+        }
+        else // it must be sub info
+        {
+            int st, en, sb;
+            if (sscanf(str2, "(%d,%d)=%d", &st, &en, &sb) == 3)
+            {
+                if (subscount == 0 || sb > subscount)
+                {
+                    Z_PANIC("Error in subs %s\n", filename);
+                }
+                tmp->subs[tmp->count].start = st;
+                tmp->subs[tmp->count].stop = en;
+                tmp->subs[tmp->count].sub = sb;
+                tmp->count++;
+            }
+        }
+    }
+    mfclose(f);
+
+    return tmp;
+}
+
+void Text_ProcessSubtitles(subtitles_t *sub, int subtime)
+{
+    int j = -1;
+    for (int i = 0; i < sub->count; i++)
+        if (subtime >= sub->subs[i].start && subtime <= sub->subs[i].stop)
+        {
+            j = i;
+            break;
+        }
+
+    if (j == -1 && sub->currentsub != -1)
+    {
+        Rend_FillRect(sub->SubRect->img, NULL, 0, 0, 0);
+        sub->currentsub = -1;
+    }
+
+    if (j != -1 && j != sub->currentsub)
+    {
+        char *sss = sub->txt[sub->subs[j].sub];
+        if (!str_empty(sss))
+        {
+            Rend_FillRect(sub->SubRect->img, NULL, 0, 0, 0);
+            Text_DrawInOneLine(sss, sub->SubRect->img);
+        }
+        sub->currentsub = j;
+    }
+}
+
+void Text_DeleteSubtitles(subtitles_t *sub)
+{
+    if (sub->txt)
+    {
+        for (int i = 0; i < sub->count; i++)
+            free(sub->txt[i]);
+    }
+    Rend_DeleteSubRect(sub->SubRect);
+    free(sub->txt);
+    free(sub->subs);
+    free(sub);
 }

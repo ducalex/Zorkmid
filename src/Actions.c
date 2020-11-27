@@ -108,21 +108,19 @@ static int action_timer(char *params, int aSlot, pzllst_t *owner)
     char tmp2[16];
     sscanf(params, "%s", tmp2);
 
-    if (getGNode(aSlot) != NULL)
+    if (GetGNode(aSlot) != NULL)
     {
         return ACTION_NORMAL;
     }
 
-    action_res_t *nod = NEW(action_res_t);
+    action_res_t *nod = Timer_CreateNode();
     nod->slot = aSlot;
     nod->owner = owner;
-    nod->node_type = NODE_TYPE_TIMER;
-    nod->need_delete = false;
     nod->nodes.node_timer = GetIntVal(PrepareString(tmp2)) * delay;
 
-    setGNode(aSlot, nod);
+    SetGNode(aSlot, nod);
 
-    ScrSys_AddToActResList(nod);
+    ScrSys_AddToActionsList(nod);
 
     SetgVarInt(aSlot, 1);
 
@@ -230,7 +228,7 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
     if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
     {
         strcpy(file + (strlen(file) - 3), "sub");
-        subs = Subtitles_Load(file);
+        subs = Text_LoadSubtitles(file);
     }
 
     Mix_Chunk *aud = avi_get_audio(anm->av);
@@ -260,7 +258,7 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
         avi_update(anm->av);
 
         if (subs)
-            Subtitles_Process(subs, anm->av->cframe);
+            Text_ProcessSubtitles(subs, anm->av->cframe);
 
         Rend_ProcessSubs();
         Rend_ScreenFlip();
@@ -270,7 +268,7 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
         if (delay > 200 || delay < 0)
             delay = 15;
 
-        Rend_Delay(delay);
+        Delay(delay);
     }
 
     if (aud != NULL)
@@ -280,7 +278,7 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
     }
 
     if (subs != NULL)
-        Subtitles_Delete(subs);
+        Text_DeleteSubtitles(subs);
 
     avi_close(anm->av);
     free(anm);
@@ -304,31 +302,31 @@ static int action_animplay(char *params, int aSlot, pzllst_t *owner)
     char framerate[16]; //framerate or 0 (default)
     sscanf(params, "%s %s %s %s %s %s %s %s %s %s %s %s", file, x, y, w, h, st, en, loop, un1, un2, mask, framerate);
 
-    MList *all = GetAction_res_List();
+    MList *all = GetActionsList();
     StartMList(all);
-    while (!eofMList(all))
+    while (!EndOfMList(all))
     {
         action_res_t *nd = (action_res_t *)DataMList(all);
 
         if (nd->node_type == NODE_TYPE_ANIMPLAY)
             if (nd->slot == aSlot)
             {
-                anim_DeleteAnimPlay(nd);
+                Anim_DeleteNode(nd);
                 DeleteCurrent(all);
             }
 
         NextMList(all);
     }
 
-    action_res_t *glob = Anim_CreateAnimPlayNode();
+    action_res_t *glob = Anim_CreateNode(NODE_TYPE_ANIMPLAY);
     animnode_t *nod = glob->nodes.node_anim;
 
-    ScrSys_AddToActResList(glob);
+    ScrSys_AddToActionsList(glob);
 
     if (aSlot > 0)
     {
         SetgVarInt(aSlot, 1);
-        setGNode(aSlot, glob);
+        SetGNode(aSlot, glob);
     }
 
     glob->slot = aSlot;
@@ -356,15 +354,15 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
     char fn[PATHBUFSIZ];
     int8_t read_params = sscanf(params, "%d %s %s %s", &type, file, loop, vol);
 
-    if (getGNode(aSlot) != NULL)
+    if (GetGNode(aSlot) != NULL)
         return ACTION_NORMAL;
 
-    action_res_t *nod = Sound_CreateWavNode();
+    action_res_t *nod = Sound_CreateNode(NODE_TYPE_MUSIC);
 
     nod->slot = aSlot;
     nod->owner = owner;
 
-    setGNode(nod->slot, nod);
+    SetGNode(nod->slot, nod);
 
     if (type == 4)
     {
@@ -380,7 +378,7 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
             if (nod->nodes.node_music->chn == -1)
             {
                 LOG_WARN("ERROR: NO CHANNELS! %s\n", params);
-                Sound_DeleteWav(nod);
+                Sound_DeleteNode(nod);
                 return ACTION_NORMAL;
             }
 
@@ -408,7 +406,7 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
         }
         else
         {
-            Sound_DeleteWav(nod);
+            Sound_DeleteNode(nod);
             return ACTION_NORMAL;
         }
     }
@@ -440,21 +438,21 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
 
         if (nod->nodes.node_music->chunk == NULL)
         {
-            Sound_DeleteWav(nod);
+            Sound_DeleteNode(nod);
             return ACTION_NORMAL;
         }
 
         if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
         {
             strcpy(ext, "sub");
-            nod->nodes.node_music->sub = Subtitles_Load(file);
+            nod->nodes.node_music->sub = Text_LoadSubtitles(file);
         }
 
         nod->nodes.node_music->chn = Sound_GetFreeChannel();
         if (nod->nodes.node_music->chn == -1)
         {
             LOG_WARN("ERROR: NO CHANNELS! %s\n", params);
-            Sound_DeleteWav(nod);
+            Sound_DeleteNode(nod);
             return ACTION_NORMAL;
         }
 
@@ -481,7 +479,7 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
         Sound_LockChannel(nod->nodes.node_music->chn);
     }
 
-    ScrSys_AddToActResList(nod);
+    ScrSys_AddToActionsList(nod);
 
     SetgVarInt(aSlot, 1);
 
@@ -519,10 +517,10 @@ static int action_syncsound(char *params, int aSlot, pzllst_t *owner)
 
     int syncto = GetIntVal(a1);
 
-    if (getGNode(syncto) == NULL)
+    if (GetGNode(syncto) == NULL)
         return ACTION_NORMAL;
 
-    action_res_t *tmp = Sound_CreateSyncNode();
+    action_res_t *tmp = Sound_CreateNode(NODE_TYPE_SYNCSND);
 
     tmp->owner = owner;
     tmp->slot = -1;
@@ -532,9 +530,9 @@ static int action_syncsound(char *params, int aSlot, pzllst_t *owner)
 
     tmp->nodes.node_sync->syncto = syncto;
 
-    if (getGNode(syncto)->node_type == NODE_TYPE_ANIMPRE)
+    if (GetGNode(syncto)->node_type == NODE_TYPE_ANIMPRE)
     {
-        getGNode(syncto)->nodes.node_animpre->framerate = FPS_DELAY; //~15fps hack
+        GetGNode(syncto)->nodes.node_animpre->framerate = FPS_DELAY; //~15fps hack
     }
 
     tmp->nodes.node_sync->chunk = Loader_LoadChunk(a3);
@@ -542,7 +540,7 @@ static int action_syncsound(char *params, int aSlot, pzllst_t *owner)
     if (tmp->nodes.node_sync->chn == -1 || tmp->nodes.node_sync->chunk == NULL)
     {
         LOG_WARN("ERROR: NO CHANNELS OR FILE! %s\n", params);
-        Sound_DeleteSync(tmp);
+        Sound_DeleteNode(tmp);
         return ACTION_NORMAL;
     }
 
@@ -550,7 +548,7 @@ static int action_syncsound(char *params, int aSlot, pzllst_t *owner)
     strcpy(ext, "sub");
 
     if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
-        tmp->nodes.node_sync->sub = Subtitles_Load(a3);
+        tmp->nodes.node_sync->sub = Text_LoadSubtitles(a3);
 
     Mix_UnregisterAllEffects(tmp->nodes.node_sync->chn);
 
@@ -560,14 +558,14 @@ static int action_syncsound(char *params, int aSlot, pzllst_t *owner)
 
     Sound_LockChannel(tmp->nodes.node_sync->chn);
 
-    ScrSys_AddToActResList(tmp);
+    ScrSys_AddToActionsList(tmp);
 
     return ACTION_NORMAL;
 }
 
 static int action_animpreload(char *params, int aSlot, pzllst_t *owner)
 {
-    if (getGNode(aSlot) != NULL)
+    if (GetGNode(aSlot) != NULL)
         return ACTION_NORMAL;
 
     char name[64];
@@ -576,7 +574,7 @@ static int action_animpreload(char *params, int aSlot, pzllst_t *owner)
     char u3[16];
     char u4[16];
 
-    action_res_t *pre = Anim_CreateAnimPreNode();
+    action_res_t *pre = Anim_CreateNode(NODE_TYPE_ANIMPRE);
 
     //%s %d %d %d %f
     //name     ? ? mask framerate
@@ -592,11 +590,11 @@ static int action_animpreload(char *params, int aSlot, pzllst_t *owner)
     pre->slot = aSlot;
     pre->owner = owner;
 
-    ScrSys_AddToActResList(pre);
+    ScrSys_AddToActionsList(pre);
 
     SetgVarInt(pre->slot, 2);
 
-    setGNode(aSlot, pre);
+    SetGNode(aSlot, pre);
 
     return ACTION_NORMAL;
 }
@@ -610,7 +608,7 @@ static int action_playpreload(char *params, int aSlot, pzllst_t *owner)
 
     slot = GetIntVal(sl);
 
-    action_res_t *pre = getGNode(slot);
+    action_res_t *pre = GetGNode(slot);
 
     if (pre == NULL)
     {
@@ -620,7 +618,7 @@ static int action_playpreload(char *params, int aSlot, pzllst_t *owner)
     if (pre->node_type != NODE_TYPE_ANIMPRE)
         return ACTION_NORMAL;
 
-    action_res_t *nod = Anim_CreateAnimPlayPreNode();
+    action_res_t *nod = Anim_CreateNode(NODE_TYPE_ANIMPRPL);
 
     anim_preplay_node_t *tmp = nod->nodes.node_animpreplay;
 
@@ -638,11 +636,11 @@ static int action_playpreload(char *params, int aSlot, pzllst_t *owner)
     nod->slot = aSlot;
     nod->owner = owner;
 
-    ScrSys_AddToActResList(nod);
+    ScrSys_AddToActionsList(nod);
 
     if (aSlot > 0)
     {
-        setGNode(aSlot, nod);
+        SetGNode(aSlot, nod);
     }
 
     //SetgVarInt(GetIntVal(chars),2);
@@ -697,9 +695,9 @@ static int action_ttytext(char *params, int aSlot, pzllst_t *owner)
     nod->nodes.tty_text->delay = delay;
 
     SetgVarInt(nod->slot, 1);
-    setGNode(nod->slot, nod);
+    SetGNode(nod->slot, nod);
 
-    ScrSys_AddToActResList(nod);
+    ScrSys_AddToActionsList(nod);
 
     return ACTION_NORMAL;
 }
@@ -713,7 +711,7 @@ static int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
     {
         if (str_equals(chars, "\"all\""))
         {
-            ScrSys_FlushActResList();
+            ScrSys_FlushActionsList();
             return ACTION_NORMAL;
         }
 
@@ -768,10 +766,10 @@ static int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
     //if (getGNode(slot) == NULL)
     //return ACTION_NOT_FOUND;
 
-    MList *all = GetAction_res_List();
+    MList *all = GetActionsList();
 
     StartMList(all);
-    while (!eofMList(all))
+    while (!EndOfMList(all))
     {
         action_res_t *nod = (action_res_t *)DataMList(all);
 
@@ -782,7 +780,7 @@ static int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
                 if (nod->nodes.node_animpre->playing)
                 {
                     if (iskillfunc)
-                        ScrSys_DeleteNode(nod);
+                        ScrSys_DeleteActionNode(nod);
                     else
                     {
                         nod->nodes.node_animpre->playing = false;
@@ -792,13 +790,13 @@ static int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
                 else
                 {
                     if (iskillfunc)
-                        ScrSys_DeleteNode(nod);
+                        ScrSys_DeleteActionNode(nod);
                     else
                         break;
                 }
             }
             else
-                ScrSys_DeleteNode(nod);
+                ScrSys_DeleteActionNode(nod);
 
             DeleteCurrent(all);
             break;
@@ -882,7 +880,7 @@ static int action_crossfade(char *params, int aSlot, pzllst_t *owner)
 
     if (item > 0)
     {
-        action_res_t *tmp = getGNode(item);
+        action_res_t *tmp = GetGNode(item);
 
         if (tmp != NULL)
             if (tmp->node_type == NODE_TYPE_MUSIC)
@@ -904,7 +902,7 @@ static int action_crossfade(char *params, int aSlot, pzllst_t *owner)
 
     if (item2 > 0)
     {
-        action_res_t *tmp = getGNode(item2);
+        action_res_t *tmp = GetGNode(item2);
 
         if (tmp != NULL)
             if (tmp->node_type == NODE_TYPE_MUSIC)
@@ -953,18 +951,18 @@ static int action_pan_track(char *params, int aSlot, pzllst_t *owner)
 
     if (slot > 0)
     {
-        action_res_t *nod = Sound_CreatePanTrack();
+        action_res_t *nod = Sound_CreateNode(NODE_TYPE_PANTRACK);
         nod->nodes.node_pantracking = slot;
 
         nod->owner = owner;
         nod->slot = aSlot;
 
         if (nod->slot > 0)
-            setGNode(nod->slot, nod);
+            SetGNode(nod->slot, nod);
 
-        ScrSys_AddToActResList(nod);
+        ScrSys_AddToActionsList(nod);
 
-        action_res_t *tmp = getGNode(slot);
+        action_res_t *tmp = GetGNode(slot);
 
         if (tmp != NULL)
             if (tmp->node_type == NODE_TYPE_MUSIC)
@@ -990,7 +988,7 @@ static int action_attenuate(char *params, int aSlot, pzllst_t *owner)
 
     if (slot > 0)
     {
-        action_res_t *tmp = getGNode(slot);
+        action_res_t *tmp = GetGNode(slot);
 
         if (tmp != NULL)
             if (tmp->node_type == NODE_TYPE_MUSIC)
@@ -1024,7 +1022,7 @@ static int action_animunload(char *params, int aSlot, pzllst_t *owner)
 
     sscanf(params, "%d", &slot);
 
-    action_res_t *nod = getGNode(slot);
+    action_res_t *nod = GetGNode(slot);
 
     if (nod != NULL)
         if (nod->node_type == NODE_TYPE_ANIMPRE)
@@ -1035,8 +1033,7 @@ static int action_animunload(char *params, int aSlot, pzllst_t *owner)
 
 static int action_flush_mouse_events(char *params, int aSlot, pzllst_t *owner)
 {
-    FlushMouseBtn(SDL_BUTTON_LEFT);
-    FlushMouseBtn(SDL_BUTTON_RIGHT);
+    FlushMouseBtn(MOUSE_BTN_LEFT|MOUSE_BTN_RIGHT);
 
     return ACTION_NORMAL;
 }
@@ -1114,7 +1111,7 @@ static int action_rotate_to(char *params, int aSlot, pzllst_t *owner)
 
         Rend_RenderFunc();
         Rend_ScreenFlip();
-        Rend_Delay(500 / time);
+        Delay(500 / time);
     }
 
     return ACTION_NORMAL;
@@ -1130,20 +1127,20 @@ static int action_distort(char *params, int aSlot, pzllst_t *owner)
     float st_lin, en_lin;
     sscanf(params, "%d %d %f %f %f %f", &slot, &speed, &st_angl, &en_angl, &st_lin, &en_lin);
 
-    if (getGNode(slot) != NULL)
+    if (GetGNode(slot) != NULL)
         return ACTION_NORMAL;
 
-    action_res_t *act = Rend_CreateDistortNode();
+    action_res_t *act = Rend_CreateNode(NODE_TYPE_DISTORT);
     act->slot = slot;
     act->owner = owner;
 
     if (slot > 0)
     {
-        setGNode(act->slot, act);
+        SetGNode(act->slot, act);
         SetgVarInt(act->slot, 1);
     }
 
-    ScrSys_AddToActResList(act);
+    ScrSys_AddToActionsList(act);
 
     act->nodes.distort->speed = speed;
     act->nodes.distort->increase = true;
@@ -1202,16 +1199,14 @@ static int action_region(char *params, int aSlot, pzllst_t *owner)
         {
         case 0: //water effect
         {
-            action_res_t *nod = NEW(action_res_t);
+            action_res_t *nod = Rend_CreateNode(NODE_TYPE_REGION);
 
             nod->slot = aSlot;
             nod->owner = owner;
-            nod->node_type = NODE_TYPE_REGION;
-            nod->need_delete = false;
 
-            setGNode(aSlot, nod);
+            SetGNode(aSlot, nod);
 
-            ScrSys_AddToActResList(nod);
+            ScrSys_AddToActionsList(nod);
 
             int32_t s_x, s_y;
             int32_t frames;
@@ -1226,16 +1221,14 @@ static int action_region(char *params, int aSlot, pzllst_t *owner)
 
         case 1: //lightning effect
         {
-            action_res_t *nod = NEW(action_res_t);
+            action_res_t *nod = Rend_CreateNode(NODE_TYPE_REGION);
 
             nod->slot = aSlot;
             nod->owner = owner;
-            nod->node_type = NODE_TYPE_REGION;
-            nod->need_delete = false;
 
-            setGNode(aSlot, nod);
+            SetGNode(aSlot, nod);
 
-            ScrSys_AddToActResList(nod);
+            ScrSys_AddToActionsList(nod);
 
             int32_t d;
 
@@ -1248,16 +1241,14 @@ static int action_region(char *params, int aSlot, pzllst_t *owner)
 
         case 9:
         {
-            action_res_t *nod = NEW(action_res_t);
+            action_res_t *nod = Rend_CreateNode(NODE_TYPE_REGION);
 
             nod->slot = aSlot;
             nod->owner = owner;
-            nod->node_type = NODE_TYPE_REGION;
-            nod->need_delete = false;
 
-            setGNode(aSlot, nod);
+            SetGNode(aSlot, nod);
 
-            ScrSys_AddToActResList(nod);
+            ScrSys_AddToActionsList(nod);
 
             int32_t d, d2;
             char buff[MINIBUFSZ];

@@ -104,7 +104,7 @@ void Mouse_SetCursor(int indx)
 {
     int8_t stt = CURSOR_STATE_UP;
 
-    if (MouseDown(SDL_BUTTON_LEFT) || MouseDown(SDL_BUTTON_RIGHT))
+    if (MouseDown(MOUSE_BTN_LEFT) || MouseDown(MOUSE_BTN_RIGHT))
         stt = CURSOR_STATE_DW;
 
     if (indx == CURSOR_OBJ_0)
@@ -121,7 +121,7 @@ Cursor_t *Mouse_GetCursor(int indx)
 {
     int8_t stt = CURSOR_STATE_UP;
 
-    if (MouseDown(SDL_BUTTON_LEFT) || MouseDown(SDL_BUTTON_RIGHT))
+    if (MouseDown(MOUSE_BTN_LEFT) || MouseDown(MOUSE_BTN_RIGHT))
         stt = CURSOR_STATE_DW;
 
     if (indx == CURSOR_OBJ_0)

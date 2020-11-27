@@ -1,6 +1,9 @@
 #ifndef SOUND_H_INCLUDED
 #define SOUND_H_INCLUDED
 
+#define SOUND_CHANNELS  16
+#define SOUND_FREQUENCY 44100
+
 typedef struct
 {
     Mix_Chunk *chunk;
@@ -42,16 +45,8 @@ void Sound_LockChannel(int i);
 void Sound_UnLockChannel(int i);
 int Sound_GetLogVol(uint8_t linear);
 
-action_res_t *Sound_CreateWavNode();
-int Sound_ProcessWav(action_res_t *nod);
-int Sound_DeleteWav(action_res_t *nod);
-
-action_res_t *Sound_CreateSyncNode();
-int Sound_ProcessSync(action_res_t *nod);
-int Sound_DeleteSync(action_res_t *nod);
-
-action_res_t *Sound_CreatePanTrack();
-int Sound_ProcessPanTrack(action_res_t *nod);
-int Sound_DeletePanTrack(action_res_t *nod);
+action_res_t *Sound_CreateNode(int type);
+int Sound_DeleteNode(action_res_t *nod);
+int Sound_ProcessNode(action_res_t *nod);
 
 #endif // SOUND_H_INCLUDED

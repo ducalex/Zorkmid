@@ -266,11 +266,11 @@ static void control_input(ctrlnode_t *ct)
             if (Mouse_IsCurrentCur(CURSOR_IDLE))
                 Mouse_SetCursor(CURSOR_ACTIVE);
 
-            if (MouseUp(SDL_BUTTON_LEFT))
+            if (MouseUp(MOUSE_BTN_LEFT))
             {
                 ctrl_setvenus(ct);
                 FocusInput = ct->slot;
-                FlushMouseBtn(SDL_BUTTON_LEFT);
+                FlushMouseBtn(MOUSE_BTN_LEFT);
             }
         }
         else if (inp->text[0] >= ' ')
@@ -281,7 +281,7 @@ static void control_input(ctrlnode_t *ct)
             if (MouseMove())
                 FocusInput = ct->slot;
 
-            if (MouseUp(SDL_BUTTON_LEFT))
+            if (MouseUp(MOUSE_BTN_LEFT))
             {
                 ctrl_setvenus(ct);
                 FocusInput = 0;
@@ -309,7 +309,7 @@ static void control_slot(ctrlnode_t *ct)
         if (Mouse_IsCurrentCur(CURSOR_IDLE))
             Mouse_SetCursor(slot->cursor);
 
-        if (MouseUp(SDL_BUTTON_LEFT))
+        if (MouseUp(MOUSE_BTN_LEFT))
         {
 
             ctrl_setvenus(ct);
@@ -347,7 +347,7 @@ static void control_slot(ctrlnode_t *ct)
                 Inventory_Drop(mouse_item);
             }
 
-            FlushMouseBtn(SDL_BUTTON_LEFT);
+            FlushMouseBtn(MOUSE_BTN_LEFT);
         }
     }
 }
@@ -376,7 +376,7 @@ static void control_paint(ctrlnode_t *ct)
     if (Mouse_IsCurrentCur(CURSOR_IDLE))
         Mouse_SetCursor(paint->cursor);
 
-    if (!MouseDown(SDL_BUTTON_LEFT))
+    if (!MouseDown(MOUSE_BTN_LEFT))
         return;
 
     ctrl_setvenus(ct);
@@ -505,7 +505,7 @@ static void control_fist(ctrlnode_t *ct)
         if (Mouse_IsCurrentCur(CURSOR_IDLE))
             Mouse_SetCursor(CURSOR_ACTIVE);
 
-        if (MouseUp(SDL_BUTTON_LEFT))
+        if (MouseUp(MOUSE_BTN_LEFT))
         {
 
             ctrl_setvenus(ct);
@@ -528,7 +528,7 @@ static void control_fist(ctrlnode_t *ct)
 
             SetgVarInt(ct->slot, fist->fiststatus);
 
-            FlushMouseBtn(SDL_BUTTON_LEFT);
+            FlushMouseBtn(MOUSE_BTN_LEFT);
         }
     }
 }
@@ -605,17 +605,13 @@ static void control_hotmv(ctrlnode_t *ct)
             if (Mouse_IsCurrentCur(CURSOR_IDLE))
                 Mouse_SetCursor(CURSOR_ACTIVE);
 
-            if (MouseUp(SDL_BUTTON_LEFT))
+            if (MouseUp(MOUSE_BTN_LEFT))
             {
                 ctrl_setvenus(ct);
 
-                FlushMouseBtn(SDL_BUTTON_LEFT);
+                FlushMouseBtn(MOUSE_BTN_LEFT);
 
                 SetgVarInt(ct->slot, 1);
-
-#ifdef TRACE
-                printf("Pushed_HotMov %d(Slot)\n", ct->slot);
-#endif
             }
         }
     }
@@ -681,9 +677,9 @@ static void control_safe(ctrlnode_t *ct)
         if (Mouse_IsCurrentCur(CURSOR_IDLE))
             Mouse_SetCursor(CURSOR_ACTIVE);
 
-        if (MouseUp(SDL_BUTTON_LEFT))
+        if (MouseUp(MOUSE_BTN_LEFT))
         {
-            FlushMouseBtn(SDL_BUTTON_LEFT);
+            FlushMouseBtn(MOUSE_BTN_LEFT);
 
             ctrl_setvenus(ct);
 
@@ -761,19 +757,16 @@ static void control_push(ctrlnode_t *ct)
                 pushChangeMouse = true;
             }
 
-        //if (MouseHit(SDL_BUTTON_LEFT))
-        //    psh->downed = true;
-
         int8_t pushed = 0;
 
         switch (psh->event)
         {
         case CTRL_PUSH_EV_UP:
-            if (MouseUp(SDL_BUTTON_LEFT))
+            if (MouseUp(MOUSE_BTN_LEFT))
                 pushed = 1;
             break;
         case CTRL_PUSH_EV_DWN:
-            if (MouseHit(SDL_BUTTON_LEFT))
+            if (MouseHit(MOUSE_BTN_LEFT))
                 pushed = 1;
             break;
         case CTRL_PUSH_EV_DBL:
@@ -782,7 +775,7 @@ static void control_push(ctrlnode_t *ct)
             break;
         default:
 
-            if (MouseUp(SDL_BUTTON_LEFT))
+            if (MouseUp(MOUSE_BTN_LEFT))
                 pushed = 1;
             break;
         };
@@ -790,15 +783,13 @@ static void control_push(ctrlnode_t *ct)
         if (pushed == 1)
         {
             ctrl_setvenus(ct);
-#ifdef TRACE
-            printf("Pushed #%d\n", ct->slot);
-#endif
+
             int32_t val = GetgVarInt(ct->slot);
             val++;
             val %= psh->count_to;
             SetgVarInt(ct->slot, val);
 
-            FlushMouseBtn(SDL_BUTTON_LEFT);
+            FlushMouseBtn(MOUSE_BTN_LEFT);
         }
     }
 }
@@ -876,7 +867,7 @@ static void control_lever(ctrlnode_t *ct)
             {
                 Mouse_SetCursor(lev->cursor);
 
-                if (MouseDown(SDL_BUTTON_LEFT))
+                if (MouseDown(MOUSE_BTN_LEFT))
                 {
                     ctrl_setvenus(ct);
 
@@ -910,7 +901,7 @@ static void control_lever(ctrlnode_t *ct)
         }
         else
         {
-            if (!MouseDown(SDL_BUTTON_LEFT))
+            if (!MouseDown(MOUSE_BTN_LEFT))
             {
                 lev->mouse_captured = false;
 
@@ -930,7 +921,7 @@ static void control_lever(ctrlnode_t *ct)
                 Mouse_SetCursor(lev->cursor);
 
                 if (lev->mouse_angle != -1)
-                    for (int16_t j = 0; j < CTRL_LEVER_MAX_DIRECTS; j++)
+                    for (int j = 0; j < CTRL_LEVER_MAX_DIRECTS; j++)
                         if (lev->hotspots[lev->curfrm].directions[j].toframe != -1)
                         {
                             int16_t angl = lev->hotspots[lev->curfrm].directions[j].angle;
@@ -1010,8 +1001,8 @@ static levernode_t *CreateLeverNode()
     tmp->cursor = CURSOR_IDLE;
     tmp->rendfrm = -1;
     tmp->autoseq = -1;
-    for (int16_t i = 0; i < CTRL_LEVER_MAX_FRAMES; i++)
-        for (int16_t j = 0; j < CTRL_LEVER_MAX_DIRECTS; j++)
+    for (int i = 0; i < CTRL_LEVER_MAX_FRAMES; i++)
+        for (int j = 0; j < CTRL_LEVER_MAX_DIRECTS; j++)
             tmp->hotspots[i].directions[j].toframe = -1;
     return tmp;
 }
@@ -2250,7 +2241,7 @@ static void ctrl_Delete_SlotNode(ctrlnode_t *nod)
 static void ctrl_Delete_InputNode(ctrlnode_t *nod)
 {
     if (nod->node.inp->cursor)
-        anim_DeleteAnimImage(nod->node.inp->cursor);
+        Anim_DeleteAnimImage(nod->node.inp->cursor);
     if (nod->node.inp->rect)
         SDL_FreeSurface(nod->node.inp->rect);
     free(nod->node.inp);
@@ -2264,28 +2255,28 @@ static void ctrl_Delete_SaveNode(ctrlnode_t *nod)
 static void ctrl_Delete_LeverNode(ctrlnode_t *nod)
 {
     if (nod->node.lev->anm != NULL)
-        anim_DeleteAnim(nod->node.lev->anm);
+        Anim_DeleteAnim(nod->node.lev->anm);
     free(nod->node.lev);
 }
 
 static void ctrl_Delete_SafeNode(ctrlnode_t *nod)
 {
     if (nod->node.safe->anm != NULL)
-        anim_DeleteAnim(nod->node.safe->anm);
+        Anim_DeleteAnim(nod->node.safe->anm);
     free(nod->node.safe);
 }
 
 static void ctrl_Delete_FistNode(ctrlnode_t *nod)
 {
     if (nod->node.fist->anm != NULL)
-        anim_DeleteAnim(nod->node.fist->anm);
+        Anim_DeleteAnim(nod->node.fist->anm);
     free(nod->node.fist);
 }
 
 static void ctrl_Delete_HotmovNode(ctrlnode_t *nod)
 {
     if (nod->node.hotmv->anm != NULL)
-        anim_DeleteAnim(nod->node.hotmv->anm);
+        Anim_DeleteAnim(nod->node.hotmv->anm);
     if (nod->node.hotmv->frame_list != NULL)
         free(nod->node.hotmv->frame_list);
     free(nod->node.hotmv);
@@ -2314,10 +2305,10 @@ static void ctrl_Delete_TitlerNode(ctrlnode_t *nod)
 
 void Controls_Draw()
 {
-    MList *ctrl = Getctrl();
+    MList *ctrl = GetControlsList();
     StartMList(ctrl);
 
-    while (!eofMList(ctrl))
+    while (!EndOfMList(ctrl))
     {
         ctrlnode_t *nod = (ctrlnode_t *)DataMList(ctrl);
 
@@ -2373,7 +2364,7 @@ void Controls_ProcessList(MList *ctrlst)
 
     LastMList(ctrlst);
 
-    while (!eofMList(ctrlst))
+    while (!EndOfMList(ctrlst))
     {
         ctrlnode_t *nod = (ctrlnode_t *)DataMList(ctrlst);
 
@@ -2390,7 +2381,7 @@ void Controls_ProcessList(MList *ctrlst)
 void Controls_FlushList(MList *lst)
 {
     StartMList(lst);
-    while (!eofMList(lst))
+    while (!EndOfMList(lst))
     {
         ctrlnode_t *nod = (ctrlnode_t *)DataMList(lst);
 
@@ -2437,22 +2428,22 @@ void Controls_FlushList(MList *lst)
 
 ctrlnode_t *Controls_GetControl(int32_t id)
 {
-    MList *lst = Getctrl();
-    pushMList(lst);
+    MList *lst = GetControlsList();
+    PushMList(lst);
     StartMList(lst);
-    while (!eofMList(lst))
+    while (!EndOfMList(lst))
     {
         ctrlnode_t *nod = (ctrlnode_t *)DataMList(lst);
 
         if (nod->slot == id)
         {
-            popMList(lst);
+            PopMList(lst);
             return nod;
         }
 
         NextMList(lst);
     }
 
-    popMList(lst);
+    PopMList(lst);
     return NULL;
 }

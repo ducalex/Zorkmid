@@ -15,20 +15,14 @@ static pzllst_t *world = NULL; //world script
 static pzllst_t *room = NULL;  //room script
 static pzllst_t *view = NULL;  //view script
 
-static MList *ctrl = NULL;   //contorls
-static MList *actres = NULL; //sounds, animations, ttytexts and other.
+static MList *controls = NULL;   // Controls
+static MList *actions = NULL; //sounds, animations, ttytexts and other.
 
 static uint8_t SaveBuffer[512 * 1024];
 static uint32_t SaveCurrentSize = 0;
 
 void FillStateBoxFromList(pzllst_t *lst);
 void ShakeStateBox(uint32_t indx);
-
-static bool in_range(int indx)
-{
-    // const size_t max = sizeof(gVars) / sizeof(gVars[0]);
-    return (indx >= 0 && indx < VAR_SLOTS_MAX); // > 0
-}
 
 pzllst_t *GetUni()
 {
@@ -50,58 +44,25 @@ pzllst_t *Getview()
     return view;
 }
 
-MList *Getctrl()
+MList *GetControlsList()
 {
-    return ctrl;
+    return controls;
 }
 
-MList *GetAction_res_List()
+MList *GetActionsList()
 {
-    return actres;
+    return actions;
 }
 
-static int DeleteTimer(action_res_t *nod)
+void ScrSys_AddToActionsList(void *nod)
 {
-    if (nod->node_type != NODE_TYPE_TIMER)
-        return NODE_RET_NO;
-
-    if (nod->nodes.node_timer < 0)
-        SetgVarInt(nod->slot, 2);
-    else
-        SetgVarInt(nod->slot, nod->nodes.node_timer);
-
-    setGNode(nod->slot, NULL);
-
-    free(nod);
-
-    return NODE_RET_DELETE;
+    if (actions && nod)
+        AddToMList(actions, nod);
 }
 
-static int ProcessTimer(action_res_t *nod)
+void SetgVarInt(uint32_t indx, int var)
 {
-    if (nod->node_type != NODE_TYPE_TIMER)
-        return NODE_RET_OK;
-
-    if (nod->nodes.node_timer < 0)
-    {
-        DeleteTimer(nod);
-        return NODE_RET_DELETE;
-    }
-
-    nod->nodes.node_timer -= GetDTime();
-
-    return NODE_RET_OK;
-}
-
-void ScrSys_AddToActResList(void *nod)
-{
-    if (actres != NULL)
-        AddToMList(actres, nod);
-}
-
-void SetgVarInt(int32_t indx, int var)
-{
-    if (in_range(indx))
+    if (indx < VAR_SLOTS_MAX)
     {
         gVars[indx] = var;
         ShakeStateBox(indx);
@@ -110,51 +71,47 @@ void SetgVarInt(int32_t indx, int var)
 
 void SetDirectgVarInt(uint32_t indx, int var)
 {
-    if (in_range(indx))
+    if (indx < VAR_SLOTS_MAX)
         gVars[indx] = var;
 }
 
-int GetgVarInt(int32_t indx)
+int GetgVarInt(uint32_t indx)
 {
-    if (!in_range(indx))
-        return 0;
-
-    return gVars[indx];
+    if (indx < VAR_SLOTS_MAX)
+        return gVars[indx];
+    return 0;
 }
 
 int *GetDirectgVarInt(uint32_t indx)
 {
-    if (!in_range(indx))
-        return NULL;
-
-    return &gVars[indx];
+    if (indx < VAR_SLOTS_MAX)
+        return &gVars[indx];
+    return NULL;
 }
 
 uint8_t ScrSys_GetFlag(uint32_t indx)
 {
-    if (!in_range(indx))
-        return 0;
-
-    return Flags[indx];
+    if (indx < VAR_SLOTS_MAX)
+        return Flags[indx];
+    return 0;
 }
 
 void ScrSys_SetFlag(uint32_t indx, uint8_t newval)
 {
-    if (in_range(indx))
+    if (indx < VAR_SLOTS_MAX)
         Flags[indx] = newval;
 }
 
-action_res_t *getGNode(int32_t indx)
+action_res_t *GetGNode(uint32_t indx)
 {
-    if (!in_range(indx))
-        return NULL;
-
-    return gNodes[indx];
+    if (indx < VAR_SLOTS_MAX)
+        return gNodes[indx];
+    return NULL;
 }
 
-void setGNode(int32_t indx, action_res_t *data)
+void SetGNode(uint32_t indx, action_res_t *data)
 {
-    if (in_range(indx))
+    if (indx < VAR_SLOTS_MAX)
         gNodes[indx] = data;
 }
 
@@ -180,8 +137,8 @@ void ScrSys_Init()
     room = Puzzle_CreateList("room");
     world = Puzzle_CreateList("world");
     uni = Puzzle_CreateList("universe");
-    ctrl = CreateMList();
-    actres = CreateMList();
+    controls = CreateMList();
+    actions = CreateMList();
 
     //needed for znemesis
     SetDirectgVarInt(SLOT_CPU, 1);
@@ -196,9 +153,7 @@ void ScrSys_LoadScript(pzllst_t *lst, FManNode_t *filename, bool control, MList 
     if (!filename)
         Z_PANIC("filename is NULL\n");
 
-#ifdef TRACE
-    printf("Loading script file %s\n", filename->name);
-#endif
+    LOG_DEBUG("Loading script file '%s'\n", filename->name);
 
     if (control)
         Rend_SetRenderer(RENDER_FLAT);
@@ -265,9 +220,9 @@ void ScrSys_PrepareSaveBuffer()
 
     buffpos = 28;
 
-    MList *lst = GetAction_res_List();
+    MList *lst = GetActionsList();
     StartMList(lst);
-    while (!eofMList(lst))
+    while (!EndOfMList(lst))
     {
         action_res_t *nod = (action_res_t *)DataMList(lst);
         if (nod->node_type == NODE_TYPE_TIMER)
@@ -332,9 +287,9 @@ void ScrSys_PrepareSaveBuffer()
     for (int i = 0; i < VAR_SLOTS_MAX; i++)
         tmp2[i] = GetgVarInt(i);
 
-    lst = GetAction_res_List();
+    lst = GetActionsList();
     StartMList(lst);
-    while (!eofMList(lst))
+    while (!EndOfMList(lst))
     {
         action_res_t *nod = (action_res_t *)DataMList(lst);
         if (nod->node_type == NODE_TYPE_MUSIC)
@@ -372,7 +327,7 @@ void ScrSys_LoadGame(char *file)
     if (!f)
         return;
 
-    ScrSys_FlushActResList();
+    ScrSys_FlushActionsList();
 
     fread(&tmp, 4, 1, f);
     if (tmp != 0x47534E5A)
@@ -493,7 +448,7 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         ScrSys_FlushResourcesByOwner(view);
 
         Puzzle_FlushList(view);
-        Controls_FlushList(ctrl);
+        Controls_FlushList(controls);
 
         tm[0] = temp.World;
         tm[1] = temp.Room;
@@ -503,7 +458,7 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         sprintf(buf, "%s.scr", tm);
         FManNode_t *fil = Loader_FindNode(buf);
         if (fil != NULL)
-            ScrSys_LoadScript(view, fil, true, ctrl);
+            ScrSys_LoadScript(view, fil, true, controls);
     }
 
     if (temp.Room != GetgVarInt(SLOT_ROOM) ||
@@ -578,20 +533,20 @@ void AddPuzzleToStateBox(int slot, puzzlenode_t *pzlnd)
 void FillStateBoxFromList(pzllst_t *lst)
 {
     StartMList(lst->_list);
-    while (!eofMList(lst->_list))
+    while (!EndOfMList(lst->_list))
     {
         puzzlenode_t *pzlnod = (puzzlenode_t *)DataMList(lst->_list);
 
         AddPuzzleToStateBox(pzlnod->slot, pzlnod);
 
         StartMList(pzlnod->CritList);
-        while (!eofMList(pzlnod->CritList))
+        while (!EndOfMList(pzlnod->CritList))
         {
             MList *CriteriaLst = (MList *)DataMList(pzlnod->CritList);
 
             int prevslot = 0;
             StartMList(CriteriaLst);
-            while (!eofMList(CriteriaLst))
+            while (!EndOfMList(CriteriaLst))
             {
                 crit_node_t *crtnod = (crit_node_t *)DataMList(CriteriaLst);
 
@@ -661,7 +616,7 @@ void ScrSys_ExecPuzzleList(pzllst_t *lst)
     if (lst->exec_times < 2)
     {
         StartMList(lst->_list);
-        while (!eofMList(lst->_list))
+        while (!EndOfMList(lst->_list))
         {
             if (Puzzle_TryExec((puzzlenode_t *)DataMList(lst->_list)) == ACTION_BREAK)
             {
@@ -711,14 +666,14 @@ void ScrSys_SetBreak()
     BreakExecute = true;
 }
 
-void ScrSys_ProcessActResList()
+void ScrSys_ProcessActionsList()
 {
-    MList *lst = GetAction_res_List();
+    MList *lst = GetActionsList();
 
     int result = NODE_RET_OK;
 
     StartMList(lst);
-    while (!eofMList(lst))
+    while (!EndOfMList(lst))
     {
         action_res_t *nod = (action_res_t *)DataMList(lst);
 
@@ -728,32 +683,24 @@ void ScrSys_ProcessActResList()
         {
             switch (nod->node_type)
             {
+            case NODE_TYPE_ANIMPLAY:
+            case NODE_TYPE_ANIMPRE:
+            case NODE_TYPE_ANIMPRPL:
+                result = Anim_ProcessNode(nod);
+                break;
             case NODE_TYPE_MUSIC:
-                result = Sound_ProcessWav(nod);
+            case NODE_TYPE_SYNCSND:
+            case NODE_TYPE_PANTRACK:
+                result = Sound_ProcessNode(nod);
                 break;
             case NODE_TYPE_TIMER:
-                result = ProcessTimer(nod);
-                break;
-            case NODE_TYPE_ANIMPLAY:
-                result = Anim_ProcessPlayNode(nod);
-                break;
-            case NODE_TYPE_ANIMPRE:
-                result = Anim_ProcessPreNode(nod);
-                break;
-            case NODE_TYPE_ANIMPRPL:
-                result = Anim_ProcessPrePlayNode(nod);
-                break;
-            case NODE_TYPE_SYNCSND:
-                result = Sound_ProcessSync(nod);
-                break;
-            case NODE_TYPE_PANTRACK:
-                result = Sound_ProcessPanTrack(nod);
+                result = Timer_ProcessNode(nod);
                 break;
             case NODE_TYPE_TTYTEXT:
                 result = Text_ProcessTTYText(nod);
                 break;
             case NODE_TYPE_DISTORT:
-                result = Rend_ProcessDistortNode(nod);
+                result = Rend_ProcessNode(nod);
                 break;
             case NODE_TYPE_REGION:
                 result = NODE_RET_OK;
@@ -766,7 +713,7 @@ void ScrSys_ProcessActResList()
         else
         {
             result = NODE_RET_DELETE;
-            ScrSys_DeleteNode(nod);
+            ScrSys_DeleteActionNode(nod);
         }
 
         if (result == NODE_RET_DELETE)
@@ -776,43 +723,38 @@ void ScrSys_ProcessActResList()
     }
 }
 
-int ScrSys_DeleteNode(action_res_t *nod)
+int ScrSys_DeleteActionNode(action_res_t *nod)
 {
     switch (nod->node_type)
     {
-    case NODE_TYPE_MUSIC:
-        return Sound_DeleteWav(nod);
-    case NODE_TYPE_TIMER:
-        return DeleteTimer(nod);
     case NODE_TYPE_ANIMPLAY:
-        return anim_DeleteAnimPlay(nod);
     case NODE_TYPE_ANIMPRE:
-        return anim_DeleteAnimPreNod(nod);
     case NODE_TYPE_ANIMPRPL:
-        return anim_DeleteAnimPrePlayNode(nod);
+        return Anim_DeleteNode(nod);
+    case NODE_TYPE_MUSIC:
     case NODE_TYPE_SYNCSND:
-        return Sound_DeleteSync(nod);
     case NODE_TYPE_PANTRACK:
-        return Sound_DeletePanTrack(nod);
+        return Sound_DeleteNode(nod);
+    case NODE_TYPE_TIMER:
+        return Timer_DeleteNode(nod);
     case NODE_TYPE_TTYTEXT:
         return Text_DeleteTTYText(nod);
     case NODE_TYPE_DISTORT:
-        return Rend_DeleteDistortNode(nod);
     case NODE_TYPE_REGION:
-        return Rend_DeleteRegion(nod);
+        return Rend_DeleteNode(nod);
     default:
         return NODE_RET_NO;
     }
 }
 
-void ScrSys_FlushActResList()
+void ScrSys_FlushActionsList()
 {
-    MList *all = GetAction_res_List();
+    MList *all = GetActionsList();
 
     StartMList(all);
-    while (!eofMList(all))
+    while (!EndOfMList(all))
     {
-        ScrSys_DeleteNode((action_res_t *)DataMList(all));
+        ScrSys_DeleteActionNode((action_res_t *)DataMList(all));
         NextMList(all);
     }
     FlushMList(all);
@@ -820,10 +762,10 @@ void ScrSys_FlushActResList()
 
 void ScrSys_FlushResourcesByOwner(pzllst_t *owner)
 {
-    MList *all = GetAction_res_List();
+    MList *all = GetActionsList();
 
     StartMList(all);
-    while (!eofMList(all))
+    while (!EndOfMList(all))
     {
         action_res_t *nod = (action_res_t *)DataMList(all);
 
@@ -834,10 +776,10 @@ void ScrSys_FlushResourcesByOwner(pzllst_t *owner)
             if (nod->node_type == NODE_TYPE_MUSIC)
             {
                 if (nod->nodes.node_music->universe == false)
-                    result = Sound_DeleteWav(nod);
+                    result = Sound_DeleteNode(nod);
             }
             else
-                result = ScrSys_DeleteNode(nod);
+                result = ScrSys_DeleteActionNode(nod);
 
             if (result == NODE_RET_DELETE)
                 DeleteCurrent(all);
@@ -849,26 +791,19 @@ void ScrSys_FlushResourcesByOwner(pzllst_t *owner)
 
 void ScrSys_FlushResourcesByType(int type)
 {
-    MList *all = GetAction_res_List();
+    MList *all = GetActionsList();
 
     StartMList(all);
-    while (!eofMList(all))
+    while (!EndOfMList(all))
     {
         action_res_t *nod = (action_res_t *)DataMList(all);
 
         if (nod->node_type == type && nod->first_process == true)
-            if (ScrSys_DeleteNode(nod) == NODE_RET_DELETE)
+            if (ScrSys_DeleteActionNode(nod) == NODE_RET_DELETE)
                 DeleteCurrent(all);
 
         NextMList(all);
     }
-}
-
-action_res_t *ScrSys_CreateActRes(int type)
-{
-    action_res_t *tmp = NEW(action_res_t);
-    tmp->node_type = type;
-    return tmp;
 }
 
 static const struct

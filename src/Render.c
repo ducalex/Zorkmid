@@ -1,7 +1,6 @@
 #include "System.h"
 
 #include <SDL/SDL_rotozoom.h>
-#include <SDL/SDL_image.h>
 
 //Graphics
 int WINDOW_W = 0;
@@ -172,6 +171,7 @@ typedef struct
 
 static effect_t Effects[EFFECTS_MAX_CNT];
 
+static void DeleteEffect(uint32_t index);
 static void Rend_EF_9_Draw(effect_t *ef);
 static void Rend_EF_Wave_Draw(effect_t *ef);
 static void Rend_EF_Light_Draw(effect_t *ef);
@@ -767,7 +767,7 @@ void Rend_DeleteSubRect(subrect_t *erect)
 void Rend_ProcessSubs()
 {
     StartMList(sublist);
-    while (!eofMList(sublist))
+    while (!EndOfMList(sublist))
     {
         subrect_t *subrec = (subrect_t *)DataMList(sublist);
 
@@ -823,11 +823,6 @@ SDL_Surface *Rend_GetLocationScreenImage()
 void Rend_ScreenFlip()
 {
     SDL_Flip(screen);
-}
-
-void Rend_Delay(uint32_t delay_ms)
-{
-    SDL_Delay(delay_ms);
 }
 
 void Rend_tilt_SetAngle(float angle)
@@ -901,69 +896,100 @@ void Rend_tilt_SetTable()
     Rend_indexer();
 }
 
-action_res_t *Rend_CreateDistortNode()
+action_res_t *Rend_CreateNode(int type)
 {
-    action_res_t *act = ScrSys_CreateActRes(NODE_TYPE_DISTORT);
+    action_res_t *tmp = NEW(action_res_t);
 
-    act->nodes.distort = NEW(distort_t);
-    act->nodes.distort->increase = true;
+    tmp->node_type = NODE_TYPE_DISTORT;
 
-    return act;
+    if (type == NODE_TYPE_DISTORT)
+    {
+        tmp->nodes.distort = NEW(distort_t);
+        tmp->nodes.distort->increase = true;
+    }
+    else if (type == NODE_TYPE_REGION)
+    {
+        //
+    }
+    else
+    {
+        Z_PANIC("Invalid render node type %d\n", type);
+    }
+
+    return tmp;
 }
 
-int32_t Rend_ProcessDistortNode(action_res_t *nod)
+int Rend_ProcessNode(action_res_t *nod)
 {
-    if (nod->node_type != NODE_TYPE_DISTORT)
-        return NODE_RET_OK;
-
-    if (Rend_GetRenderer() != RENDER_PANA && Rend_GetRenderer() != RENDER_TILT)
-        return NODE_RET_OK;
-
-    distort_t *dist = nod->nodes.distort;
-
-    if (dist->increase)
-        dist->cur_frame += rand() % dist->frames;
-    else
-        dist->cur_frame -= rand() % dist->frames;
-
-    if (dist->cur_frame >= dist->frames)
+    if (nod->node_type == NODE_TYPE_DISTORT)
     {
-        dist->increase = false;
-        dist->cur_frame = dist->frames;
-    }
-    else if (dist->cur_frame <= 1)
-    {
-        dist->cur_frame = 1;
-        dist->increase = true;
+        if (Rend_GetRenderer() != RENDER_PANA && Rend_GetRenderer() != RENDER_TILT)
+            return NODE_RET_OK;
+
+        distort_t *dist = nod->nodes.distort;
+
+        if (dist->increase)
+            dist->cur_frame += rand() % dist->frames;
+        else
+            dist->cur_frame -= rand() % dist->frames;
+
+        if (dist->cur_frame >= dist->frames)
+        {
+            dist->increase = false;
+            dist->cur_frame = dist->frames;
+        }
+        else if (dist->cur_frame <= 1)
+        {
+            dist->cur_frame = 1;
+            dist->increase = true;
+        }
+
+        float diff = (1.0 / (5.0 - ((float)dist->cur_frame * dist->param1))) / (5.0 - dist->param1);
+
+        SetRendererAngle(dist->st_angl + diff * dist->dif_angl);
+        SetRendererLinscale(dist->st_lin + diff * dist->dif_lin);
+        SetRendererTable();
     }
 
-    float diff = (1.0 / (5.0 - ((float)dist->cur_frame * dist->param1))) / (5.0 - dist->param1);
-
-    SetRendererAngle(dist->st_angl + diff * dist->dif_angl);
-    SetRendererLinscale(dist->st_lin + diff * dist->dif_lin);
-    SetRendererTable();
     return NODE_RET_OK;
 }
 
-int32_t Rend_DeleteDistortNode(action_res_t *nod)
+int Rend_DeleteNode(action_res_t *nod)
 {
-    if (nod->node_type != NODE_TYPE_DISTORT)
-        return NODE_RET_NO;
-
-    SetRendererAngle(nod->nodes.distort->rend_angl);
-    SetRendererLinscale(nod->nodes.distort->rend_lin);
-    SetRendererTable();
-
-    if (nod->slot > 0)
+    if (nod->node_type == NODE_TYPE_DISTORT)
     {
-        setGNode(nod->slot, NULL);
-        SetgVarInt(nod->slot, 2);
+        SetRendererAngle(nod->nodes.distort->rend_angl);
+        SetRendererLinscale(nod->nodes.distort->rend_lin);
+        SetRendererTable();
+
+        if (nod->slot > 0)
+        {
+            SetGNode(nod->slot, NULL);
+            SetgVarInt(nod->slot, 2);
+        }
+
+        free(nod->nodes.distort);
+        free(nod);
+
+        return NODE_RET_DELETE;
+    }
+    else if (nod->node_type == NODE_TYPE_REGION)
+    {
+        if (nod->nodes.node_region != -1)
+            DeleteEffect(nod->nodes.node_region);
+
+        if (nod->slot > 0)
+        {
+            SetgVarInt(nod->slot, 2);
+            SetGNode(nod->slot, NULL);
+        }
+
+        free(nod);
+
+        return NODE_RET_DELETE;
     }
 
-    free(nod->nodes.distort);
-    free(nod);
-
-    return NODE_RET_DELETE;
+    return NODE_RET_NO;
 }
 
 static bool GetScreenPart(int32_t *x, int32_t *y, int32_t w, int32_t h, SDL_Surface *dst)
@@ -1543,25 +1569,6 @@ void Rend_SetGamma(float val)
 float Rend_GetGamma()
 {
     return mgamma;
-}
-
-int Rend_DeleteRegion(action_res_t *nod)
-{
-    if (nod->node_type != NODE_TYPE_REGION)
-        return NODE_RET_NO;
-
-    if (nod->nodes.node_region != -1)
-        DeleteEffect(nod->nodes.node_region);
-
-    if (nod->slot > 0)
-    {
-        SetgVarInt(nod->slot, 2);
-        setGNode(nod->slot, NULL);
-    }
-
-    free(nod);
-
-    return NODE_RET_DELETE;
 }
 
 void Rend_SetColorKey(SDL_Surface *surf, uint8_t r, uint8_t g, uint8_t b)
