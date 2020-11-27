@@ -2,7 +2,7 @@
 
 static void DeletePuzzleNode(puzzlenode_t *nod)
 {
-    TRACE_PUZZLE("Deleting Puzzle #%d\n", nod->slot);
+    LOG_DEBUG("Deleting Puzzle #%d\n", nod->slot);
 
     StartMList(nod->CritList);
     while (!eofMList(nod->CritList))
@@ -243,23 +243,20 @@ void Puzzle_Parse(pzllst_t *lst, mfile_t *fl, char *ctstr)
             if ((ScrSys_GetFlag(pzl->slot) & FLAG_ONCE_PER_I))
                 SetgVarInt(slot, 0);
 
-            TRACE_PUZZLE("Created Puzzle %d\n", slot);
+            LOG_DEBUG("Created Puzzle %d\n", slot);
             AddToMList(lst->_list, pzl);
             return;
         }
         else if (str_starts_with(str, "criteria"))
         {
-            TRACE_PUZZLE("Creating criteria\n");
             Parse_Puzzle_Criteria(pzl, fl);
         }
         else if (str_starts_with(str, "results"))
         {
-            TRACE_PUZZLE("Creating results\n");
             Parse_Puzzle_Results(pzl, fl);
         }
         else if (str_starts_with(str, "flags"))
         {
-            TRACE_PUZZLE("Reading flags\n");
             Parse_Puzzle_Flags(pzl, fl);
         }
     }
@@ -278,7 +275,7 @@ static bool ProcessCriteries(MList *lst)
     {
         crit_node_t *critnd = (crit_node_t *)DataMList(lst);
 
-        TRACE_PUZZLE("        [%d] %d [%d] %d\n", critnd->slot1, critnd->oper, critnd->slot2, critnd->var2);
+        LOG_DEBUG("  [%d] %d [%d] %d\n", critnd->slot1, critnd->oper, critnd->slot2, critnd->var2);
 
         int tmp1 = GetgVarInt(critnd->slot1);
         int tmp2 = critnd->var2 ? GetgVarInt(critnd->slot2) : critnd->slot2;
@@ -340,7 +337,7 @@ int Puzzle_TryExec(puzzlenode_t *pzlnod) //, pzllst_t *owner)
             return ACTION_NORMAL;
     }
 
-    TRACE_PUZZLE("Puzzle: %d (%s) \n", pzlnod->slot, pzlnod->owner->name);
+    LOG_DEBUG("Running puzzle %d (%s)\n", pzlnod->slot, pzlnod->owner->name);
 
     SetgVarInt(pzlnod->slot, 1);
 

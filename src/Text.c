@@ -398,11 +398,17 @@ size_t Text_Draw(const char *txt, txt_style_t *fnt_stl, SDL_Surface *dst)
     size_t width = aaa->w;
 
     if (fnt_stl->justify == TXT_JUSTIFY_LEFT)
+    {
         Rend_BlitSurfaceXY(aaa, dst, 0, fnt_stl->size - aaa->h);
+    }
     else if (fnt_stl->justify == TXT_JUSTIFY_CENTER)
+    {
         Rend_BlitSurfaceXY(aaa, dst, (dst->w - aaa->w) / 2, fnt_stl->size - aaa->h);
+    }
     else if (fnt_stl->justify == TXT_JUSTIFY_RIGHT)
+    {
         Rend_BlitSurfaceXY(aaa, dst, dst->w - aaa->w, fnt_stl->size - aaa->h);
+    }
 
     SDL_FreeSurface(aaa);
     TTF_CloseFont(fnt);
@@ -556,13 +562,17 @@ void Text_DrawInOneLine(const char *text, SDL_Surface *dst)
         for (int jj = 0; jj < j; jj++)
         {
             if (TxtJustify[i] == TXT_JUSTIFY_LEFT)
+            {
                 Rend_BlitSurfaceXY(TxtSurfaces[i][jj], dst, dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h);
-
+            }
             else if (TxtJustify[i] == TXT_JUSTIFY_CENTER)
+            {
                 Rend_BlitSurfaceXY(TxtSurfaces[i][jj], dst, ((dst->w - width) >> 1) + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h);
-
+            }
             else if (TxtJustify[i] == TXT_JUSTIFY_RIGHT)
+            {
                 Rend_BlitSurfaceXY(TxtSurfaces[i][jj], dst, dst->w - width + dx, dy + TxtPoint[i] - TxtSurfaces[i][jj]->h);
+            }
 
             dx += TxtSurfaces[i][jj]->w;
         }

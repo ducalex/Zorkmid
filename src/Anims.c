@@ -71,41 +71,43 @@ void Anim_Process(animnode_t *mnod)
 
     mnod->nexttick -= GetDTime();
 
-    if (mnod->nexttick <= 0)
+    if (mnod->nexttick > 0)
+        return;
+
+    mnod->nexttick = mnod->framerate;
+
+    // if (mnod->CurFr < mnod->end)
+
+    if (mnod->anim_avi)
     {
-        mnod->nexttick = mnod->framerate;
+        avi_renderframe(mnod->anim_avi->av, mnod->CurFr);
+        avi_to_surf(mnod->anim_avi->av, mnod->anim_avi->img);
 
-        if (mnod->anim_avi)
+        SDL_Rect rect = {mnod->x, mnod->y, mnod->w, mnod->h};
+        Rend_BlitSurface(mnod->anim_avi->img, NULL, Rend_GetLocationScreenImage(), &rect);
+    }
+    else if (mnod->anim_rlf)
+    {
+        Rend_BlitSurfaceXY(
+            mnod->anim_rlf->img[mnod->CurFr],
+            Rend_GetLocationScreenImage(),
+            mnod->x,
+            mnod->y);
+    }
+
+    mnod->CurFr++;
+
+    if (mnod->CurFr >= mnod->end)
+    {
+        mnod->loops++;
+
+        if (mnod->loops < mnod->loopcnt || mnod->loopcnt == 0)
         {
-            avi_renderframe(mnod->anim_avi->av, mnod->CurFr);
-            avi_to_surf(mnod->anim_avi->av, mnod->anim_avi->img);
-
-            SDL_Rect rect = {mnod->x, mnod->y, mnod->w, mnod->h};
-            Rend_BlitSurface(mnod->anim_avi->img, NULL, Rend_GetLocationScreenImage(), &rect);
+            mnod->CurFr = mnod->start;
         }
-        else if (mnod->anim_rlf)
+        else
         {
-            Rend_BlitSurfaceXY(
-                mnod->anim_rlf->img[mnod->CurFr],
-                Rend_GetLocationScreenImage(),
-                mnod->x,
-                mnod->y);
-        }
-
-        mnod->CurFr++;
-
-        if (mnod->CurFr > mnod->end)
-        {
-            mnod->loops++;
-
-            if (mnod->loops < mnod->loopcnt || mnod->loopcnt == 0)
-            {
-                mnod->CurFr = mnod->start;
-            }
-            else
-            {
-                mnod->playing = false;
-            }
+            mnod->playing = false;
         }
     }
 }

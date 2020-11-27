@@ -1322,7 +1322,7 @@ static int action_disable_venus(char *params, int aSlot, pzllst_t *owner)
 
 int Actions_Run(const char* name, char *params, int aSlot, pzllst_t *owner)
 {
-    TRACE_ACTION("Running %s %s\n", name, params);
+    LOG_DEBUG("Running action %s %s\n", name, params);
 
     if (str_equals(name, "set_screen"))              return action_set_screen(params, aSlot, owner);
     else if (str_equals(name, "debug"))              return action_debug(params, aSlot, owner);

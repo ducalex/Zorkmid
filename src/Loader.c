@@ -97,7 +97,7 @@ static void FindAssets(const char *dir)
         len--;
     }
 
-    TRACE_LOADER("Listing dir: %s\n", path);
+    LOG_DEBUG("Listing dir: %s\n", path);
 
     DIR *dr = opendir(path);
     struct dirent *de;
@@ -122,7 +122,7 @@ static void FindAssets(const char *dir)
         }
         else if (str_ends_with(path, ".TTF"))
         {
-            TRACE_LOADER("Adding font : %s\n", path);
+            LOG_DEBUG("Adding font : %s\n", path);
             TTF_Font *fnt = TTF_OpenFont(path, 10);
             if (fnt != NULL)
             {
@@ -135,7 +135,7 @@ static void FindAssets(const char *dir)
         }
         else
         {
-            TRACE_LOADER("Adding game file : %s\n", path);
+            LOG_DEBUG("Adding game file : %s\n", path);
             FManNode_t *nod = NEW(FManNode_t);
             nod->path = strdup(path);
             nod->name = nod->path + len + 1;
@@ -594,7 +594,7 @@ static void de_lz(SDL_Surface *srf, uint8_t *src, uint32_t size, int32_t transpo
 
 SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, int32_t key_555)
 {
-    TRACE_LOADER("Load GFX file '%s'\n", file);
+    LOG_DEBUG("Loading GFX file '%s'\n", file);
 
     FManNode_t *mfil = Loader_FindNode(file);
 
@@ -787,7 +787,7 @@ static void HRLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
 
 anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555)
 {
-    TRACE_LOADER("Load RLF file '%s'\n", file);
+    LOG_DEBUG("Loading RLF file '%s'\n", file);
 
     FManNode_t *fil = Loader_FindNode(file);
     if (!fil)
@@ -894,13 +894,13 @@ anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555)
 /******************** ZCR ************************/
 void Loader_LoadZCR(const char *file, Cursor_t *cur)
 {
-    TRACE_LOADER("Load ZCR file '%s'\n", file);
+    LOG_DEBUG("Loading ZCR file '%s'\n", file);
 
     FManNode_t *fl = Loader_FindNode(file);
 
     if (fl == NULL)
     {
-        TRACE_LOADER("fallback-mechanism\n");
+        LOG_DEBUG("  > Using fallback mechanism\n");
         char tmp[64];
         strcpy(tmp, file);
         int len = strlen(tmp);
@@ -987,7 +987,7 @@ static MList *zfs_arch_list = NULL;
 
 void Loader_OpenZFS(const char *file)
 {
-    TRACE_LOADER("Loading ZFS : %s\n", file);
+    LOG_DEBUG("Loading ZFS file '%s'\n", file);
 
     FILE *fl = fopen(file, "rb");
     if (!fl)
@@ -1026,7 +1026,7 @@ void Loader_OpenZFS(const char *file)
 
             if (!str_empty(fil.name))
             {
-                TRACE_LOADER("Adding zfs file : %s\n", fil.name);
+                LOG_DEBUG("Adding file from zfs : %s\n", fil.name);
 
                 FManNode_t *nod = NEW(FManNode_t);
                 nod->path = strdup(fil.name);

@@ -679,9 +679,13 @@ void Rend_RenderFunc()
     {
         Rend_BlitSurfaceXY(scrbuf, tempbuf, GAMESCREEN_W_2 - *view_X, 0);
         if (*view_X < GAMESCREEN_W_2)
+        {
             Rend_BlitSurfaceXY(scrbuf, tempbuf, GAMESCREEN_W_2 - (*view_X + pana_PanaWidth), 0);
+        }
         else if (pana_PanaWidth - *view_X < GAMESCREEN_W_2)
+        {
             Rend_BlitSurfaceXY(scrbuf, tempbuf, GAMESCREEN_W_2 + pana_PanaWidth - *view_X, 0);
+        }
     }
     else if (Renderer == RENDER_TILT)
     {
@@ -1596,6 +1600,10 @@ void Rend_BlitSurface(SDL_Surface *src, SDL_Rect *src_rct, SDL_Surface *dst, SDL
     int src_h = (src_rct && src_rct->h > 0) ? src_rct->h : src->h;
     int dst_w = (dst_rct && dst_rct->w > 0) ? dst_rct->w : src_w;
     int dst_h = (dst_rct && dst_rct->h > 0) ? dst_rct->h : src_h;
+
+    if (dst_rct) LOG_DEBUG("dst_rct: %d %d %d %d\n", dst_rct->x, dst_rct->y, dst_rct->w, dst_rct->h);
+    if (src_rct) LOG_DEBUG("src_rct: %d %d %d %d\n", dst_rct->x, dst_rct->y, dst_rct->w, dst_rct->h);
+    LOG_DEBUG("src: %d %d    dst: %d %d\n", src->w, src->h, dst->w, dst->h);
 
     if (dst_h != src_h || dst_w != src_w)
     {

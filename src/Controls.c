@@ -2350,7 +2350,7 @@ void Control_Parse(MList *controlst, mfile_t *fl, char *ctstr)
 
     sscanf(ctstr, "control:%d %s", &slot, ctrltp); //read slot number;
 
-    TRACE_CONTROL("Creating control:%d %s Creating object\n", slot, ctrltp);
+    LOG_DEBUG("Creating control:%d %s\n", slot, ctrltp);
 
     if (str_equals(ctrltp, "flat"))             Parse_Control_Flat();
     else if (str_equals(ctrltp, "pana"))        Parse_Control_Panorama(fl);
@@ -2377,7 +2377,7 @@ void Controls_ProcessList(MList *ctrlst)
     {
         ctrlnode_t *nod = (ctrlnode_t *)DataMList(ctrlst);
 
-        TRACE_CONTROL("Control, slot:%d \n", nod->slot);
+        LOG_DEBUG("Running control %d\n", nod->slot);
 
         if (!(ScrSys_GetFlag(nod->slot) & FLAG_DISABLED)) //(nod->enable)
             if (nod->func != NULL)

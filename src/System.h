@@ -67,18 +67,13 @@
     }
 
 #ifdef ENABLE_TRACING
-#define TRACE(x...) printf(x)
+#define LOG_DEBUG(f, ...) fprintf(stderr, "[DEBUG] (%s) " f, __func__, ##__VA_ARGS__)
 #else
-#define TRACE(x...)
+#define LOG_DEBUG(f, ...)
 #endif
 
-#define TRACE_LOADER(x...) TRACE("[LOADER] " x)
-#define TRACE_PUZZLE(x...) TRACE("[PUZZLE] " x)
-#define TRACE_ACTION(x...) TRACE("[ACTION] " x)
-#define TRACE_CONTROL(x...) TRACE("[CONTROL] " x)
-
-#define LOG_INFO(f, x...) printf("[INFO] %s : " f, __func__, x)
-#define LOG_WARN(f, x...) fprintf(stderr, "[WARNING] %s : " f, __func__, x)
+#define LOG_INFO(f, ...) fprintf(stderr, "[INFO] (%s) " f, __func__, ##__VA_ARGS__)
+#define LOG_WARN(f, ...) fprintf(stderr, "[WARNING] (%s) " f, __func__, ##__VA_ARGS__)
 
 typedef struct anim_preplay_node anim_preplay_node_t;
 typedef struct struct_action_res action_res_t;

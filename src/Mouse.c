@@ -140,7 +140,9 @@ bool Mouse_IsCurrentCur(int indx)
 void Mouse_DrawCursor(int x, int y)
 {
     if (cur && DrawCursor)
+    {
         Rend_BlitSurfaceXY(cur->img, Rend_GetScreen(), x - cur->ox, y - cur->oy);
+    }
 }
 
 int Mouse_GetCursorIndex(char *name)
