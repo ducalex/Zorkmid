@@ -140,7 +140,7 @@ void avi_set_dem(avi_file_t *av, int32_t w, int32_t h);
 int8_t avi_renderframe(avi_file_t *av, int32_t frm);
 void avi_play(avi_file_t *av);
 Mix_Chunk *avi_get_audio(avi_file_t *av);
-void avi_to_surf(avi_file_t *av, SDL_Surface *srf);
+void avi_blit(avi_file_t *av, SDL_Surface *srf);
 void avi_stop(avi_file_t *av);
 void avi_update(avi_file_t *av);
 void avi_close(avi_file_t *av);

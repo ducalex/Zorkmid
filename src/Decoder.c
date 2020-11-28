@@ -530,7 +530,7 @@ void avi_stop(avi_file_t *av)
     av->status = AVI_STOP;
 }
 
-void avi_to_surf(avi_file_t *av, SDL_Surface *srf)
+void avi_blit(avi_file_t *av, SDL_Surface *srf)
 {
     if (av->pix_fmt != 16)
     {
@@ -539,39 +539,46 @@ void avi_to_surf(avi_file_t *av, SDL_Surface *srf)
 
     SDL_LockSurface(srf);
 
-    bool fullscreen = av->w == srf->w && av->h == srf->h;
-
+    bool exact_fit = av->w == srf->w && av->h == srf->h;
     uint16_t *img = (uint16_t *)av->frame;
-    uint16_t color;
 
-    float xperc = (float)av->w / (float)srf->w;
-    float yperc = (float)av->h / (float)srf->h;
-
-    for (int y = 0; y < srf->h; y++)
+    if (exact_fit && av->translate == 0 && srf->format->BitsPerPixel == av->pix_fmt)
     {
-        for (int x = 0; x < srf->w; x++)
+        // It is much faster to do a raw data copy if possible!
+        memcpy(srf->pixels, img, srf->h * srf->pitch);
+    }
+    else
+    {
+        uint16_t color;
+        float xperc = (float)av->w / (float)srf->w;
+        float yperc = (float)av->h / (float)srf->h;
+
+        for (int y = 0; y < srf->h; y++)
         {
-            if (fullscreen)
+            for (int x = 0; x < srf->w; x++)
             {
-                if (av->translate == 0)
-                    color = *img++;
+                if (exact_fit)
+                {
+                    if (av->translate == 0)
+                        color = *img++;
+                    else
+                        color = img[x * av->h + y];
+                }
                 else
-                    color = img[x * av->h + y];
-            }
-            else
-            {
-                if (av->translate == 0)
-                    color = img[av->w * (int32_t)(y * yperc) + (int32_t)(x * xperc)];
-                else
-                    color = img[(int32_t)(x * yperc) * av->h + (int32_t)(y * xperc)];
-            }
+                {
+                    if (av->translate == 0)
+                        color = img[av->w * (int32_t)(y * yperc) + (int32_t)(x * xperc)];
+                    else
+                        color = img[(int32_t)(x * yperc) * av->h + (int32_t)(y * xperc)];
+                }
 
-            // Video is 555 format
-            uint8_t r = (color >> 10) & 0x1F;
-            uint8_t g = (color >> 5) & 0x1F;
-            uint8_t b = (color >> 0) & 0x1F;
+                // Video is 555 format
+                uint8_t r = (color >> 10) & 0x1F;
+                uint8_t g = (color >> 5) & 0x1F;
+                uint8_t b = (color >> 0) & 0x1F;
 
-            Rend_SetPixel(srf, x, y, r << 3, g << 3, b << 3);
+                Rend_SetPixel(srf, x, y, r << 3, g << 3, b << 3);
+            }
         }
     }
 

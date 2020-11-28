@@ -1,45 +1,19 @@
 #include "System.h"
 
-static uint32_t channel_time[SOUND_CHANNELS];
-static bool channel_status[SOUND_CHANNELS];
-static int channels = 0;
+static uint32_t channel_start_time[SOUND_CHANNELS];
+static int num_channels = 0;
 
-static const int log_volume[101] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+static const uint8_t log_volume[101] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2,
                                   3, 3, 3, 4, 4, 4, 5, 5, 6, 7, 7, 8, 9, 10, 11, 12, 14, 15, 17,
                                   18, 20, 23, 26, 29, 32, 36, 41, 46, 51, 57, 64, 72, 81, 91, 102, 114, 127};
 
-static uint32_t GetChanTime(int i)
+static uint32_t GetChanElapsedTime(int i)
 {
-    if (i >= 0 && i < channels)
-        if (channel_status[i])
-            return Game_GetTime() - channel_time[i];
+    if (i >= 0 && i < num_channels && channel_start_time[i] > 0)
+        return Game_GetTime() - channel_start_time[i];
     return 0;
-}
-
-static int GetFreeChannel()
-{
-    for (int i = 0; i < channels; i++)
-        if (channel_status[i] == false)
-            return i;
-
-    return -1;
-}
-
-static void LockChannel(int i)
-{
-    if (i >= 0 && i < channels)
-    {
-        channel_status[i] = true;
-        channel_time[i] = Game_GetTime();
-    }
-}
-
-static void UnlockChannel(int i)
-{
-    if (i >= 0 && i < channels)
-        channel_status[i] = false;
 }
 
 void Sound_Init()
@@ -50,8 +24,8 @@ void Sound_Init()
     }
 
     Mix_OpenAudio(SOUND_FREQUENCY, AUDIO_S16LSB, MIX_DEFAULT_CHANNELS, 1024);
-    memset(channel_status, 0, sizeof(channel_status));
-    channels = Mix_AllocateChannels(SOUND_CHANNELS);
+    memset(channel_start_time, 0, sizeof(channel_start_time));
+    num_channels = Mix_AllocateChannels(SOUND_CHANNELS);
 }
 
 void Sound_DeInit()
@@ -61,32 +35,55 @@ void Sound_DeInit()
 
 int Sound_Play(int channel, Mix_Chunk *chunk, int loops, int volume)
 {
-    if (channel == -1)
-        channel = GetFreeChannel();
-
-    if (channel >= 0)
+    if (channel < 0) // Find free channel
     {
-        Mix_UnregisterAllEffects(channel);
-
-        if (volume >= 0)
-            Sound_SetVolume(channel, volume);
-
-        LockChannel(channel);
-
-        Mix_PlayChannel(channel, chunk, loops);
+        for (int i = 0; i < num_channels; i++)
+            if (channel_start_time[i] == 0)
+                channel = i;
     }
+
+    if (channel < 0 || channel >= num_channels)
+    {
+        LOG_WARN("Unable to play sound, invalid channel: %d!\n", channel);
+        return -1;
+    }
+
+    if (chunk == NULL)
+    {
+        LOG_WARN("Unable to play sound, chunk is NULL!\n");
+        return -2;
+    }
+
+    Mix_UnregisterAllEffects(channel);
+    if (volume >= 0)
+        Sound_SetVolume(channel, volume);
+    Mix_PlayChannel(channel, chunk, loops);
+
+    channel_start_time[channel] = Game_GetTime();
 
     return channel;
 }
 
 int Sound_Stop(int channel)
 {
+    if (channel < 0 || channel >= num_channels)
+    {
+        LOG_WARN("Unable to stop sound, invalid channel: %d!\n", channel);
+        return -1;
+    }
+
+    if (channel_start_time[channel] == 0)
+    {
+        LOG_WARN("Unable to stop sound, channel not playing!\n");
+        return -2;
+    }
+
     if (Mix_Playing(channel))
         Mix_HaltChannel(channel);
 
     Mix_UnregisterAllEffects(channel);
-    UnlockChannel(channel);
 
+    channel_start_time[channel] = 0;
     return 0;
 }
 
@@ -257,7 +254,7 @@ int Sound_ProcessNode(action_res_t *nod)
         }
 
         if (mnod->sub != NULL)
-            Text_ProcessSubtitles(mnod->sub, GetChanTime(mnod->chn) / 100);
+            Text_ProcessSubtitles(mnod->sub, GetChanElapsedTime(mnod->chn) / 100);
 
         return NODE_RET_OK;
     }
@@ -267,7 +264,7 @@ int Sound_ProcessNode(action_res_t *nod)
         syncnode_t *mnod = nod->nodes.node_sync;
 
         if (mnod->sub != NULL)
-            Text_ProcessSubtitles(mnod->sub, GetChanTime(mnod->chn) / 100);
+            Text_ProcessSubtitles(mnod->sub, GetChanElapsedTime(mnod->chn) / 100);
 
         if (!Sound_Playing(mnod->chn) || GetGNode(mnod->syncto) == NULL)
         {

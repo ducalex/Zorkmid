@@ -213,7 +213,6 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
     int yy = GetIntVal(y);
     int ww = GetIntVal(w) - xx + 1;
     int hh = GetIntVal(h) - yy + 1;
-    int tmp = 0;
 
     anim_avi_t *anm = NEW(anim_avi_t);
     subtitles_t *subs = NULL;
@@ -232,12 +231,13 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
     }
 
     Mix_Chunk *aud = avi_get_audio(anm->av);
-    if (aud)
-    {
-        tmp = Sound_Play(-1, aud, 0, 100);
-    }
+    int tmp = Sound_Play(-1, aud, 0, 100);
 
     SDL_Rect dst_rct = {GAMESCREEN_X + xx + GAMESCREEN_FLAT_X, GAMESCREEN_Y + yy, ww, hh};
+    int frame_delay = anm->av->header.mcrSecPframe / 2000;
+
+    if (frame_delay > 200 || frame_delay < 0)
+        frame_delay = 15;
 
     avi_play(anm->av);
 
@@ -248,7 +248,7 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
         if (KeyHit(SDLK_SPACE))
             avi_stop(anm->av);
 
-        avi_to_surf(anm->av, anm->img);
+        avi_blit(anm->av, anm->img);
 
         Rend_BlitSurface(anm->img, NULL, Rend_GetScreen(), &dst_rct);
 
@@ -260,22 +260,12 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
         Rend_ProcessSubs();
         Rend_ScreenFlip();
 
-        int32_t delay = anm->av->header.mcrSecPframe / 2000;
-
-        if (delay > 200 || delay < 0)
-            delay = 15;
-
-        Game_Delay(delay);
+        Game_Delay(frame_delay);
     }
 
-    if (aud != NULL)
-    {
-        Sound_Stop(tmp);
-        Mix_FreeChunk(aud);
-    }
-
-    if (subs != NULL)
-        Text_DeleteSubtitles(subs);
+    if (tmp >= 0) Sound_Stop(tmp);
+    if (aud) Mix_FreeChunk(aud);
+    if (subs) Text_DeleteSubtitles(subs);
 
     avi_close(anm->av);
     free(anm);
@@ -348,11 +338,49 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
     char file[32];
     char loop[16];
     char vol[16];
-    char fn[PATHBUFSIZ];
-    int8_t read_params = sscanf(params, "%d %s %s %s", &type, file, loop, vol);
+    int read_params = sscanf(params, "%d %s %s %s", &type, file, loop, vol);
+
+    Mix_Chunk *chunk = NULL;
+
+    char *ext = file + (strlen(file) - 3);
 
     if (GetGNode(aSlot) != NULL)
         return ACTION_NORMAL;
+
+    if (type == 4) // MIDI note
+    {
+        int instrument = atoi(file);
+        int pitch = atoi(loop);
+        char fn[PATHBUFSIZ];
+        sprintf(fn, "%s/MIDI/%d/%d.wav", Game_GetPath(), instrument, pitch);
+        chunk = Loader_LoadSound(fn);
+        sprintf(loop, "%d", (instrument != 0));
+    }
+    else
+    {
+        if ((chunk = Loader_LoadSound(file)) == NULL)
+        {
+            strcpy(ext, "raw");
+            if ((chunk = Loader_LoadSound(file)) == NULL)
+            {
+                strcpy(ext, "ifp");
+                if ((chunk = Loader_LoadSound(file)) == NULL)
+                {
+                    strcpy(ext, "src");
+                    chunk = Loader_LoadSound(file);
+                }
+            }
+        }
+    }
+
+    int volume = (read_params == 4) ? GetIntVal(vol) : 100;
+    int looped = GetIntVal(loop) == 1;
+    int playing = Sound_Play(-1, chunk, looped ? -1 : 0, volume);
+
+    if (playing < 0)
+    {
+        return ACTION_NORMAL;
+    }
 
     action_res_t *nod = Sound_CreateNode(NODE_TYPE_MUSIC);
 
@@ -361,90 +389,17 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
 
     SetGNode(nod->slot, nod);
 
-    if (type == 4)
+    if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
     {
-        int32_t instr = atoi(file);
-        int32_t pitch = atoi(loop);
-        sprintf(fn, "%s/MIDI/%d/%d.wav", Game_GetPath(), instr, pitch);
-        if (FileExists(fn))
-        {
-            nod->nodes.node_music->universe = universe;
-            nod->nodes.node_music->chunk = Mix_LoadWAV(fn);
-            nod->nodes.node_music->volume = (read_params == 4) ? GetIntVal(vol) : 100;
-            nod->nodes.node_music->looped = (instr != 0);
-            nod->nodes.node_music->chn = Sound_Play(
-                -1,
-                nod->nodes.node_music->chunk,
-                instr == 0 ? 0 : -1,
-                nod->nodes.node_music->volume);
-
-            if (nod->nodes.node_music->chn == -1)
-            {
-                LOG_WARN("ERROR: NO CHANNELS! %s\n", params);
-                Sound_DeleteNode(nod);
-                return ACTION_NORMAL;
-            }
-        }
-        else
-        {
-            Sound_DeleteNode(nod);
-            return ACTION_NORMAL;
-        }
+        strcpy(ext, "sub");
+        nod->nodes.node_music->sub = Text_LoadSubtitles(file);
     }
-    else
-    {
-        nod->nodes.node_music->universe = universe;
 
-        char *ext = file + (strlen(file) - 3);
-
-        nod->nodes.node_music->chunk = Loader_LoadSound(file);
-
-        if (nod->nodes.node_music->chunk == NULL)
-        {
-            strcpy(ext, "raw");
-            nod->nodes.node_music->chunk = Loader_LoadSound(file);
-
-            if (nod->nodes.node_music->chunk == NULL)
-            {
-                strcpy(ext, "ifp");
-                nod->nodes.node_music->chunk = Loader_LoadSound(file);
-
-                if (nod->nodes.node_music->chunk == NULL)
-                {
-                    strcpy(ext, "src");
-                    nod->nodes.node_music->chunk = Loader_LoadSound(file);
-                }
-            }
-        }
-
-        if (nod->nodes.node_music->chunk == NULL)
-        {
-            Sound_DeleteNode(nod);
-            return ACTION_NORMAL;
-        }
-
-        if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
-        {
-            strcpy(ext, "sub");
-            nod->nodes.node_music->sub = Text_LoadSubtitles(file);
-        }
-
-        nod->nodes.node_music->volume = (read_params == 4) ? GetIntVal(vol) : 100;
-        nod->nodes.node_music->looped = (GetIntVal(loop) == 1);
-
-        nod->nodes.node_music->chn = Sound_Play(
-            -1,
-            nod->nodes.node_music->chunk,
-            nod->nodes.node_music->looped ? -1 : 0,
-            nod->nodes.node_music->volume);
-
-        if (nod->nodes.node_music->chn == -1)
-        {
-            LOG_WARN("ERROR: NO CHANNELS! %s\n", params);
-            Sound_DeleteNode(nod);
-            return ACTION_NORMAL;
-        }
-    }
+    nod->nodes.node_music->universe = universe;
+    nod->nodes.node_music->volume = volume;
+    nod->nodes.node_music->looped = looped;
+    nod->nodes.node_music->chunk = chunk;
+    nod->nodes.node_music->chn = playing;
 
     ScrSys_AddToActionsList(nod);
 
@@ -487,21 +442,22 @@ static int action_syncsound(char *params, int aSlot, pzllst_t *owner)
     if (GetGNode(syncto) == NULL)
         return ACTION_NORMAL;
 
+    Mix_Chunk *chunk = Loader_LoadSound(a3);
+    int playing = Sound_Play(-1, chunk, 0, 100);
+
+    if (playing < 0)
+    {
+        return ACTION_NORMAL;
+    }
+
     action_res_t *tmp = Sound_CreateNode(NODE_TYPE_SYNCSND);
 
     tmp->owner = owner;
     tmp->slot = -1;
     //tmp->slot  = aSlot;
     tmp->nodes.node_sync->syncto = syncto;
-    tmp->nodes.node_sync->chunk = Loader_LoadSound(a3);
-    tmp->nodes.node_sync->chn = Sound_Play(-1, tmp->nodes.node_sync->chunk, 0, 100);
-
-    if (tmp->nodes.node_sync->chn == -1 || tmp->nodes.node_sync->chunk == NULL)
-    {
-        LOG_WARN("ERROR: NO CHANNELS OR FILE! %s\n", params);
-        Sound_DeleteNode(tmp);
-        return ACTION_NORMAL;
-    }
+    tmp->nodes.node_sync->chunk = chunk;
+    tmp->nodes.node_sync->chn = playing;
 
     if (GetGNode(syncto)->node_type == NODE_TYPE_ANIMPRE)
         GetGNode(syncto)->nodes.node_animpre->framerate = FPS_DELAY; //~15fps hack
@@ -535,11 +491,7 @@ static int action_animpreload(char *params, int aSlot, pzllst_t *owner)
     //in zgi   0 0 0
     sscanf(params, "%s %s %s %s %s", name, u1, u2, u3, u4);
 
-    Anim_Load(pre->nodes.node_animpre,
-                  name,
-                  0, 0,
-                  GetIntVal(u3),
-                  GetIntVal(u4));
+    Anim_Load(pre->nodes.node_animpre, name, 0, 0, GetIntVal(u3), GetIntVal(u4));
 
     pre->slot = aSlot;
     pre->owner = owner;
@@ -564,13 +516,10 @@ static int action_playpreload(char *params, int aSlot, pzllst_t *owner)
 
     action_res_t *pre = GetGNode(slot);
 
-    if (pre == NULL)
+    if (pre == NULL || pre->node_type != NODE_TYPE_ANIMPRE)
     {
         return ACTION_NORMAL;
     }
-
-    if (pre->node_type != NODE_TYPE_ANIMPRE)
-        return ACTION_NORMAL;
 
     action_res_t *nod = Anim_CreateNode(NODE_TYPE_ANIMPRPL);
 

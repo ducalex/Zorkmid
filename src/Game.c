@@ -291,9 +291,7 @@ static void UpdateKeyboard()
 static void LoadGameStrings(void)
 {
     const char *file = (CUR_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR");
-    char filename[PATHBUFSIZ];
-    sprintf(filename, "%s/%s", Game_GetPath(), file);
-    GameStrings = (const char **)Loader_LoadSTR(filename);
+    GameStrings = (const char **)Loader_LoadSTR(file);
 }
 
 static void SetGamePath(const char *path)

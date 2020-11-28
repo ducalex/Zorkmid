@@ -188,7 +188,7 @@ void Anim_Process(animnode_t *mnod)
         if (mnod->anim_avi)
         {
             avi_renderframe(mnod->anim_avi->av, mnod->pos);
-            avi_to_surf(mnod->anim_avi->av, mnod->anim_avi->img);
+            avi_blit(mnod->anim_avi->av, mnod->anim_avi->img);
 
             SDL_Rect rect = {mnod->x, mnod->y, mnod->w, mnod->h};
             Rend_BlitSurface(mnod->anim_avi->img, NULL, Rend_GetLocationScreenImage(), &rect);
@@ -255,7 +255,7 @@ void Anim_RenderFrame(animnode_t *mnod, int x, int y, int w, int h, int frame)
         if (mnod->anim_avi->lastfrm != frame)
         {
             avi_renderframe(mnod->anim_avi->av, frame);
-            avi_to_surf(mnod->anim_avi->av, mnod->anim_avi->img);
+            avi_blit(mnod->anim_avi->av, mnod->anim_avi->img);
         }
 
         mnod->anim_avi->lastfrm = frame;
