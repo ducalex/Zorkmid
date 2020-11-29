@@ -3,24 +3,59 @@
 
 #include "System.h"
 
-/************************** Assets discovery **************************/
+/******************************* Assets management *******************************/
+typedef struct
+{
+    FILE *fl;
+    uint32_t xor_key;
+} zfs_arch_t;
+
+typedef struct
+{
+    uint32_t offset;
+    uint32_t size;
+    zfs_arch_t *archive;
+} zfs_file_t;
+
+typedef struct
+{
+    uint32_t magic;
+    uint32_t unk1;
+    uint32_t unk2;
+    uint32_t files_perblock;
+    uint32_t files_cnt;
+    uint32_t xor_key;
+    uint32_t Offset_files;
+} zfs_header_t;
+
+typedef struct
+{
+    char name[0x10];
+    uint32_t offset;
+    uint32_t id;
+    uint32_t size;
+    uint32_t time;
+    uint32_t unk2;
+} zfs_file_header_t;
+
+typedef struct
+{
+    char *name;
+    char *path;
+    size_t size;
+    zfs_file_t *zfs;
+} FManNode_t;
+
+typedef struct BinTreeNd_s
+{
+    struct BinTreeNd_s *zero;
+    struct BinTreeNd_s *one;
+    FManNode_t *nod;
+} BinTreeNd_t;
+
 static BinTreeNd_t *root = NULL;
 static MList *BinNodesList = NULL;
 static MList *FontList;
-
-bool isDirectory(const char *path)
-{
-    struct stat statbuf;
-    if (stat(path, &statbuf) != 0)
-        return 0;
-    return S_ISDIR(statbuf.st_mode);
-}
-
-bool FileExists(const char *path)
-{
-    struct stat statbuf;
-    return stat(path, &statbuf) == 0;
-}
 
 static void AddFManNode(FManNode_t *nod)
 {
@@ -51,12 +86,11 @@ static void AddFManNode(FManNode_t *nod)
         }
     if ((*treenod)->nod == NULL) //we don't need to reSet nodes (ADDON and patches don't work without it)
         (*treenod)->nod = nod;
-    else if (mfsize((*treenod)->nod) < 10)
-        if (mfsize(nod) >= 10)
-            (*treenod)->nod = nod;
+    else if ((*treenod)->nod->size < 10 && nod->size >= 10)
+        (*treenod)->nod = nod;
 }
 
-FManNode_t *Loader_FindNode(const char *chr)
+static FManNode_t *FindFManNode(const char *chr)
 {
     char buffer[255];
     int32_t t_len = strlen(chr);
@@ -84,9 +118,62 @@ FManNode_t *Loader_FindNode(const char *chr)
     return treenod->nod;
 }
 
+static void OpenZFS(const char *file)
+{
+    LOG_DEBUG("Opening ZFS file '%s'\n", file);
+
+    FILE *fl = fopen(file, "rb");
+    if (!fl)
+        Z_PANIC("Error: File '%s' not found!\n", file);
+
+    zfs_header_t hdr;
+    fread(&hdr, sizeof(hdr), 1, fl);
+
+    if (hdr.magic != MAGIC_ZFS)
+    {
+        LOG_WARN("File '%s' is not valid ZFS\n", file);
+        return;
+    }
+
+    zfs_arch_t *tmp = NEW(zfs_arch_t);
+    tmp->fl = fl;
+    tmp->xor_key = hdr.xor_key;
+
+    uint32_t nextpos = hdr.Offset_files;
+
+    while (nextpos != 0)
+    {
+        fseek(fl, nextpos, 0);
+        fread(&nextpos, 4, 1, fl);
+
+        for (uint32_t i = 0; i < hdr.files_perblock; i++)
+        {
+            //fseek(f,pos,0);
+            zfs_file_header_t fil;
+            fread(&fil, sizeof(fil), 1, fl);
+
+            if (!str_empty(fil.name))
+            {
+                LOG_DEBUG("Adding file from zfs : %s\n", fil.name);
+
+                FManNode_t *nod = NEW(FManNode_t);
+                nod->path = strdup(fil.name);
+                nod->name = nod->path;
+                nod->zfs = NEW(zfs_file_t);
+                nod->zfs->archive = tmp;
+                nod->zfs->offset = fil.offset;
+                nod->zfs->size = fil.size;
+                nod->size = fil.size;
+                AddFManNode(nod);
+            }
+        }
+    }
+}
+
 static void FindAssets(const char *dir)
 {
     char path[PATHBUFSIZ];
+    struct stat statbuf;
     int len = strlen(dir);
 
     strcpy(path, dir);
@@ -112,13 +199,18 @@ static void FindAssets(const char *dir)
 
         sprintf(path + len, "/%s", de->d_name);
 
-        if (isDirectory(path))
+        if (stat(path, &statbuf) != 0)
+        {
+            // LOG_WARN("Error stat file '%s'\n", path);
+            continue;
+        }
+        else if (S_ISDIR(statbuf.st_mode))
         {
             FindAssets(path);
         }
         else if (str_ends_with(path, ".ZFS"))
         {
-            Loader_OpenZFS(path);
+            OpenZFS(path);
         }
         else if (str_ends_with(path, ".TTF"))
         {
@@ -140,6 +232,7 @@ static void FindAssets(const char *dir)
             nod->path = strdup(path);
             nod->name = nod->path + len + 1;
             nod->zfs = NULL;
+            nod->size = statbuf.st_size;
             AddFManNode(nod);
         }
     }
@@ -153,42 +246,27 @@ void Loader_Init(const char *dir)
     root = NEW(BinTreeNd_t);
     AddToMList(BinNodesList, root);
     FindAssets(Game_GetPath());
+    // Load working dir (this would allow us to override without touching the original assets)
+    // FindAssets(".");
 }
 
-const char *Loader_GetPath(const char *chr)
+const char *Loader_FindFile(const char *filename)
 {
-    FManNode_t *nod = Loader_FindNode(chr);
+    FManNode_t *nod = FindFManNode(filename);
 
     if (nod && nod->zfs == NULL)
         return nod->path;
 
-    LOG_WARN("Can't find file '%s'\n", chr);
+    struct stat statbuf;
+    if (stat(filename, &statbuf) == 0)
+        return filename;
+
     return NULL;
 }
-
-TTF_Font *Loader_LoadFont(char *name, int size)
-{
-    graph_font_t *fnt = NULL;
-
-    StartMList(FontList);
-    while (!EndOfMList(FontList))
-    {
-        fnt = (graph_font_t *)DataMList(FontList);
-        if (str_equals(fnt->name, name)) // str_starts_with
-            break;
-
-        NextMList(FontList);
-    }
-
-    if (fnt == NULL)
-        return NULL;
-
-    return TTF_OpenFont(fnt->path, size);
-}
-/************************ End Assets discovery ************************/
+/***************************** END Assets management *****************************/
 
 
-/*********************************** adpcm_Support *******************************/
+/*********************************** Music/Sound *******************************/
 static const struct
 {
     int8_t pkd;
@@ -230,22 +308,20 @@ static int znem_stereo[2] = {0, 1};
 
 Mix_Chunk *Loader_LoadSound(const char *file)
 {
-    FManNode_t *mfp = Loader_FindNode(file);
+    mfile_t *mfp = mfopen(file);
+    Mix_Chunk *chunks = NULL;
+
     if (!mfp)
     {
         LOG_WARN("File '%s' not found\n", file);
-        return NULL;
     }
-
-    Mix_Chunk *chunks;
-
-    if (str_ends_with(mfp->name, "wav"))
+    else if (str_ends_with(file, "wav"))
     {
-        chunks = Mix_LoadWAV(file);
+        chunks = Mix_QuickLoad_WAV((uint8_t*)mfbuffer(mfp));
     }
     else if (CUR_GAME == GAME_ZGI)
     {
-        char type = tolower(mfp->name[strlen(mfp->name) - 5]);
+        char type = tolower(file[strlen(file) - 5]);
         int index = -1;
 
         for (int i = 0; i < 24; i++)
@@ -258,19 +334,17 @@ Mix_Chunk *Loader_LoadSound(const char *file)
         if (index == -1)
             return NULL;
 
-        mfile_t *f = mfopen(mfp);
         chunks = wav_create(
-            f->buf,
-            f->size,
+            mfbuffer(mfp),
+            mfp->size,
             zg[index].stereo + 1,
             zg[index].freq,
             zg[index].bits,
             zg[index].pkd);
-        mfclose(f);
     }
     else if (CUR_GAME == GAME_NEM)
     {
-        char type = tolower(mfp->name[strlen(mfp->name) - 6]);
+        char type = tolower(file[strlen(file) - 6]);
 
         if (type < 'p')
         {
@@ -285,23 +359,23 @@ Mix_Chunk *Loader_LoadSound(const char *file)
 
         type -= '0';
 
-        mfile_t *f = mfopen(mfp);
         chunks = wav_create(
-            f->buf,
-            f->size,
+            mfbuffer(mfp),
+            mfp->size,
             znem_stereo[type % 2] + 1,
             znem_freq[type % 16],
             znem_bits[type % 4],
-            !(str_ends_with(mfp->name, "ifp") || type == '6'));
-        mfclose(f);
+            !(str_ends_with(file, "ifp") || type == '6'));
     }
+
+    mfclose(mfp);
 
     return chunks;
 }
-/*********************************** END adpcm_Support *******************************/
+/********************************* END Music/Sound *****************************/
 
 
-/***********************************TGZ_Support *******************************/
+/******************************* Bitmaps *******************************/
 static void de_lz(SDL_Surface *srf, uint8_t *src, uint32_t size, int32_t transpose)
 {
     uint8_t lz[0x1000];
@@ -418,19 +492,18 @@ SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, int32_t key_555)
 {
     LOG_DEBUG("Loading GFX file '%s'\n", file);
 
-    FManNode_t *mfil = Loader_FindNode(file);
-
-    if (!mfil)
+    mfile_t *mfp = mfopen(file);
+    if (!mfp)
     {
         LOG_WARN("GFX File '%s' not found\n", file);
         return NULL;
     }
 
-    mfile_t *mfp = mfopen(mfil);
+    uint8_t *buffer = (uint8_t *)mfbuffer(mfp);
 
-    uint32_t magic = ((uint32_t*)mfp->buf)[0];
-    int32_t wi = ((int32_t*)mfp->buf)[2];
-    int32_t hi = ((int32_t*)mfp->buf)[3];
+    uint32_t magic = ((uint32_t*)buffer)[0];
+    int32_t wi = ((int32_t*)buffer)[2];
+    int32_t hi = ((int32_t*)buffer)[3];
 
     if (magic != MAGIC_TGA)
         Z_PANIC("File '%s' is not valid TGA\n", file);
@@ -444,7 +517,7 @@ SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, int32_t key_555)
 
     SDL_Surface *srf = Rend_CreateSurface(wi, hi, 0);
 
-    de_lz(srf, (uint8_t*)mfp->buf + 0x10, mfp->size - 0x10, transpose);
+    de_lz(srf, buffer + 0x10, mfp->size - 0x10, transpose);
 
     mfclose(mfp);
 
@@ -458,10 +531,94 @@ SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, int32_t key_555)
 
     return srf;
 }
-/*********************************** END TGZ_Support *******************************/
+
+void Loader_LoadZCR(const char *file, Cursor_t *cur)
+{
+    LOG_DEBUG("Loading ZCR file '%s'\n", file);
+
+    mfile_t *f = mfopen(file);
+    if (f)
+    {
+        uint32_t magic = 0;
+        mfread(&magic, 4, f);
+        if (magic == MAGIC_ZCR)
+        {
+            uint16_t x = 0, y = 0, w = 0, h = 0;
+            mfread(&x, 2, f);
+            mfread(&y, 2, f);
+            mfread(&w, 2, f);
+            mfread(&h, 2, f);
+
+            cur->ox = x;
+            cur->oy = y;
+
+            cur->img = Rend_CreateSurface(w, h, 0);
+            Rend_SetColorKey(cur->img, 0, 0, 0);
+
+            SDL_LockSurface(cur->img);
+
+            mfread(cur->img->pixels, 2 * w * h, f);
+
+            SDL_UnlockSurface(cur->img);
+        }
+        else
+        {
+            LOG_WARN("File '%s' is not ZCR\n", file);
+        }
+        mfclose(f);
+    }
+    else
+    {
+        LOG_DEBUG("  > Using fallback mechanism\n");
+        char tmp[64];
+        strcpy(tmp, file);
+        int len = strlen(tmp);
+
+        cur->img = Loader_LoadGFX(tmp, false, 0x0000);
+
+        if (cur->img == NULL)
+            return;
+
+        tmp[len - 3] = 'p';
+        tmp[len - 2] = 'o';
+        tmp[len - 1] = 'i';
+        tmp[len] = 'n';
+        tmp[len + 1] = 't';
+        tmp[len + 2] = 0x0;
+
+        mfile_t *f = mfopen(tmp);
+        if (f)
+        {
+            mfread(&cur->ox, 2, f);
+            mfread(&cur->oy, 2, f);
+            mfclose(f);
+        }
+    }
+}
+
+TTF_Font *Loader_LoadFont(char *name, int size)
+{
+    graph_font_t *fnt = NULL;
+
+    StartMList(FontList);
+    while (!EndOfMList(FontList))
+    {
+        fnt = (graph_font_t *)DataMList(FontList);
+        if (str_equals(fnt->name, name)) // str_starts_with
+            break;
+
+        NextMList(FontList);
+    }
+
+    if (fnt == NULL)
+        return NULL;
+
+    return TTF_OpenFont(fnt->path, size);
+}
+/***************************** END Bitmaps *****************************/
 
 
-/*********************************** RLF ***************************************/
+/******************************* Animations *******************************/
 typedef struct
 {
     uint32_t magic; //FELR 0x524C4546
@@ -469,7 +626,7 @@ typedef struct
     uint32_t unk1;
     uint32_t unk2;
     uint32_t frames; //number of frames
-} Header;
+} rlf_header_t;
 
 typedef struct
 {
@@ -486,7 +643,7 @@ typedef struct
     uint32_t unk5;
     char HKEY[0x18];
     uint32_t ELRH;
-} Cinf;
+} rlf_cinf_t;
 
 typedef struct
 {
@@ -498,7 +655,7 @@ typedef struct
     uint32_t unk3;
     uint32_t width;
     uint32_t height;
-} MinF;
+} rlf_minf_t;
 
 typedef struct
 {
@@ -506,7 +663,7 @@ typedef struct
     uint32_t size;
     uint32_t unk1;
     uint32_t microsecs;
-} mTime;
+} rlf_mtime_t;
 
 typedef struct
 {
@@ -514,10 +671,10 @@ typedef struct
     uint32_t size;
     uint32_t unk1;
     uint32_t unk2;
-    uint32_t TYPE;   // ELRH or  ELHD
+    uint32_t type;   // ELRH or  ELHD
     uint32_t offset; //from begin of frame to data
     uint32_t unk3;
-} Frame;
+} rlf_frame_t;
 
 static void DHLE(int8_t *dst, int8_t *src, int32_t size, int32_t size2)
 {
@@ -611,22 +768,20 @@ anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555)
 {
     LOG_DEBUG("Loading RLF file '%s'\n", file);
 
-    FManNode_t *fil = Loader_FindNode(file);
-    if (!fil)
-        Z_PANIC("File %s not found\n", file);
+    mfile_t *f = mfopen(file);
+    if (!f)
+        Z_PANIC("RLF File %s not found\n", file);
 
-    mfile_t *f = mfopen(fil);
+    rlf_header_t hd;
+    rlf_cinf_t cin;
+    rlf_minf_t mn;
+    rlf_mtime_t tm;
+    rlf_frame_t frm;
 
-    Header hd;
-    Cinf cin;
-    MinF mn;
-    mTime tm;
-    Frame frm;
-
-    mfread(&hd, sizeof(Header), f);
-    mfread(&cin, sizeof(Cinf), f);
-    mfread(&mn, sizeof(MinF), f);
-    mfread(&tm, sizeof(mTime), f);
+    mfread(&hd, sizeof(hd), f);
+    mfread(&cin, sizeof(cin), f);
+    mfread(&mn, sizeof(mn), f);
+    mfread(&tm, sizeof(tm), f);
 
     if (hd.magic != MAGIC_RLF)
     {
@@ -650,25 +805,26 @@ anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555)
     atmp->img = NEW_ARRAY(SDL_Surface*, atmp->info.frames);
 
     size_t sz_frame = mn.height * mn.width * 2;
-    int8_t *buf2 = calloc(sz_frame, 1);
-    void *buf  = NULL;
+    int8_t *buf2 = NEW_ARRAY(int8_t, sz_frame);
 
     for (int i = 0; i < hd.frames; i++)
     {
-        if (!mfread(&frm, sizeof(Frame), f))
+        if (!mfread(&frm, sizeof(frm), f))
         {
             Z_PANIC("mfread failed\n");
         }
 
         if (frm.size > 0 && frm.size < 0x40000000)
         {
-            if (mfread_ptr(&buf, frm.size - frm.offset, f))
+            int8_t *frm_data = NEW_ARRAY(int8_t, frm.size - frm.offset);
+            if (mfread(frm_data, frm.size - frm.offset, f))
             {
-                if (frm.TYPE == 0x44484C45)
-                    DHLE(buf2, buf, frm.size - frm.offset, sz_frame);
-                else if (frm.TYPE == 0x48524C45)
-                    HRLE(buf2, buf, frm.size - frm.offset, sz_frame);
+                if (frm.type == 0x44484C45)
+                    DHLE(buf2, frm_data, frm.size - frm.offset, sz_frame);
+                else if (frm.type == 0x48524C45)
+                    HRLE(buf2, frm_data, frm.size - frm.offset, sz_frame);
             }
+            free(frm_data);
         }
 
         SDL_Surface *srf = Rend_CreateSurface(atmp->info.w, atmp->info.h, 0);
@@ -710,175 +866,22 @@ anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555)
 
     return atmp;
 }
-/*********************************** END RLF ***************************************/
+/***************************** END Animations *****************************/
 
 
-/******************** ZCR ************************/
-void Loader_LoadZCR(const char *file, Cursor_t *cur)
+/******************************* STRINGS *******************************/
+char **Loader_LoadSTR(const char *filename)
 {
-    LOG_DEBUG("Loading ZCR file '%s'\n", file);
-
-    FManNode_t *fl = Loader_FindNode(file);
-
-    if (fl == NULL)
-    {
-        LOG_DEBUG("  > Using fallback mechanism\n");
-        char tmp[64];
-        strcpy(tmp, file);
-        int len = strlen(tmp);
-
-        cur->img = Loader_LoadGFX(tmp, false, 0x0000);
-
-        if (cur->img == NULL)
-            return;
-
-        tmp[len - 3] = 'p';
-        tmp[len - 2] = 'o';
-        tmp[len - 1] = 'i';
-        tmp[len] = 'n';
-        tmp[len + 1] = 't';
-        tmp[len + 2] = 0x0;
-
-        const char *tmp2 = Loader_GetPath(tmp);
-        if (tmp2 == NULL)
-            return;
-
-        FILE *f = fopen(tmp2, "rb");
-        fread(&cur->ox, 1, 2, f);
-        fread(&cur->oy, 1, 2, f);
-        fclose(f);
-        return;
-    }
-
-    mfile_t *f = mfopen(fl);
-
-    uint32_t magic = 0;
-    mfread(&magic, 4, f);
-    if (magic == MAGIC_ZCR)
-    {
-        uint16_t x = 0, y = 0, w = 0, h = 0;
-        mfread(&x, 2, f);
-        mfread(&y, 2, f);
-        mfread(&w, 2, f);
-        mfread(&h, 2, f);
-
-        cur->ox = x;
-        cur->oy = y;
-
-        cur->img = Rend_CreateSurface(w, h, 0);
-        Rend_SetColorKey(cur->img, 0, 0, 0);
-
-        SDL_LockSurface(cur->img);
-
-        mfread(cur->img->pixels, 2 * w * h, f);
-
-        SDL_UnlockSurface(cur->img);
-    }
-    else
-    {
-        LOG_WARN("File '%s' is not ZCR\n", file);
-    }
-    mfclose(f);
-}
-/******************** ZCR END************************/
-
-
-/******************** ZFS Routines************************/
-typedef struct
-{
-    uint32_t magic;
-    uint32_t unk1;
-    uint32_t unk2;
-    uint32_t files_perblock;
-    uint32_t files_cnt;
-    uint32_t xor_key;
-    uint32_t Offset_files;
-} header_zfs;
-
-typedef struct
-{
-    char name[0x10];
-    uint32_t offset;
-    uint32_t id;
-    uint32_t size;
-    uint32_t time;
-    uint32_t unk2;
-} file_header_zfs;
-
-static MList *zfs_arch_list = NULL;
-
-void Loader_OpenZFS(const char *file)
-{
-    LOG_DEBUG("Loading ZFS file '%s'\n", file);
-
-    FILE *fl = fopen(file, "rb");
-    if (!fl)
-        Z_PANIC("Error: File '%s' not found!\n", file);
-
-    header_zfs hdr;
-    fread(&hdr, sizeof(hdr), 1, fl);
-
-    if (hdr.magic != MAGIC_ZFS)
-    {
-        LOG_WARN("File '%s' is not valid ZFS\n", file);
-        return;
-    }
-
-    zfs_arch_t *tmp = NEW(zfs_arch_t);
-    tmp->fl = fl;
-    tmp->xor_key = hdr.xor_key;
-
-    if (!zfs_arch_list)
-        zfs_arch_list = CreateMList();
-
-    AddToMList(zfs_arch_list, tmp);
-
-    uint32_t nextpos = hdr.Offset_files;
-
-    while (nextpos != 0)
-    {
-        fseek(fl, nextpos, 0);
-        fread(&nextpos, 4, 1, fl);
-
-        for (uint32_t i = 0; i < hdr.files_perblock; i++)
-        {
-            //fseek(f,pos,0);
-            file_header_zfs fil;
-            fread(&fil, sizeof(fil), 1, fl);
-
-            if (!str_empty(fil.name))
-            {
-                LOG_DEBUG("Adding file from zfs : %s\n", fil.name);
-
-                FManNode_t *nod = NEW(FManNode_t);
-                nod->path = strdup(fil.name);
-                nod->name = nod->path;
-                nod->zfs = NEW(zfs_file_t);
-                nod->zfs->archive = tmp;
-                nod->zfs->offset = fil.offset;
-                nod->zfs->size = fil.size;
-                AddFManNode(nod);
-            }
-        }
-    }
-}
-/******************** ZFS END************************/
-
-
-/******************* STRINGS *****************/
-char **Loader_LoadSTR_m(mfile_t *mfp)
-{
-    char buffer[STRBUFSIZE];
+    char line_buffer[STRBUFSIZE];
     int lines = 1;
 
+    mfile_t *mfp = mfopen_txt(filename);
     if (!mfp)
         return NULL;
 
-    m_wide_to_utf8(mfp);
-
-    for (int i = strlen(mfp->buf); i > 0; i--)
+    for (int i = 0; i < mfp->size; i++)
     {
-        if (mfp->buf[i] == '\n')
+        if (mfp->buffer[i] == '\n')
             lines++;
     }
 
@@ -887,8 +890,8 @@ char **Loader_LoadSTR_m(mfile_t *mfp)
 
     while (!mfeof(mfp))
     {
-        mfgets(buffer, STRBUFSIZE, mfp);
-        strings[pos++] = str_trim(buffer);
+        mfgets(line_buffer, STRBUFSIZE, mfp);
+        strings[pos++] = str_trim(line_buffer);
     }
     strings[pos] = NULL;
 
@@ -896,179 +899,28 @@ char **Loader_LoadSTR_m(mfile_t *mfp)
 
     return strings;
 }
+/***************************** STRINGS END *****************************/
 
-char **Loader_LoadSTR(const char *path)
+
+/******************************* File access *******************************/
+static void txt_wide_to_utf8(mfile_t *file)
 {
-    FManNode_t file = {
-        .name = (char*)path,
-        .path = (char*)path,
-        .zfs = NULL
-    };
-    return Loader_LoadSTR_m(mfopen(&file));
-}
-/***************** STRINGS END ***************/
+    const char *file_buf = mfbuffer(file);
+    size_t size = file->size * 2;
+    size_t pos = 0;
 
+    char *buf = NEW_ARRAY(char, size);
 
-/**************** FS and ZFS ACCESS *****************/
-mfile_t *mfopen(FManNode_t *nod)
-{
-    if (!nod)
-        Z_PANIC("mfopen(NULL)");
-
-    mfile_t *tmp = NEW(mfile_t);
-    zfs_file_t *zfile = nod->zfs;
-
-    if (zfile)
-    {
-        tmp->buf = NEW_ARRAY(char, zfile->size + 4);
-        tmp->size = zfile->size;
-
-        fseek(zfile->archive->fl, zfile->offset, SEEK_SET);
-        fread(tmp->buf, zfile->size, 1, zfile->archive->fl);
-
-        if (zfile->archive->xor_key)
-        {
-            size_t cnt = zfile->size >> 2;
-            for (size_t i = 0; i < cnt; i++)
-                ((uint32_t*)tmp->buf)[i] ^= zfile->archive->xor_key;
-        }
-    }
-    else
-    {
-        FILE *fp = fopen(nod->path, "rb");
-        if (!fp)
-            Z_PANIC("File '%s' could not be opened\n", nod->path);
-
-        fseek(fp, 0, SEEK_END);
-
-        tmp->size = ftell(fp);
-        tmp->buf = NEW_ARRAY(char, tmp->size);
-
-        fseek(fp, 0, SEEK_SET);
-        fread(tmp->buf, tmp->size, 1, fp);
-
-        fclose(fp);
-    }
-
-    return tmp;
-}
-
-int32_t mfsize(FManNode_t *nod)
-{
-    struct stat statbuf;
-    if (nod->zfs)
-        return nod->zfs->size;
-    if (stat(nod->path, &statbuf) == 0)
-        return statbuf.st_size;
-    return -1;
-}
-
-bool mfread(void *buf, int32_t bytes, mfile_t *file)
-{
-    if (file->pos + bytes > file->size)
-        return false;
-
-    memcpy(buf, file->buf + file->pos, bytes);
-
-    file->pos += bytes;
-
-    return true;
-}
-
-bool mfread_ptr(void **buf, int32_t bytes, mfile_t *file)
-{
-    if (file->pos + bytes > file->size)
-        return false;
-
-    *buf = file->buf + file->pos;
-
-    file->pos += bytes;
-
-    return true;
-}
-
-void mfseek(mfile_t *fil, int32_t pos)
-{
-    if (pos <= fil->size && pos >= 0)
-        fil->pos = pos;
-}
-
-int32_t mftell(mfile_t *fil)
-{
-    return fil ? fil->pos : -1;
-}
-
-void mfclose(mfile_t *fil)
-{
-    free(fil->buf);
-    free(fil);
-}
-
-bool mfeof(mfile_t *fil)
-{
-    return (fil->pos >= fil->size);
-}
-
-char *mfgets(char *str, int32_t num, mfile_t *stream)
-{
-    int32_t copied = 0;
-    num--;
-
-    if (mfeof(stream))
-        return NULL;
-
-    while ((copied < num) && (stream->pos < stream->size) && (stream->buf[stream->pos] != 0x0A) && (stream->buf[stream->pos] != 0x0D))
-    {
-        str[copied] = stream->buf[stream->pos];
-        copied++;
-        stream->pos++;
-    }
-
-    str[copied] = 0;
-
-    if (stream->pos < stream->size)
-    {
-        if (stream->buf[stream->pos] == 0x0D)
-        {
-            stream->pos++;
-
-            if (stream->pos < stream->size)
-                if (stream->buf[stream->pos] == 0xA) //windows
-                    stream->pos++;
-        }
-        else if (stream->buf[stream->pos] == 0x0D) //unix
-            stream->pos++;
-    }
-
-    return str;
-}
-
-static bool m_is_wide_char(mfile_t *file)
-{
-    for (size_t i = 0; i < file->size - 2; i++)
-        if (file->buf[i] == 0 && file->buf[i + 2] == 0)
-            return true;
-
-    return false;
-}
-
-void m_wide_to_utf8(mfile_t *file)
-{
-    if (!m_is_wide_char(file))
-        return;
-
-    char *buf = (char *)malloc(file->size * 2);
-    int32_t pos = 0, size = file->size * 2;
     file->pos = 0;
     while (file->pos < file->size && pos < size)
     {
-        if (file->buf[file->pos] == 0xD)
+        if (file_buf[file->pos] == 0xD)
         {
             buf[pos] = 0xD;
             pos++;
             file->pos++;
             if (file->pos < file->size)
-                if (file->buf[file->pos] == 0xA)
+                if (file_buf[file->pos] == 0xA)
                 {
                     if (pos < size)
                     {
@@ -1077,7 +929,7 @@ void m_wide_to_utf8(mfile_t *file)
                     }
                     file->pos++;
                     if (file->pos < file->size)
-                        if (file->buf[file->pos] == 0x0)
+                        if (file_buf[file->pos] == 0x0)
                             file->pos++;
                 }
         }
@@ -1085,7 +937,7 @@ void m_wide_to_utf8(mfile_t *file)
         {
             if (file->pos + 1 < file->size)
             {
-                uint16_t ch = (file->buf[file->pos] & 0xFF) | ((file->buf[file->pos + 1] << 8) & 0xFF00);
+                uint16_t ch = (file_buf[file->pos] & 0xFF) | ((file_buf[file->pos + 1] << 8) & 0xFF00);
                 if (ch < 0x80)
                 {
                     buf[pos] = ch & 0x7F;
@@ -1133,9 +985,180 @@ void m_wide_to_utf8(mfile_t *file)
         }
     }
 
-    free(file->buf);
+    free((void*)file_buf);
     file->pos = 0;
     file->size = pos;
-    file->buf = buf;
+    file->buffer = buf;
 }
-/************** END FS and ZFS ACCESS ***************/
+
+mfile_t *mfopen(const char *filename)
+{
+    FManNode_t *node = FindFManNode(filename);
+    if (node)
+    {
+        if (node->zfs)
+        {
+            LOG_DEBUG("Opening file '%s' from ZFS archive\n", filename);
+            mfile_t *tmp = NEW(mfile_t);
+
+            tmp->size = node->size;
+            tmp->zfs = node->zfs;
+
+            return tmp;
+        }
+        else
+        {
+            filename = node->path;
+        }
+    }
+
+    FILE *fp = fopen(filename, "rb");
+    if (fp)
+    {
+        LOG_DEBUG("Opening file '%s' from file system\n", filename);
+        mfile_t *tmp = NEW(mfile_t);
+
+        fseek(fp, 0, SEEK_END);
+        tmp->size = ftell(fp);
+        tmp->fp = fp;
+
+        return tmp;
+    }
+
+    LOG_WARN("Unable to open file '%s'\n", filename);
+    return NULL;
+}
+
+mfile_t *mfopen_txt(const char *filename)
+{
+    mfile_t *file = mfopen(filename);
+
+    if (!file)
+        return NULL;
+
+    mfbuffer(file);
+
+    for (size_t i = 0; i < file->size - 2; i++)
+        if (file->buffer[i] == 0 && file->buffer[i + 2] == 0)
+        {
+            txt_wide_to_utf8(file);
+            break;
+        }
+
+    return file;
+}
+
+const void *mfbuffer(mfile_t *file)
+{
+    if (!file->buffer)
+    {
+        file->buffer = NEW_ARRAY(char, file->size + 4);
+
+        if (file->zfs)
+        {
+            zfs_file_t *zfile = (zfs_file_t *)file->zfs;
+            file->zfs = NULL; // We no longer need the file pointer
+
+            fseek(zfile->archive->fl, zfile->offset, SEEK_SET);
+            fread(file->buffer, file->size, 1, zfile->archive->fl);
+
+            if (zfile->archive->xor_key)
+            {
+                size_t count = file->size >> 2;
+                for (size_t i = 0; i < count; i++)
+                    ((uint32_t*)file->buffer)[i] ^= zfile->archive->xor_key;
+            }
+        }
+        else
+        {
+            fseek(file->fp, 0, SEEK_SET);
+            fread(file->buffer, file->size, 1, file->fp);
+            fclose(file->fp); // We no longer need the file pointer
+            file->fp = NULL;
+        }
+    }
+    return file->buffer;
+}
+
+bool mfread(void *buf, size_t bytes, mfile_t *file)
+{
+    if (file->pos + bytes > file->size)
+        return false;
+
+    memcpy(buf, mfbuffer(file) + file->pos, bytes);
+
+    // if (!file->buffer && !file->fp)
+    //     mfbuffer(file);
+
+    // if (file->buffer)
+    //     memcpy(buf, file->buffer + file->pos, bytes);
+    // else if (file->fp)
+    // {
+    //     fseek(file->fp, file->pos, SEEK_SET);
+    //     fread(buf, bytes, 1, file->fp);
+    // }
+
+    file->pos += bytes;
+
+    return true;
+}
+
+void mfseek(mfile_t *file, size_t pos)
+{
+    if (pos <= file->size)
+        file->pos = pos;
+}
+
+int32_t mftell(mfile_t *file)
+{
+    return file ? file->pos : -1;
+}
+
+void mfclose(mfile_t *file)
+{
+    if (file)
+    {
+        if (file->fp)
+            fclose(file->fp);
+        if (file->buffer)
+            free(file->buffer);
+        free(file);
+    }
+}
+
+bool mfeof(mfile_t *file)
+{
+    return file->pos >= file->size;
+}
+
+char *mfgets(char *buf, size_t max_bytes, mfile_t *file)
+{
+    int copied = 0;
+    int max = max_bytes - 1;
+
+    if (mfeof(file))
+        return NULL;
+
+    if (!file->buffer)
+        mfbuffer(file);
+
+    while (copied < max && file->pos < file->size && file->buffer[file->pos] != '\r' && file->buffer[file->pos] != '\n')
+    {
+        buf[copied++] = file->buffer[file->pos++];
+    }
+
+    buf[copied] = 0;
+
+    if (file->pos < file->size && file->buffer[file->pos] == '\r')
+    {
+        file->pos++;
+    }
+
+    if (file->pos < file->size && file->buffer[file->pos] == '\n')
+    {
+        file->pos++;
+    }
+
+    return buf;
+}
+/***************************** END File access *****************************/

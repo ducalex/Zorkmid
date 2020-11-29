@@ -214,15 +214,22 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
     int ww = GetIntVal(w) - xx + 1;
     int hh = GetIntVal(h) - yy + 1;
 
-    anim_avi_t *anm = NEW(anim_avi_t);
-    subtitles_t *subs = NULL;
-
-    const char *fil = Loader_GetPath(file);
-    if (fil == NULL)
+    avi_file_t *avi = avi_openfile(file, 0);
+    if (!avi)
         return ACTION_NORMAL;
 
-    anm->av = avi_openfile(fil, 0);
-    anm->img = Rend_CreateSurface(anm->av->w, anm->av->h, 0);
+    Mix_Chunk *chunk = avi_get_audio(avi);
+    int channel = Sound_Play(-1, chunk, 0, 100);
+
+    SDL_Surface *surf = Rend_CreateSurface(avi->w, avi->h, 0);
+    SDL_Rect dst_rct = {GAMESCREEN_X + xx + GAMESCREEN_FLAT_X, GAMESCREEN_Y + yy, ww, hh};
+
+    int frame_delay = avi->header.mcrSecPframe / 2000;
+
+    if (frame_delay > 200 || frame_delay < 0)
+        frame_delay = 15;
+
+    subtitles_t *subs = NULL;
 
     if (GetgVarInt(SLOT_SUBTITLE_FLAG) == 1)
     {
@@ -230,32 +237,22 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
         subs = Text_LoadSubtitles(file);
     }
 
-    Mix_Chunk *aud = avi_get_audio(anm->av);
-    int tmp = Sound_Play(-1, aud, 0, 100);
+    avi_play(avi);
 
-    SDL_Rect dst_rct = {GAMESCREEN_X + xx + GAMESCREEN_FLAT_X, GAMESCREEN_Y + yy, ww, hh};
-    int frame_delay = anm->av->header.mcrSecPframe / 2000;
-
-    if (frame_delay > 200 || frame_delay < 0)
-        frame_delay = 15;
-
-    avi_play(anm->av);
-
-    while (anm->av->status == AVI_PLAY)
+    while (avi->status == AVI_PLAY)
     {
         GameUpdate();
-
         if (KeyHit(SDLK_SPACE))
-            avi_stop(anm->av);
+            avi_stop(avi);
 
-        avi_blit(anm->av, anm->img);
+        avi_blit(avi, surf);
 
-        Rend_BlitSurface(anm->img, NULL, Rend_GetScreen(), &dst_rct);
+        Rend_BlitSurface(surf, NULL, Rend_GetScreen(), &dst_rct);
 
-        avi_update(anm->av);
+        avi_update(avi);
 
         if (subs)
-            Text_ProcessSubtitles(subs, anm->av->cframe);
+            Text_ProcessSubtitles(subs, avi->cframe);
 
         Rend_ProcessSubs();
         Rend_ScreenFlip();
@@ -263,12 +260,11 @@ static int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
         Game_Delay(frame_delay);
     }
 
-    if (tmp >= 0) Sound_Stop(tmp);
-    if (aud) Mix_FreeChunk(aud);
+    if (channel >= 0) Sound_Stop(channel);
+    if (chunk) Mix_FreeChunk(chunk);
     if (subs) Text_DeleteSubtitles(subs);
-
-    avi_close(anm->av);
-    free(anm);
+    if (avi) avi_close(avi);
+    if (surf) SDL_FreeSurface(surf);
 
     return ACTION_NORMAL;
 }
@@ -351,10 +347,16 @@ static int music_music(char *params, int aSlot, pzllst_t *owner, bool universe)
     {
         int instrument = atoi(file);
         int pitch = atoi(loop);
-        char fn[PATHBUFSIZ];
-        sprintf(fn, "%s/MIDI/%d/%d.wav", Game_GetPath(), instrument, pitch);
-        chunk = Loader_LoadSound(fn);
+        char filename[PATHBUFSIZ];
+
         sprintf(loop, "%d", (instrument != 0));
+        sprintf(filename, "MIDI/%d/%d.wav", instrument, pitch);
+
+        if (!(chunk = Loader_LoadSound(filename)))
+        {
+            sprintf(filename, "%s/MIDI/%d/%d.wav", Game_GetPath(), instrument, pitch);
+            chunk = Loader_LoadSound(filename);
+        }
     }
     else
     {
@@ -561,9 +563,8 @@ static int action_ttytext(char *params, int aSlot, pzllst_t *owner)
     w -= x;
     h -= y;
 
-    FManNode_t *fil = Loader_FindNode(chars);
-
-    if (fil == NULL)
+    mfile_t *fl = mfopen_txt(chars);
+    if (!fl)
     {
         SetgVarInt(aSlot, 2);
         return ACTION_NORMAL;
@@ -574,15 +575,12 @@ static int action_ttytext(char *params, int aSlot, pzllst_t *owner)
     nod->slot = aSlot;
     nod->owner = owner;
 
-    mfile_t *fl = mfopen(fil);
-    m_wide_to_utf8(fl);
-
     nod->nodes.tty_text->txtbuf = NEW_ARRAY(char, fl->size);
 
     size_t j = 0;
     for (size_t i = 0; i < fl->size; i++)
-        if (fl->buf[i] != 0x0A && fl->buf[i] != 0x0D)
-            nod->nodes.tty_text->txtbuf[j++] = (char)fl->buf[i];
+        if (fl->buffer[i] != 0x0A && fl->buffer[i] != 0x0D)
+            nod->nodes.tty_text->txtbuf[j++] = (char)fl->buffer[i];
 
     nod->nodes.tty_text->txtsize = j;
 

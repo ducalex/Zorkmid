@@ -751,14 +751,12 @@ subtitles_t *Text_LoadSubtitles(char *filename)
     char buf[STRBUFSIZE];
     int subscount = 0;
 
-    FManNode_t *fil = Loader_FindNode(filename);
-    if (!fil)
-        return NULL;
+    mfile_t *f = mfopen(filename);
+    if (!f) return NULL;
 
     subtitles_t *tmp = NEW(subtitles_t);
     tmp->currentsub = -1;
 
-    mfile_t *f = mfopen(fil);
     while (!mfeof(f))
     {
         mfgets(buf, STRBUFSIZE, f);
@@ -791,14 +789,14 @@ subtitles_t *Text_LoadSubtitles(char *filename)
         }
         else if (str_starts_with(str1, "TextFile"))
         {
-            FManNode_t *fil2 = Loader_FindNode(str2);
-            if (fil2 == NULL)
+            tmp->txt = Loader_LoadSTR(str2);
+
+            if (tmp->txt == NULL)
             {
                 free(tmp);
                 return NULL;
             }
 
-            tmp->txt = Loader_LoadSTR_m(mfopen(fil2));
             subscount = 0;
             while (tmp->txt[subscount])
                 subscount++;

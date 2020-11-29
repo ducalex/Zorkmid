@@ -166,7 +166,7 @@ void SetDirectgVarInt(uint32_t indx, int var);
 int *GetDirectgVarInt(uint32_t indx);
 
 void ScrSys_Init();
-void ScrSys_LoadScript(pzllst_t *lst, FManNode_t *filename, bool control, MList *controlst);
+void ScrSys_LoadScript(pzllst_t *lst, const char *filename, bool control, MList *controlst);
 void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X, bool force_all);
 uint8_t ScrSys_GetFlag(uint32_t indx);
 void ScrSys_SetFlag(uint32_t indx, uint8_t newval);

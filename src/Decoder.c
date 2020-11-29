@@ -76,7 +76,7 @@ uint16_t readu16(FILE *file)
     return tmp;
 }
 
-static void adpcm8_decode(void *in, void *out, int8_t stereo, int32_t n, adpcm_context_t *ctx)
+static void adpcm8_decode(const void *in, void *out, int8_t stereo, int32_t n, adpcm_context_t *ctx)
 {
     uint8_t *m1;
     uint16_t *m2;
@@ -305,11 +305,21 @@ static int avi_get_offset(avi_file_t *av, uint32_t virt)
     return 0;
 }
 
-avi_file_t *avi_openfile(const char *fle, uint8_t transl)
+avi_file_t *avi_openfile(const char *filename, uint8_t transl)
 {
-    FILE *file = fopen(fle, "rb");
+    const char *path = Loader_FindFile(filename);
+    if (!path)
+    {
+        LOG_WARN("AVI file '%s' not in assets list\n", filename);
+        path = filename;
+    }
+
+    FILE *file = fopen(path, "rb");
     if (!file)
+    {
+        LOG_WARN("Unable to open avi file '%s'\n", path);
         return NULL;
+    }
 
     avi_file_t *tmp = NEW(avi_file_t);
 
@@ -332,7 +342,7 @@ avi_file_t *avi_openfile(const char *fle, uint8_t transl)
         avi_set_dem(tmp, tmp->header.width, tmp->header.height);
         truemotion1_decode_init(tmp);
         avi_build_vlist(tmp);
-        tmp->buf = malloc(tmp->header.buffsize);
+        tmp->buf = NEW_ARRAY(uint8_t, tmp->header.buffsize);
         return tmp;
     }
 
@@ -347,7 +357,7 @@ void avi_set_dem(avi_file_t *av, int32_t w, int32_t h)
     if (av->frame)
         free(av->frame);
 
-    av->frame = malloc(w * h * 4);
+    av->frame = NEW_ARRAY(uint32_t, w * h);
     av->header.width = w;
     av->header.height = h;
     if (av->translate)
@@ -446,7 +456,7 @@ Mix_Chunk *avi_get_audio(avi_file_t *av)
     if (av->atrk->tag == 0x1) // PCM
     {
         size_t buffer_size = asz + sizeof(wavHeader);
-        uint32_t *raw = (uint32_t *)malloc(buffer_size);
+        uint32_t *raw = NEW_ARRAY(uint32_t, buffer_size / 4 + 1);
         memcpy(raw, wavHeader, sizeof(wavHeader));
         raw[7] = av->atrk->channels * raw[6] * av->atrk->size / 8;
         raw[8] = (av->atrk->size << 16) | (av->atrk->size * av->atrk->channels / 8);
@@ -465,7 +475,7 @@ Mix_Chunk *avi_get_audio(avi_file_t *av)
     else if (av->atrk->tag == 0x11) // Intel's DVI ADPCM
     {
         size_t buffer_size = asz * 2 + sizeof(wavHeader);
-        uint32_t *raw = (uint32_t *)malloc(buffer_size);
+        uint32_t *raw = NEW_ARRAY(uint32_t, buffer_size / 4 + 1);
         memcpy(raw, wavHeader, sizeof(wavHeader));
         raw[1] = buffer_size - 8;
         raw[5] = (av->atrk->channels << 16) | 0x01;
@@ -602,11 +612,11 @@ void avi_close(avi_file_t *av)
     free(av);
 }
 
-Mix_Chunk *wav_create(void *data, size_t data_len, int channels, int freq, int bits, int adpcm)
+Mix_Chunk *wav_create(const void *data, size_t data_len, int channels, int freq, int bits, int adpcm)
 {
     size_t final_size = sizeof(wavHeader) + (adpcm ? data_len * 2 : data_len);
 
-    uint32_t *buffer = malloc(final_size);
+    uint32_t *buffer = NEW_ARRAY(uint32_t, final_size / 4 + 1);
 
     memcpy(buffer, wavHeader, sizeof(wavHeader));
 

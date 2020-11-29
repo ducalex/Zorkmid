@@ -810,12 +810,9 @@ static void control_save(ctrlnode_t *ct)
                         bool tosave = true;
 
                         sprintf(fln, CTRL_SAVE_SAVES, i + 1);
-                        if (FileExists(fln))
+                        if (Loader_FindFile(fln) != NULL)
                         {
-                            if (game_question_message(Game_GetString(SYSTEM_STR_SAVEEXIST)))
-                                tosave = true;
-                            else
-                                tosave = false;
+                            tosave = game_question_message(Game_GetString(SYSTEM_STR_SAVEEXIST));
                         }
 
                         if (tosave)
@@ -1111,7 +1108,9 @@ static int Parse_Control_Flat()
 
 static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
 {
-    char buf[STRBUFSIZE];
+    char tmpbuf[STRBUFSIZE];
+    char filename[MINIBUFSZ];
+    int32_t t1, t2, t3, t4;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_LEVER);
     levernode_t *lev = ctnode->node.lev;
@@ -1120,12 +1119,10 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
 
     ctnode->slot = slot;
 
-    char filename[MINIBUFSZ];
-
     while (!mfeof(fl))
     {
-        mfgets(buf, STRBUFSIZE, fl);
-        char *str = PrepareString(buf);
+        mfgets(tmpbuf, STRBUFSIZE, fl);
+        char *str = PrepareString(tmpbuf);
 
         if (str[0] == '}')
         {
@@ -1145,17 +1142,14 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
         }
     }
 
-    const char *descfile = Loader_GetPath(filename);
-
+    mfile_t *descfile = mfopen_txt(filename);
     if (!descfile)
         return 0; //FAIL
 
-    FILE *file2 = fopen(descfile, "rb");
-
-    while (!feof(file2))
+    while (!mfeof(descfile))
     {
-        fgets(buf, STRBUFSIZE, file2);
-        char *str = PrepareString(buf);
+        mfgets(tmpbuf, STRBUFSIZE, descfile);
+        char *str = PrepareString(tmpbuf);
 
         if (str_starts_with(str, "animation_id"))
         {
@@ -1163,20 +1157,18 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "filename"))
         {
-            char minbuf[MINIBUFSZ];
-            sscanf(str, "filename:%s", minbuf);
-            int16_t ln = strlen(minbuf);
-            if (minbuf[ln - 1] == '~')
-                minbuf[ln - 1] = 0;
+            sscanf(str, "filename:%s", tmpbuf);
+            size_t ln = strlen(tmpbuf);
+            if (tmpbuf[ln - 1] == '~')
+                tmpbuf[ln - 1] = 0;
             lev->anm = NEW(animnode_t);
-            Anim_Load(lev->anm, minbuf, 0, 0, 0, 0);
+            Anim_Load(lev->anm, tmpbuf, 0, 0, 0, 0);
         }
         else if (str_starts_with(str, "skipcolor"))
         {
         }
         else if (str_starts_with(str, "anim_coords"))
         {
-            int32_t t1, t2, t3, t4;
             sscanf(str, "anim_coords:%d %d %d %d~", &t1, &t2, &t3, &t4);
             lev->AnimCoords.x = t1;
             lev->AnimCoords.y = t2;
@@ -1185,7 +1177,6 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "mirrored"))
         {
-            int32_t t1;
             sscanf(str, "mirrored:%d", &t1);
             if (t1 == 1)
                 lev->mirrored = true;
@@ -1194,7 +1185,6 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "frames"))
         {
-            int32_t t1;
             sscanf(str, "frames:%d", &t1);
             lev->frames = t1;
         }
@@ -1206,21 +1196,18 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "start_pos"))
         {
-            int32_t t1;
             sscanf(str, "start_pos:%d", &t1);
             lev->startpos = t1;
             lev->curfrm = lev->startpos;
         }
         else if (str_starts_with(str, "hotspot_deltas"))
         {
-            int32_t t1, t2;
             sscanf(str, "hotspot_deltas:%d %d", &t1, &t2);
             lev->delta_x = t1;
             lev->delta_y = t2;
         }
         else
         {
-            int32_t t1, t2, t3;
             if (sscanf(str, "%d:%d %d", &t1, &t2, &t3) == 3)
             {
                 if (t1 < CTRL_LEVER_MAX_FRAMES)
@@ -1229,7 +1216,6 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
                     lev->hotspots[t1].y = t3;
                     char *token;
                     const char *find = " ";
-                    char tmpbuf[STRBUFSIZE];
                     strcpy(tmpbuf, str);
                     token = strtok(tmpbuf, find);
                     while (token != NULL)
@@ -1264,21 +1250,21 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
                 }
             }
         }
+    }
 
-    } //while (!feof(file2))
+    mfclose(descfile);
 
-    //SetgVarInt(ctnode->slot, lev->curfrm);
     lev->curfrm = GetgVarInt(ctnode->slot);
-
-    fclose(file2);
 
     return 1;
 }
 
 static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
 {
-    char buf[STRBUFSIZE];
+    char tmpbuf[STRBUFSIZE];
+    char filename[MINIBUFSZ];
     char *str;
+    int32_t t1, t2, t3, t4, tt;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_HOTMV);
     hotmvnode_t *hotm = ctnode->node.hotmv;
@@ -1288,12 +1274,10 @@ static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
     ctnode->slot = slot;
     SetDirectgVarInt(slot, 0);
 
-    char filename[MINIBUFSZ];
-
     while (!mfeof(fl))
     {
-        mfgets(buf, STRBUFSIZE, fl);
-        str = PrepareString(buf);
+        mfgets(tmpbuf, STRBUFSIZE, fl);
+        str = PrepareString(tmpbuf);
 
         if (str[0] == '}')
         {
@@ -1301,33 +1285,27 @@ static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "hs_frame_list"))
         {
-            str = GetParams(str);
-            strcpy(filename, str);
+            strcpy(filename, GetParams(str));
         }
         else if (str_starts_with(str, "num_frames"))
         {
-            str = GetParams(str);
-            hotm->num_frames = atoi(str) + 1;
+            hotm->num_frames = atoi(GetParams(str)) + 1;
             hotm->frame_list = NEW_ARRAY(Rect_t, hotm->num_frames);
         }
         else if (str_starts_with(str, "num_cycles"))
         {
-            str = GetParams(str);
-            hotm->num_cycles = atoi(str);
+            hotm->num_cycles = atoi(GetParams(str));
         }
         else if (str_starts_with(str, "animation"))
         {
-            str = GetParams(str);
             char file[MINIBUFSZ];
-            sscanf(str, "%s", file);
+            sscanf(GetParams(str), "%s", file);
             hotm->anm = NEW(animnode_t);
             Anim_Load(hotm->anm, file, 0, 0, 0, 0);
         }
         else if (str_starts_with(str, "rectangle"))
         {
-            str = GetParams(str);
-            int32_t t1, t2, t3, t4;
-            sscanf(str, "%d %d %d %d", &t1, &t2, &t3, &t4);
+            sscanf(GetParams(str), "%d %d %d %d", &t1, &t2, &t3, &t4);
             hotm->rect.x = t1;
             hotm->rect.y = t2;
             hotm->rect.w = t3 - t1 + 1;
@@ -1335,23 +1313,18 @@ static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "venus_id"))
         {
-            str = GetParams(str);
-            ctnode->venus = atoi(str);
+            ctnode->venus = atoi(GetParams(str));
         }
     }
 
-    const char *descfile = Loader_GetPath(filename);
-
-    if (!descfile)
+    mfile_t *frmfile = mfopen_txt(filename);
+    if (!frmfile)
         return 0; //FAIL
 
-    FILE *file2 = fopen(descfile, "rb");
-
-    while (!feof(file2))
+    while (!mfeof(frmfile))
     {
-        fgets(buf, STRBUFSIZE, file2);
-        int32_t t1, t2, t3, t4, tt;
-        sscanf(buf, "%d:%d %d %d %d~", &tt, &t1, &t2, &t3, &t4);
+        mfgets(tmpbuf, STRBUFSIZE, frmfile);
+        sscanf(tmpbuf, "%d:%d %d %d %d~", &tt, &t1, &t2, &t3, &t4);
         if (tt >= 0 && tt < hotm->num_frames)
         {
             hotm->frame_list[tt].x = t1;
@@ -1361,7 +1334,7 @@ static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
         }
     }
 
-    fclose(file2);
+    mfclose(frmfile);
 
     return 1;
 }
@@ -1483,14 +1456,14 @@ static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
 
     memset(sv->Names, 0, sizeof(sv->Names));
 
-    if (FileExists(CTRL_SAVE_FILE))
+    if (Loader_FindFile(CTRL_SAVE_FILE) != NULL)
     {
         char **saves = Loader_LoadSTR(CTRL_SAVE_FILE);
 
         for (int i = 0; saves[i] != NULL; i++)
         {
             sprintf(fln, CTRL_SAVE_SAVES, i + 1);
-            if (FileExists(fln))
+            if (Loader_FindFile(fln) != NULL)
                 strcpy(sv->Names[i], saves[i]);
             free(saves[i]);
         }
@@ -1587,11 +1560,9 @@ static int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "string_resource_file") == 0)
         {
-            const char *path = Loader_GetPath(GetParams(str));
-            if (path)
+            char **strings = Loader_LoadSTR(GetParams(str));
+            if (strings)
             {
-                char **strings = Loader_LoadSTR(path);
-
                 titler->num_strings = 0;
 
                 for (int i = 0; i < CTRL_TITLER_MAX_STRINGS; i++)
@@ -2007,17 +1978,18 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
         }
     }
 
-    const char *pth = Loader_GetPath(filename);
+    char **lines = Loader_LoadSTR(filename);
 
-    if (pth != NULL)
+    if (lines)
     {
-        FILE *fil = fopen(pth, "rb");
+        int32_t t1, t2, t3, t4, t5, t6;
+        char s1[MINIBUFSZ];
+        char s2[MINIBUFSZ];
 
-        while (!feof(fil))
+        for (int pos = 0; lines[pos] != NULL; pos++)
         {
-            fgets(buf, STRBUFSIZE, fil);
-            char *str = PrepareString(buf);
-            int32_t ln = strlen(str);
+            char *str = PrepareString(lines[pos]);
+            size_t ln = strlen(str);
             if (str[ln - 1] == '~')
                 str[ln - 1] = 0;
 
@@ -2027,14 +1999,12 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
             }
             else if (str_starts_with(str, "animation"))
             {
-                char minbuf[MINIBUFSZ];
-                sscanf(str, "animation:%s", minbuf);
+                sscanf(str, "animation:%s", s1);
                 fist->anm = NEW(animnode_t);
-                Anim_Load(fist->anm, minbuf, 0, 0, 0, 0);
+                Anim_Load(fist->anm, s1, 0, 0, 0, 0);
             }
             else if (str_starts_with(str, "anim_rect"))
             {
-                int32_t t1, t2, t3, t4;
                 sscanf(str, "anim_rect:%d %d %d %d", &t1, &t2, &t3, &t4);
                 fist->anm_rect.x = t1;
                 fist->anm_rect.y = t2;
@@ -2043,27 +2013,23 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
             }
             else if (str_starts_with(str, "num_fingers"))
             {
-                int32_t t1;
                 sscanf(str, "num_fingers:%d", &t1);
                 if (t1 >= 0 && t1 <= CTRL_FIST_MAX_FISTS)
                     fist->fistnum = t1;
             }
             else if (str_starts_with(str, "entries"))
             {
-                int32_t t1;
                 sscanf(str, "entries:%d", &t1);
                 if (t1 >= 0 && t1 <= CTRL_FIST_MAX_ENTRS)
                     fist->num_entries = t1;
             }
             else if (str_starts_with(str, "eval_order_ascending"))
             {
-                int32_t t1;
                 sscanf(str, "eval_order_ascending:%d", &t1);
                 fist->order = t1;
             }
             else if (str_starts_with(str, "up_hs_num_"))
             {
-                int32_t t1, t2;
                 sscanf(str, "up_hs_num_%d:%d", &t1, &t2);
                 if (t1 >= 0 && t1 < fist->fistnum)
                     if (t2 >= 0 && t2 <= CTRL_FIST_MAX_BOXES)
@@ -2071,7 +2037,6 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
             }
             else if (str_starts_with(str, "up_hs_"))
             {
-                int32_t t1, t2, t3, t4, t5, t6;
                 sscanf(str, "up_hs_%d_%d:%d %d %d %d", &t1, &t2, &t3, &t4, &t5, &t6);
                 if (t1 >= 0 && t1 < fist->fistnum)
                     if (t2 >= 0 && t2 < fist->fists_up[t1].num_box)
@@ -2084,7 +2049,6 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
             }
             else if (str_starts_with(str, "down_hs_num_"))
             {
-                int32_t t1, t2;
                 sscanf(str, "down_hs_num_%d:%d", &t1, &t2);
                 if (t1 >= 0 && t1 < fist->fistnum)
                     if (t2 >= 0 && t2 <= CTRL_FIST_MAX_BOXES)
@@ -2092,7 +2056,6 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
             }
             else if (str_starts_with(str, "down_hs_"))
             {
-                int32_t t1, t2, t3, t4, t5, t6;
                 sscanf(str, "down_hs_%d_%d:%d %d %d %d", &t1, &t2, &t3, &t4, &t5, &t6);
                 if (t1 >= 0 && t1 < fist->fistnum)
                     if (t2 >= 0 && t2 < fist->fists_dwn[t1].num_box)
@@ -2105,9 +2068,6 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
             }
             else
             {
-                int32_t t1, t2, t3, t4;
-                char s1[MINIBUFSZ];
-                char s2[MINIBUFSZ];
                 if (sscanf(str, "%d:%s %s %d %d (%d)", &t1, s1, s2, &t2, &t3, &t4) == 6)
                 {
                     if (t1 >= 0 && t1 < fist->num_entries)
@@ -2132,8 +2092,9 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
                     }
                 }
             }
+            free(lines[pos]);
         }
-        fclose(fil);
+        free(lines);
     }
     else
         good = 0;

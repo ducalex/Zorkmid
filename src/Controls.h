@@ -37,8 +37,8 @@
 #define CTRL_PUSH_EV_DWN 1
 #define CTRL_PUSH_EV_DBL 2
 
-#define CTRL_SAVE_FILE (CUR_GAME == GAME_ZGI ? "inquis.sav" : "nemesis.sav")
-#define CTRL_SAVE_SAVES (CUR_GAME == GAME_ZGI ? "inqsav%d.sav" : "nemsav%d.sav")
+#define CTRL_SAVE_FILE (CUR_GAME == GAME_ZGI ? "./inquis.sav" : "./nemesis.sav")
+#define CTRL_SAVE_SAVES (CUR_GAME == GAME_ZGI ? "./inqsav%d.sav" : "./nemsav%d.sav")
 
 typedef struct
 {

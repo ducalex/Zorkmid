@@ -119,7 +119,7 @@ char *str_trim(const char *buffer)
         int new_len = strlen(str) - trim;
 
         if (new_len > 0) {
-            char *out = (char *)malloc(new_len + 1);
+            char *out = NEW_ARRAY(char, new_len + 1);
             memcpy(out, str, new_len);
             out[new_len] = 0;
             return out;

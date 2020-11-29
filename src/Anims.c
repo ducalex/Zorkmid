@@ -142,7 +142,7 @@ void Anim_Load(animnode_t *nod, char *filename, int u1, int u2, int32_t mask, in
     if (str_ends_with(filename, ".avi")) // AVI
     {
         nod->anim_avi = NEW(anim_avi_t);
-        nod->anim_avi->av = avi_openfile(Loader_GetPath(filename), Rend_GetRenderer() == RENDER_PANA);
+        nod->anim_avi->av = avi_openfile(filename, Rend_GetRenderer() == RENDER_PANA);
 
         if (nod->framerate == 0)
             nod->framerate = nod->anim_avi->av->header.mcrSecPframe / 1000; //~15fps

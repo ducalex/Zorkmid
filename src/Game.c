@@ -364,7 +364,7 @@ void GameInit(const char *path)
     Menu_LoadGraphics();
 
     ScrSys_Init();
-    ScrSys_LoadScript(GetUni(), Loader_FindNode("universe.scr"), false, NULL);
+    ScrSys_LoadScript(GetUni(), "universe.scr", false, NULL);
 
     ScrSys_ChangeLocation(InitWorld, InitRoom, InitNode, InitView, 0, true);
 

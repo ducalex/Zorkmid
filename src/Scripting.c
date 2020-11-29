@@ -6,7 +6,7 @@ static action_res_t *gNodes[30000];
 static uint8_t Flags[30000];
 static StateBoxEnt_t *StateBox[30000];
 
-static const char *PreferencesFile = "prefs.ini";
+static const char *PreferencesFile = NULL;
 
 static bool BreakExecute = false;
 
@@ -119,12 +119,12 @@ void ScrSys_Init()
 {
     if (CUR_GAME == GAME_ZGI)
     {
-        PreferencesFile = "prefs_zgi.ini";
+        PreferencesFile = "./prefs_zgi.ini";
         VAR_SLOTS_MAX = 20000;
     }
     else
     {
-        PreferencesFile = "prefs_znem.ini";
+        PreferencesFile = "./prefs_znem.ini";
         VAR_SLOTS_MAX = 30000;
     }
 
@@ -148,17 +148,17 @@ void ScrSys_Init()
     ScrSys_LoadPreferences();
 }
 
-void ScrSys_LoadScript(pzllst_t *lst, FManNode_t *filename, bool control, MList *controlst)
+void ScrSys_LoadScript(pzllst_t *lst, const char *filename, bool control, MList *controlst)
 {
-    if (!filename)
-        Z_PANIC("filename is NULL\n");
+    mfile_t *fl = mfopen(filename);
+    if (!fl)
+        Z_PANIC("Unable to load script file '%s'\n", filename);
 
-    LOG_DEBUG("Loading script file '%s'\n", filename->name);
+    LOG_DEBUG("Loading script file '%s'\n", filename);
 
     if (control)
         Rend_SetRenderer(RENDER_FLAT);
 
-    mfile_t *fl = mfopen(filename);
     char buf[STRBUFSIZE];
 
     while (!mfeof(fl))
@@ -323,68 +323,65 @@ void ScrSys_LoadGame(char *file)
     int16_t pos;
     char buf[32];
 
-    FILE *f = fopen(file, "rb");
+    mfile_t *f = mfopen(file);
     if (!f)
         return;
 
     ScrSys_FlushActionsList();
 
-    fread(&tmp, 4, 1, f);
-    if (tmp != 0x47534E5A)
+    mfread(&tmp, 4, f);
+    if (tmp != MAGIC_SAV)
+        Z_PANIC("Invalid save file '%s' (MAGIC)\n", file);
+
+    mfread(&tmp, 4, f);
+    mfread(&tmp, 4, f);
+    mfread(&tmp, 4, f);
+    mfread(&tmp, 4, f);
+
+    mfread(&w, 1, f);
+    mfread(&r, 1, f);
+    mfread(&n, 1, f);
+    mfread(&v, 1, f);
+
+    mfread(&pos, 2, f);
+
+    mfread(&tmp, 2, f);
+
+    while (!mfeof(f))
     {
-        Z_PANIC("Error in save file %s\n", file);
-    }
-
-    fread(&tmp, 4, 1, f);
-    fread(&tmp, 4, 1, f);
-    fread(&tmp, 4, 1, f);
-    fread(&tmp, 4, 1, f);
-
-    fread(&w, 1, 1, f);
-    fread(&r, 1, 1, f);
-    fread(&n, 1, 1, f);
-    fread(&v, 1, 1, f);
-
-    fread(&pos, 2, 1, f);
-
-    fread(&tmp, 2, 1, f);
-
-    while (!feof(f))
-    {
-        fread(&tmp, 4, 1, f);
+        mfread(&tmp, 4, f);
         if (tmp != 0x524D4954)
             break;
 
-        fread(&tmp, 4, 1, f);
+        mfread(&tmp, 4, f);
 
-        fread(&slot, 4, 1, f);
-        fread(&time, 4, 1, f);
+        mfread(&slot, 4, f);
+        mfread(&time, 4, f);
 
         sprintf(buf, "%d", time / 100);
         Actions_Run("timer", buf, slot, view);
     }
 
-    fread(&tmp, 4, 1, f);
+    mfread(&tmp, 4, f);
 
     if (tmp != VAR_SLOTS_MAX * 2)
-    {
         Z_PANIC("Error in save file %s (FLAGS VAR_SLOTS_MAX)\n", file);
-    }
+
     for (int i = 0; i < VAR_SLOTS_MAX; i++)
     {
-        fread(&tmp2, 2, 1, f);
+        mfread(&tmp2, 2, f);
         ScrSys_SetFlag(i, tmp2);
     }
 
-    fread(&tmp, 4, 1, f);
-    fread(&tmp, 4, 1, f);
+    mfread(&tmp, 4, f);
+    mfread(&tmp, 4, f);
+
     if (tmp != VAR_SLOTS_MAX * 2)
-    {
         Z_PANIC("Error in save file %s (PUZZLE VAR_SLOTS_MAX)\n", file);
-    }
+
     for (int i = 0; i < VAR_SLOTS_MAX; i++)
     {
-        fread(&tmp2, 2, 1, f);
+        mfread(&tmp2, 2, f);
         SetDirectgVarInt(i, tmp2);
     }
 
@@ -394,7 +391,7 @@ void ScrSys_LoadGame(char *file)
 
     SetgVarInt(SLOT_JUST_RESTORED, 1);
 
-    fclose(f);
+    mfclose(f);
 
     ScrSys_LoadPreferences();
 }
@@ -456,9 +453,8 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         tm[3] = temp.View;
         tm[4] = 0;
         sprintf(buf, "%s.scr", tm);
-        FManNode_t *fil = Loader_FindNode(buf);
-        if (fil != NULL)
-            ScrSys_LoadScript(view, fil, true, controls);
+
+        ScrSys_LoadScript(view, buf, true, controls);
     }
 
     if (temp.Room != GetgVarInt(SLOT_ROOM) ||
@@ -474,13 +470,10 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         tm[2] = 0;
         sprintf(buf, "%s.scr", tm);
 
-        FManNode_t *fil = Loader_FindNode(buf);
-        if (fil != NULL)
-            ScrSys_LoadScript(room, fil, false, NULL);
+        ScrSys_LoadScript(room, buf, false, NULL);
     }
 
-    if (temp.World != GetgVarInt(SLOT_WORLD) ||
-        force_all || world == NULL)
+    if (temp.World != GetgVarInt(SLOT_WORLD) || force_all || world == NULL)
     {
         ScrSys_FlushResourcesByOwner(world);
 
@@ -490,9 +483,7 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         tm[1] = 0;
         sprintf(buf, "%s.scr", tm);
 
-        FManNode_t *fil = Loader_FindNode(buf);
-        if (fil != NULL)
-            ScrSys_LoadScript(world, fil, false, NULL);
+        ScrSys_LoadScript(world, buf, false, NULL);
 
         Mouse_ShowCursor();
     }
