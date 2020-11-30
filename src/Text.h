@@ -15,9 +15,7 @@
 #define TXT_RET_HASSTBOX 0x8
 
 #define TXT_CFG_FONTNAME_MAX_LEN 64
-//buffers size used for parsing text
 #define TXT_CFG_BUF_MAX_LEN 512
-//used for drawing text
 #define TXT_CFG_TEXTURES_LINES 256
 #define TXT_CFG_TEXTURES_PER_LINE 6
 
@@ -58,7 +56,7 @@ typedef struct
 typedef struct
 {
     char name[128];
-    char path[PATHBUFSIZ];
+    char path[PATHBUFSIZE];
 } graph_font_t;
 
 typedef struct
@@ -77,11 +75,16 @@ typedef struct
     int currentsub;
 } subtitles_t;
 
+void Text_Init();
 void Text_InitStyle(txt_style_t *style);
 void Text_GetStyle(txt_style_t *style, const char *strin);
 void Text_SetStyle(TTF_Font *font, txt_style_t *fnt_stl);
 size_t Text_Draw(const char *txt, txt_style_t *fnt_stl, SDL_Surface *dst);
 void Text_DrawInOneLine(const char *text, SDL_Surface *dst);
+void Text_DrawSubtitles();
+
+subrect_t *Text_CreateSubRect(int x, int y, int w, int h);
+void Text_DeleteSubRect(subrect_t *rect);
 
 action_res_t *Text_CreateTTYText();
 int Text_DeleteTTYText(action_res_t *nod);

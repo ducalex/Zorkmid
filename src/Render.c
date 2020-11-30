@@ -8,8 +8,6 @@ int GAMESCREEN_P = 0;
 int GAMESCREEN_H = 0;
 int GAMESCREEN_X = 0;
 int GAMESCREEN_Y = 0;
-int GAMESCREEN_FLAT_X = 0;
-int WIDESCREEN = 0;
 int FULLSCREEN = 0;
 
 static float tilt_angle = 60.0;
@@ -20,30 +18,23 @@ static float mgamma = 1.0;
 
 static uint8_t Renderer = RENDER_FLAT;
 
-static MList *sublist = NULL;
-static int32_t subid = 0;
-
 static SDL_Surface *screen;      // Game window surface
 static SDL_Surface *scrbuf;      // Surface loaded by setscreen, all changes by setpartialscreen and other similar modify this surface.
 static SDL_Surface *tempbuf;     // This surface used for effects(region action) and control draws.
 static SDL_Surface *viewportbuf; // This surface used for rendered viewport image with renderer processing.
 
-static int32_t RenderDelay = 0;
+static int32_t render_delay = 0;
 
-static struct
-{
-    int32_t x;
-    int32_t y;
-} render_table[1024][1024];
-
-static int32_t new_render_table[1024 * 1024];
+static struct {short x, y;} render_table[1024][1024];
+static int16_t new_render_table[1024 * 1024];
 
 static int32_t *view_X;
 
-static int32_t pana_PanaWidth = 1800;
-static bool pana_ReversePana = false;
-static float pana_angle = 60.0, pana_linscale = 1.00;
-static int32_t pana_Zero = 0;
+static int pana_PanaWidth = 1800;
+static int pana_Zero = 0;
+static int pana_ReversePana = false;
+static float pana_angle = 60.0;
+static float pana_linscale = 1.00;
 
 static const int FiveBitToEightBitLookupTable[32] = {
     0, 8, 16, 24, 32, 41, 49, 57, 65, 74, 82, 90, 98, 106, 115, 123,
@@ -125,7 +116,7 @@ static inline float fastSqrt(float x)
 #define EFFECT_LIGH 2
 #define EFFECT_9 4
 
-typedef struct //water
+typedef struct // water
 {
     int32_t frame;
     int32_t frame_cnt;
@@ -133,7 +124,7 @@ typedef struct //water
     SDL_Surface *surface;
 } effect0_t;
 
-typedef struct //lightning
+typedef struct // lightning
 {
     int8_t *map; // 0 - no; !0 - draw
     int8_t sign;
@@ -216,57 +207,6 @@ static void SetRendererTable()
         Rend_pana_SetTable();
     else if (Renderer == RENDER_TILT)
         Rend_tilt_SetTable();
-}
-
-void Rend_SetRenderer(int meth)
-{
-    Renderer = meth;
-    pana_ReversePana = false;
-    Rend_tilt_SetLinscale(0.65);
-    Rend_tilt_SetAngle(60.0);
-    Rend_pana_SetLinscale(0.55);
-    Rend_pana_SetAngle(60.0);
-}
-
-int Rend_GetRenderer()
-{
-    return Renderer;
-}
-
-static void ProcessCursor()
-{
-    if (GetgVarInt(SLOT_INVENTORY_MOUSE) != 0)
-    {
-        if (GetgVarInt(SLOT_INVENTORY_MOUSE) != Mouse_GetCurrentObjCur())
-            Mouse_LoadObjCursor(GetgVarInt(SLOT_INVENTORY_MOUSE));
-
-        if (Mouse_IsCurrentCur(CURSOR_ACTIVE) || Mouse_IsCurrentCur(CURSOR_HANDPU) || Mouse_IsCurrentCur(CURSOR_IDLE))
-        {
-            if (Mouse_IsCurrentCur(CURSOR_ACTIVE) || Mouse_IsCurrentCur(CURSOR_HANDPU))
-                Mouse_SetCursor(CURSOR_OBJ_1);
-            else
-                Mouse_SetCursor(CURSOR_OBJ_0);
-        }
-    }
-
-    if (Renderer == RENDER_PANA)
-        if (Rend_MouseInGamescr())
-        {
-            if (MouseX() < GAMESCREEN_X + GAMESCREEN_P)
-                Mouse_SetCursor(CURSOR_LEFT);
-            if (MouseX() > GAMESCREEN_X + GAMESCREEN_W - GAMESCREEN_P)
-                Mouse_SetCursor(CURSOR_RIGH);
-        }
-    if (Renderer == RENDER_TILT)
-        if (Rend_MouseInGamescr())
-        {
-            if (MouseY() < GAMESCREEN_Y + GAMESCREEN_P)
-                Mouse_SetCursor(CURSOR_UPARR);
-            if (MouseY() > GAMESCREEN_Y + GAMESCREEN_H - GAMESCREEN_P)
-                Mouse_SetCursor(CURSOR_DWNARR);
-        }
-
-    Mouse_DrawCursor(MouseX(), MouseY());
 }
 
 static void PanaMouseInteract()
@@ -364,6 +304,18 @@ static void TiltMouseInteract()
         *view_X = tilt_gap;
 }
 
+static void IndexTable()
+{
+    int16_t previndx = new_render_table[0];
+
+    for (int ff = 1; ff < GAMESCREEN_H * GAMESCREEN_W; ff++)
+    {
+        int16_t curindx = new_render_table[ff];
+        new_render_table[ff] = curindx - previndx;
+        previndx = curindx;
+    }
+}
+
 void Rend_pana_SetAngle(float angle)
 {
     pana_angle = angle;
@@ -377,23 +329,6 @@ void Rend_pana_SetLinscale(float linscale)
 void Rend_pana_SetZeroPoint(int32_t point)
 {
     pana_Zero = point;
-}
-
-void Rend_SetDelay(int32_t delay)
-{
-    RenderDelay = delay;
-}
-
-void Rend_indexer()
-{
-    int32_t previndx = new_render_table[0];
-
-    for (int ff = 1; ff < GAMESCREEN_H * GAMESCREEN_W; ff++)
-    {
-        int32_t curindx = new_render_table[ff];
-        new_render_table[ff] = curindx - previndx;
-        previndx = curindx;
-    }
 }
 
 void Rend_pana_SetTable()
@@ -452,33 +387,27 @@ void Rend_pana_SetTable()
         }
     }
 
-    Rend_indexer();
+    IndexTable();
 }
 
-void Rend_SetVideoMode(int w, int h, int full, int wide)
+void Rend_SetVideoMode(int w, int h, int full)
 {
-    wide = wide >= 0 ? wide : WIDESCREEN;
     full = full >= 0 ? full : FULLSCREEN;
     w = w >= 0 ? w : WINDOW_W;
     h = h >= 0 ? h : WINDOW_H;
 
-    if (screen && (WINDOW_W == w && WINDOW_H == h && WIDESCREEN == wide && FULLSCREEN == full))
+    if (screen && (WINDOW_W == w && WINDOW_H == h && FULLSCREEN == full))
     {
         // No changes to make
         return;
     }
 
-    LOG_INFO("Changing video mode to: Size: %dx%d, Wide: %d, Full: %d\n", w, h, full, wide);
+    LOG_INFO("Changing video mode to: Size: %dx%d, Full: %d\n", w, h, full);
 
     if (CUR_GAME == GAME_ZGI)
     {
         GAMESCREEN_W = 640;
         GAMESCREEN_H = 344;
-        if (WIDESCREEN)
-        {
-            GAMESCREEN_W = 854;
-            GAMESCREEN_FLAT_X = 107;
-        }
     }
     else
     {
@@ -489,6 +418,7 @@ void Rend_SetVideoMode(int w, int h, int full, int wide)
     SDL_FreeSurface(tempbuf);
     SDL_FreeSurface(viewportbuf);
 
+    // SDL_DOUBLEBUF
     screen = SDL_SetVideoMode(w, h, 0, SDL_SWSURFACE | (full ? SDL_FULLSCREEN : SDL_RESIZABLE));
     tempbuf = Rend_CreateSurface(GAMESCREEN_W, GAMESCREEN_H, 0);
     viewportbuf = Rend_CreateSurface(GAMESCREEN_W, GAMESCREEN_H, 0);
@@ -496,25 +426,22 @@ void Rend_SetVideoMode(int w, int h, int full, int wide)
     WINDOW_W = screen->w;
     WINDOW_H = screen->h;
     FULLSCREEN = (screen->flags & SDL_FULLSCREEN) != 0;
-    WIDESCREEN = GAMESCREEN_W > 640;
     GAMESCREEN_X = (WINDOW_W - GAMESCREEN_W) / 2;
     GAMESCREEN_Y = (WINDOW_H - GAMESCREEN_H) / 2;
-    GAMESCREEN_FLAT_X = 0;
     GAMESCREEN_P = 60;
 }
 
-void Rend_InitGraphics(int full, int wide)
+void Rend_InitGraphics(int full)
 {
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
     {
         Z_PANIC("Unable to init SDL: %s\n", SDL_GetError());
     }
 
-    sublist = CreateMList();
     view_X = GetDirectgVarInt(SLOT_VIEW_POS);
     tilt_gap = GAMESCREEN_H_2;
 
-    Rend_SetVideoMode(640, 480, full, wide);
+    Rend_SetVideoMode(640, 480, full);
 
     char buffer[128];
     sprintf(buffer, "Zorkmid: %s [build: " __DATE__ " " __TIME__ "]", GetGameTitle());
@@ -523,7 +450,7 @@ void Rend_InitGraphics(int full, int wide)
     TTF_Init();
 }
 
-bool Rend_LoadGamescr(const char *file)
+void Rend_LoadGamescr(const char *file)
 {
     if (scrbuf)
         SDL_FreeSurface(scrbuf);
@@ -532,18 +459,33 @@ bool Rend_LoadGamescr(const char *file)
 
     Rend_FillRect(tempbuf, NULL, 0, 0, 0);
 
-    if (!scrbuf) // no errors if no screen
+    if (!scrbuf)
     {
         LOG_WARN("Loader_LoadGFX(%s) failed: %s\n", file, SDL_GetError());
         scrbuf = Rend_CreateSurface(GAMESCREEN_W, GAMESCREEN_H, 0);
     }
 
-    if (Renderer != RENDER_TILT)
-        pana_PanaWidth = scrbuf->w;
-    else
-        pana_PanaWidth = scrbuf->h;
+    pana_PanaWidth = (Renderer == RENDER_TILT) ? scrbuf->h : scrbuf->w;
+}
 
-    return true;
+void Rend_SetRenderer(int type)
+{
+    Renderer = type;
+    pana_ReversePana = false;
+    Rend_tilt_SetLinscale(0.65);
+    Rend_tilt_SetAngle(60.0);
+    Rend_pana_SetLinscale(0.55);
+    Rend_pana_SetAngle(60.0);
+}
+
+int Rend_GetRenderer()
+{
+    return Renderer;
+}
+
+void Rend_SetDelay(int32_t delay)
+{
+    render_delay = delay;
 }
 
 bool Rend_MouseInGamescr()
@@ -558,7 +500,7 @@ int Rend_GetMouseGameX()
     switch (Renderer)
     {
     case RENDER_FLAT:
-        return MouseX() - GAMESCREEN_X - GAMESCREEN_FLAT_X;
+        return MouseX() - GAMESCREEN_X;
 
     case RENDER_PANA:
         tmp = MouseY() - GAMESCREEN_Y;
@@ -658,20 +600,18 @@ int Rend_GetPanaWidth()
     return pana_PanaWidth;
 }
 
-void Rend_RenderFunc()
+void Rend_RenderFrame()
 {
-    if (RenderDelay > 0)
+    if (render_delay > 0)
     {
-        RenderDelay--;
+        render_delay--;
         return;
     }
 
-    Rend_FillRect(screen, NULL, 0, 0, 0);
-
-    //pre-rendered
+    // Pre-rendered
     if (Renderer == RENDER_FLAT)
     {
-        Rend_BlitSurfaceXY(scrbuf, tempbuf, GAMESCREEN_FLAT_X, 0);
+        Rend_BlitSurfaceXY(scrbuf, tempbuf, 0, 0);
     }
     else if (Renderer == RENDER_PANA)
     {
@@ -690,10 +630,10 @@ void Rend_RenderFunc()
         Rend_BlitSurfaceXY(scrbuf, tempbuf, 0, GAMESCREEN_H_2 - *view_X);
     }
 
-    //draw dynamic controls
+    // Draw dynamic controls
     Controls_Draw();
 
-    //effect-processor
+    // Process effects
     for (int i = 0; i < EFFECTS_MAX_CNT; i++)
     {
         if (Effects[i].type == EFFECT_WAVE)
@@ -704,19 +644,19 @@ void Rend_RenderFunc()
             Rend_EF_9_Draw(&Effects[i]);
     }
 
-    //Apply renderer distortion
+    // Apply renderer distortion
     if (Renderer == RENDER_FLAT)
     {
         Rend_BlitSurfaceXY(tempbuf, viewportbuf, 0, 0);
     }
-    else if (Renderer == RENDER_PANA || RenderDelay == RENDER_TILT)
+    else if (Renderer == RENDER_PANA || Renderer == RENDER_TILT)
     {
         SDL_LockSurface(tempbuf);
         SDL_LockSurface(viewportbuf);
 
         uint16_t *nww = (uint16_t *)viewportbuf->pixels;
         uint16_t *old = (uint16_t *)tempbuf->pixels;
-        int32_t *ofs = new_render_table;
+        int16_t *ofs = new_render_table;
         for (int ai = 0; ai < GAMESCREEN_H * GAMESCREEN_W; ai++)
         {
             old += *ofs;
@@ -729,73 +669,16 @@ void Rend_RenderFunc()
         SDL_UnlockSurface(viewportbuf);
     }
 
-    //output viewport
-    Rend_BlitSurfaceToScreen(viewportbuf, GAMESCREEN_X, GAMESCREEN_Y);
-
-    Rend_ProcessSubs();
+    SDL_Rect rect = {GAMESCREEN_X, GAMESCREEN_Y, 0, 0};
+    Rend_BlitSurface(tempbuf, NULL, screen, &rect);
 
     Menu_Draw();
 
-    ProcessCursor();
-}
+    Text_DrawSubtitles();
 
-subrect_t *Rend_CreateSubRect(int x, int y, int w, int h)
-{
-    subrect_t *tmp = NEW(subrect_t);
+    Mouse_DrawCursor();
 
-    tmp->h = h;
-    tmp->w = w;
-    tmp->x = x;
-    tmp->y = y;
-    tmp->todelete = false;
-    tmp->id = subid++;
-    tmp->timer = -1;
-    tmp->img = Rend_CreateSurface(w, h, 0);
-
-    AddToMList(sublist, tmp);
-
-    return tmp;
-}
-
-void Rend_DeleteSubRect(subrect_t *erect)
-{
-    erect->todelete = true;
-}
-
-void Rend_ProcessSubs()
-{
-    StartMList(sublist);
-    while (!EndOfMList(sublist))
-    {
-        subrect_t *subrec = (subrect_t *)DataMList(sublist);
-
-        if (subrec->timer >= 0)
-        {
-            subrec->timer -= Game_GetDTime();
-            if (subrec->timer < 0)
-                subrec->todelete = true;
-        }
-
-        if (subrec->todelete)
-        {
-            SDL_FreeSurface(subrec->img);
-            free(subrec);
-            DeleteCurrent(sublist);
-        }
-        else
-            Rend_BlitSurfaceToScreen(
-                subrec->img,
-                subrec->x + GAMESCREEN_X + GAMESCREEN_FLAT_X,
-                subrec->y + GAMESCREEN_Y - 5);
-
-        NextMList(sublist);
-    }
-}
-
-void Rend_DelaySubDelete(subrect_t *sub, int32_t time)
-{
-    if (time > 0)
-        sub->timer = time;
+    Rend_ScreenFlip();
 }
 
 SDL_Surface *Rend_CreateSurface(int w, int h, int rgb_mode)
@@ -891,7 +774,7 @@ void Rend_tilt_SetTable()
         }
     }
 
-    Rend_indexer();
+    IndexTable();
 }
 
 action_res_t *Rend_CreateNode(int type)
@@ -1572,22 +1455,6 @@ float Rend_GetGamma()
 void Rend_SetColorKey(SDL_Surface *surf, uint8_t r, uint8_t g, uint8_t b)
 {
     SDL_SetColorKey(surf, SDL_SRCCOLORKEY, SDL_MapRGB(surf->format, r, g, b));
-}
-
-void Rend_DrawImageToGameScreen(SDL_Surface *scr, int x, int y)
-{
-    SDL_Rect rect = {x, y, 0, 0};
-
-    if (Renderer == RENDER_TILT)
-        rect.y = y + GAMESCREEN_H_2 - *view_X;
-
-    Rend_BlitSurface(scr, NULL, tempbuf, &rect);
-}
-
-void Rend_BlitSurfaceToScreen(SDL_Surface *surf, int x, int y)
-{
-    SDL_Rect rect = {x, y, 0, 0};
-    Rend_BlitSurface(surf, NULL, screen, &rect);
 }
 
 void Rend_BlitSurfaceXY(SDL_Surface *surf, SDL_Surface *dest, int x, int y)

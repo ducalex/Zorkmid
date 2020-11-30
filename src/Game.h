@@ -54,10 +54,10 @@ typedef struct
     int16_t X;
 } Location_t;
 
-void GameLoop();
-void GameUpdate();
-void GameQuit();
-void GameInit(const char *path);
+void Game_Loop();
+void Game_Update();
+void Game_Quit();
+void Game_Init(const char *path);
 void Game_Relocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X);
 
 const char *Game_GetPath();

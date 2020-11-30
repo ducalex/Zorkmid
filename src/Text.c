@@ -1,5 +1,7 @@
 #include "System.h"
 
+static MList *sublist = NULL;
+
 static SDL_Surface *RenderUTF8(TTF_Font *fnt, const char *text, txt_style_t *style)
 {
     Text_SetStyle(fnt, style);
@@ -324,6 +326,12 @@ static int32_t getglyphwidth(TTF_Font *fnt, uint16_t chr)
     return advice;
 }
 
+void Text_Init()
+{
+    sublist = CreateMList();
+    // Load all fonts here
+}
+
 void Text_InitStyle(txt_style_t *style)
 {
     if (style == NULL)
@@ -501,7 +509,7 @@ void Text_DrawInOneLine(const char *text, SDL_Surface *dst)
 
             if (ret & TXT_RET_HASSTBOX)
             {
-                char buf3[MINIBUFSZ];
+                char buf3[MINIBUFSIZE];
                 sprintf(buf3, "%d", GetgVarInt(style.statebox));
                 strcat(buf, buf3);
                 txtpos += strlen(buf3);
@@ -660,7 +668,7 @@ int Text_ProcessTTYText(action_res_t *nod)
         return NODE_RET_NO;
 
     ttytext_t *tty = nod->nodes.tty_text;
-    char buf[MINIBUFSZ];
+    char buf[MINIBUFSIZE];
 
     tty->nexttime -= Game_GetDTime();
 
@@ -785,7 +793,7 @@ subtitles_t *Text_LoadSubtitles(char *filename)
         {
             int x, y, x2, y2;
             sscanf(str2, "%d %d %d %d", &x, &y, &x2, &y2);
-            tmp->SubRect = Rend_CreateSubRect(x, y, x2 - x + 1, y2 - y + 1);
+            tmp->SubRect = Text_CreateSubRect(x, y, x2 - x + 1, y2 - y + 1);
         }
         else if (str_starts_with(str1, "TextFile"))
         {
@@ -857,9 +865,72 @@ void Text_DeleteSubtitles(subtitles_t *sub)
     {
         for (int i = 0; i < sub->count; i++)
             free(sub->txt[i]);
+        free(sub->txt);
     }
-    Rend_DeleteSubRect(sub->SubRect);
-    free(sub->txt);
+    Text_DeleteSubRect(sub->SubRect);
     free(sub->subs);
     free(sub);
+}
+
+subrect_t *Text_CreateSubRect(int x, int y, int w, int h)
+{
+    static int subid = 0;
+
+    subrect_t *tmp = NEW(subrect_t);
+
+    tmp->h = h;
+    tmp->w = w;
+    tmp->x = x;
+    tmp->y = y;
+    tmp->todelete = false;
+    tmp->id = subid++;
+    tmp->timer = -1;
+    tmp->img = Rend_CreateSurface(w, h, 0);
+
+    AddToMList(sublist, tmp);
+
+    return tmp;
+}
+
+void Text_DeleteSubRect(subrect_t *rect)
+{
+    rect->todelete = true;
+}
+
+void Text_DrawSubtitles()
+{
+    SDL_Surface *screen = Rend_GetScreen();
+
+    SDL_Rect msg_rect = {
+        0, GAMESCREEN_Y + GAMESCREEN_H,
+        WINDOW_W, WINDOW_H - (GAMESCREEN_Y + GAMESCREEN_H)
+    };
+    Rend_FillRect(screen, &msg_rect, 0, 0, 0);
+
+    StartMList(sublist);
+    while (!EndOfMList(sublist))
+    {
+        subrect_t *subrec = (subrect_t *)DataMList(sublist);
+
+        if (subrec->timer >= 0)
+        {
+            subrec->timer -= Game_GetDTime();
+            if (subrec->timer < 0)
+                subrec->todelete = true;
+        }
+
+        if (subrec->todelete)
+        {
+            SDL_FreeSurface(subrec->img);
+            free(subrec);
+            DeleteCurrent(sublist);
+        }
+        else
+        {
+            SDL_Rect rect = {subrec->x + GAMESCREEN_X, subrec->y + GAMESCREEN_Y - 5, 0, 0};
+            Rend_BlitSurface(subrec->img, NULL, screen, &rect);
+        }
+
+        NextMList(sublist);
+    }
 }

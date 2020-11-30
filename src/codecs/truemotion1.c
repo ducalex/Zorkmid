@@ -441,35 +441,35 @@ int truemotion1_decode_header(TrueMotion1Context *s)
     //if (av_image_check_size(s->w, s->h, 0, s->avctx) < 0)
     //return -1;
 
-    if (s->w != s->av->header.width || s->h != s->av->header.height ||
-        new_pix_fmt != s->av->pix_fmt)
+    if (s->w != s->av->width || s->h != s->av->height ||
+        new_pix_fmt != s->av->pixel_format)
     {
         //        if (s->frame.data[0])
         //            s->av->release_buffer(s->avctx, &s->frame);
         //s->avctx->sample_aspect_ratio = (AVRational){ 1 << width_shift, 1 };
-        s->av->pix_fmt = new_pix_fmt;
+        s->av->pixel_format = new_pix_fmt;
         avi_set_dem(s->av, s->w, s->h);
 
-        s->frame.data[0] = (uint8_t *)s->av->frame;
+        s->frame.data[0] = (uint8_t *)s->av->framebuffer;
         s->frame.linesize[0] = s->w * new_pix_fmt / 8;
 
         free(s->vert_pred);
-        s->vert_pred = (uint32_t *)calloc(s->av->header.width, sizeof(unsigned int));
-        s->vert_pred_size = s->av->header.width * sizeof(unsigned int);
+        s->vert_pred = (uint32_t *)calloc(s->av->width, sizeof(unsigned int));
+        s->vert_pred_size = s->av->width * sizeof(unsigned int);
         //av_fast_malloc(&s->vert_pred, &s->vert_pred_size, s->avctx->width * sizeof(unsigned int));
     }
 
     /* There is 1 change bit per 4 pixels, so each change byte represents
      * 32 pixels; divide width by 4 to obtain the number of change bits and
      * then round up to the nearest byte. */
-    s->mb_change_bits_row_size = ((s->av->header.width >> (2 - width_shift)) + 7) >> 3;
+    s->mb_change_bits_row_size = ((s->av->width >> (2 - width_shift)) + 7) >> 3;
 
     if ((header.deltaset != s->last_deltaset) || (header.vectable != s->last_vectable))
     {
         if (compression_types[header.compression].algorithm == ALGO_RGB24H)
             gen_vector_table24(s, sel_vector_table);
         else
-            //if (s->av->pix_fmt == 16)
+            //if (s->av->pixel_format == 16)
             gen_vector_table15(s, sel_vector_table);
         //else
         //   gen_vector_table16(s, sel_vector_table);
@@ -486,7 +486,7 @@ int truemotion1_decode_header(TrueMotion1Context *s)
     {
         /* one change bit per 4x4 block */
         s->index_stream = s->mb_change_bits +
-                          (s->mb_change_bits_row_size * (s->av->header.height >> 2));
+                          (s->mb_change_bits_row_size * (s->av->height >> 2));
     }
     s->index_stream_size = s->size - (s->index_stream - s->buf);
 
@@ -502,24 +502,24 @@ int truemotion1_decode_header(TrueMotion1Context *s)
 
 int truemotion1_decode_init(avi_file_t *fil)
 {
-    fil->priv_data = calloc(sizeof(TrueMotion1Context), 1);
-    TrueMotion1Context *s = (TrueMotion1Context *)fil->priv_data;
+    fil->ctx = calloc(sizeof(TrueMotion1Context), 1);
+    TrueMotion1Context *s = (TrueMotion1Context *)fil->ctx;
 
     s->av = fil;
 
     // FIXME: it may change ?
     //    if (avctx->bits_per_sample == 24)
-    //        avctx->pix_fmt = AV_PIX_FMT_RGB24;
+    //        avctx->pixel_format = AV_PIX_FMT_RGB24;
     //    else
-    //        avctx->pix_fmt = AV_PIX_FMT_RGB555;
+    //        avctx->pixel_format = AV_PIX_FMT_RGB555;
 
     //avcodec_get_frame_defaults(&s->frame);
-    s->frame.data[0] = (uint8_t *)fil->frame;
+    s->frame.data[0] = (uint8_t *)fil->framebuffer;
 
     /* there is a vertical predictor for each pixel in a line; each vertical
      * predictor is 0 to start with */
-    s->vert_pred = (uint32_t *)calloc(s->av->header.width, sizeof(unsigned int));
-    s->vert_pred_size = s->av->header.width * sizeof(unsigned int);
+    s->vert_pred = (uint32_t *)calloc(s->av->width, sizeof(unsigned int));
+    s->vert_pred_size = s->av->width * sizeof(unsigned int);
     //av_fast_malloc(&s->vert_pred, &s->vert_pred_size, s->avctx->width * sizeof(unsigned int));
 
     return 0;
@@ -682,11 +682,11 @@ void truemotion1_decode_16bit(TrueMotion1Context *s)
     int index;
 
     /* clean out the line buffer */
-    memset(s->vert_pred, 0, s->av->header.width * sizeof(unsigned int));
+    memset(s->vert_pred, 0, s->av->width * sizeof(unsigned int));
 
     GET_NEXT_INDEX();
 
-    for (y = 0; y < s->av->header.height; y++)
+    for (y = 0; y < s->av->height; y++)
     {
 
         /* re-init variables for the next line iteration */
@@ -696,7 +696,7 @@ void truemotion1_decode_16bit(TrueMotion1Context *s)
         mb_change_index = 0;
         mb_change_byte = mb_change_bits[mb_change_index++];
         mb_change_byte_mask = 0x01;
-        pixels_left = s->av->header.width;
+        pixels_left = s->av->width;
 
         while (pixels_left > 0)
         {
@@ -822,11 +822,11 @@ void truemotion1_decode_24bit(TrueMotion1Context *s)
     int index;
 
     /* clean out the line buffer */
-    memset(s->vert_pred, 0, s->av->header.width * sizeof(unsigned int));
+    memset(s->vert_pred, 0, s->av->width * sizeof(unsigned int));
 
     GET_NEXT_INDEX();
 
-    for (y = 0; y < s->av->header.height; y++)
+    for (y = 0; y < s->av->height; y++)
     {
 
         /* re-init variables for the next line iteration */
@@ -836,7 +836,7 @@ void truemotion1_decode_24bit(TrueMotion1Context *s)
         mb_change_index = 0;
         mb_change_byte = mb_change_bits[mb_change_index++];
         mb_change_byte_mask = 0x01;
-        pixels_left = s->av->header.width;
+        pixels_left = s->av->width;
 
         while (pixels_left > 0)
         {
@@ -944,7 +944,7 @@ int truemotion1_decode_frame(avi_file_t *avctx, void *pkt, int pkt_sz)
 {
     const uint8_t *buf = (uint8_t *)pkt;
     int buf_size = pkt_sz;
-    TrueMotion1Context *s = (TrueMotion1Context *)avctx->priv_data;
+    TrueMotion1Context *s = (TrueMotion1Context *)avctx->ctx;
 
     s->buf = buf;
     s->size = buf_size;
@@ -980,7 +980,7 @@ int truemotion1_decode_frame(avi_file_t *avctx, void *pkt, int pkt_sz)
 
 int truemotion1_decode_end(avi_file_t *avctx)
 {
-    TrueMotion1Context *s = (TrueMotion1Context *)avctx->priv_data;
+    TrueMotion1Context *s = (TrueMotion1Context *)avctx->ctx;
 
     //if (s->frame.data[0])
     //avctx->release_buffer(avctx, &s->frame);

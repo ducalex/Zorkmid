@@ -172,7 +172,7 @@ static void OpenZFS(const char *file)
 
 static void FindAssets(const char *dir)
 {
-    char path[PATHBUFSIZ];
+    char path[PATHBUFSIZE];
     struct stat statbuf;
     int len = strlen(dir);
 

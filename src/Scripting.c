@@ -1,5 +1,11 @@
 #include "System.h"
 
+typedef struct
+{
+    puzzlenode_t *nod[PuzzleStack];
+    int32_t cnt;
+} StateBoxEnt_t;
+
 static int32_t VAR_SLOTS_MAX = 20000;
 static int32_t gVars[30000];
 static action_res_t *gNodes[30000];

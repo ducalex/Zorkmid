@@ -1,35 +1,43 @@
 #include "System.h"
 
-enum {
-    CURSOR_STATE_UP = 0,
-    CURSOR_STATE_DW,
-    CURSOR_STATE_CT
+#define MOUSE_UP     0
+#define MOUSE_DOWN   1
+
+static const struct
+{
+    const char *name;
+    const char *zgi;
+    const char *znem;
+} Cursors[CURSOR_MAX] = {
+    {"active",          "g0gbc011.zcr", "00act" },
+    {"arrow",           "g0gac001.zcr", "arrow" },
+    {"backward",        "g0gac021.zcr", "back"  },
+    {"downarrow",       "g0gac031.zcr", "down"  },
+    {"forward",         "g0gac041.zcr", "forw"  },
+    {"handpt",          "g0gac051.zcr", "handpt"},
+    {"handpu",          "g0gac061.zcr", "handpu"},
+    {"hdown",           "g0gac071.zcr", "hdown" },
+    {"hleft",           "g0gac081.zcr", "hleft" },
+    {"hright",          "g0gac091.zcr", "hright"},
+    {"hup",             "g0gac101.zcr", "hup"   },
+    {"idle",            "g0gac011.zcr", "00idle"},
+    {"leftarrow",       "g0gac111.zcr", "left"  },
+    {"rightarrow",      "g0gac121.zcr", "right" },
+    {"suggest_surround","g0gac131.zcr", "ssurr" },
+    {"suggest_tilt",    "g0gac141.zcr", "stilt" },
+    {"turnaround",      "g0gac151.zcr", "turn"  },
+    {"zuparrow",        "g0gac161.zcr", "up"    },
 };
 
-static const char *CurNames[] = {
-    "active", "arrow", "backward", "downarrow", "forward", "handpt",
-    "handpu", "hdown", "hleft", "hright", "hup", "idle", "leftarrow",
-    "rightarrow", "suggest_surround", "suggest_tilt", "turnaround",
-    "zuparrow"};
+static Cursor_t DefCursors[CURSOR_MAX][2];
+static Cursor_t ObjCursors[2][2];
+static Cursor_t *cursor;
 
-static const char *CurFiles_zgi[] = {
-    "g0gbc011.zcr", "g0gac001.zcr", "g0gac021.zcr", "g0gac031.zcr", "g0gac041.zcr", "g0gac051.zcr",
-    "g0gac061.zcr", "g0gac071.zcr", "g0gac081.zcr", "g0gac091.zcr", "g0gac101.zcr", "g0gac011.zcr",
-    "g0gac111.zcr", "g0gac121.zcr", "g0gac131.zcr", "g0gac141.zcr", "g0gac151.zcr", "g0gac161.zcr"};
+static int current_cursor = 0;
+static int current_obj_cursor = 0;
+static bool draw_cursor = true;
 
-static const char *CurFiles_znemesis[] = {
-    "00act", "arrow", "back", "down", "forw", "handpt", "handpu", "hdown", "hleft",
-    "hright", "hup", "00idle", "left", "right", "ssurr", "stilt", "turn", "up"};
-
-static Cursor_t DefCursors[NUM_CURSORS][CURSOR_STATE_CT];
-static Cursor_t ObjCursors[2][CURSOR_STATE_CT];
-static Cursor_t *cur;
-
-static int8_t cursor_index = 0;
-static int current_obj_cur = 0;
-static bool DrawCursor = true;
-
-static void Free_Cursor(Cursor_t *cur)
+static void FreeCursor(Cursor_t *cur)
 {
     if (cur && cur->img)
     {
@@ -38,135 +46,150 @@ static void Free_Cursor(Cursor_t *cur)
     }
 }
 
-void Mouse_LoadCursors()
+void Mouse_Init()
 {
-    char buffer[MINIBUFSZ];
+    char buffer[MINIBUFSIZE];
 
     for (int i = 0; i < 18; i++)
     {
-        Free_Cursor(&DefCursors[i][CURSOR_STATE_UP]);
+        FreeCursor(&DefCursors[i][MOUSE_UP]);
+        FreeCursor(&DefCursors[i][MOUSE_DOWN]);
 
         if (CUR_GAME == GAME_ZGI)
         {
-            Loader_LoadZCR(CurFiles_zgi[i], &DefCursors[i][CURSOR_STATE_UP]);
-            strcpy(buffer, CurFiles_zgi[i]);
+            strcpy(buffer, Cursors[i].zgi);
+            Loader_LoadZCR(buffer, &DefCursors[i][MOUSE_UP]);
             buffer[3] += 2;
-            Loader_LoadZCR(buffer, &DefCursors[i][CURSOR_STATE_DW]);
+            Loader_LoadZCR(buffer, &DefCursors[i][MOUSE_DOWN]);
         }
         else
         {
-            sprintf(buffer, "%sa.zcr", CurFiles_znemesis[i]);
-            Loader_LoadZCR(buffer, &DefCursors[i][CURSOR_STATE_UP]);
-            sprintf(buffer, "%sb.zcr", CurFiles_znemesis[i]);
-            Loader_LoadZCR(buffer, &DefCursors[i][CURSOR_STATE_DW]);
+            sprintf(buffer, "%sa.zcr", Cursors[i].znem);
+            Loader_LoadZCR(buffer, &DefCursors[i][MOUSE_UP]);
+            sprintf(buffer, "%sb.zcr", Cursors[i].znem);
+            Loader_LoadZCR(buffer, &DefCursors[i][MOUSE_DOWN]);
         }
     }
 
-    cur = &DefCursors[CURSOR_IDLE][0];
+    cursor = &DefCursors[CURSOR_IDLE][MOUSE_UP];
 }
 
-void Mouse_LoadObjCursor(int num)
+static void LoadObjCursor(int index)
 {
-    Free_Cursor(&ObjCursors[0][CURSOR_STATE_UP]);
-    Free_Cursor(&ObjCursors[0][CURSOR_STATE_DW]);
-    Free_Cursor(&ObjCursors[1][CURSOR_STATE_UP]);
-    Free_Cursor(&ObjCursors[1][CURSOR_STATE_DW]);
+    FreeCursor(&ObjCursors[0][MOUSE_UP]);
+    FreeCursor(&ObjCursors[0][MOUSE_DOWN]);
+    FreeCursor(&ObjCursors[1][MOUSE_UP]);
+    FreeCursor(&ObjCursors[1][MOUSE_DOWN]);
 
-    current_obj_cur = num;
+    current_obj_cursor = index;
 
-    char buf[MINIBUFSZ];
+    char buf[MINIBUFSIZE];
 
     if (CUR_GAME == GAME_ZGI)
     {
-        sprintf(buf, "g0b%cc%2.2x1.zcr", 'a', current_obj_cur);
-        Loader_LoadZCR(buf, &ObjCursors[0][CURSOR_STATE_UP]);
-        sprintf(buf, "g0b%cc%2.2x1.zcr", 'b', current_obj_cur);
-        Loader_LoadZCR(buf, &ObjCursors[1][CURSOR_STATE_UP]);
-        sprintf(buf, "g0b%cc%2.2x1.zcr", 'c', current_obj_cur);
-        Loader_LoadZCR(buf, &ObjCursors[0][CURSOR_STATE_DW]);
-        sprintf(buf, "g0b%cc%2.2x1.zcr", 'd', current_obj_cur);
-        Loader_LoadZCR(buf, &ObjCursors[1][CURSOR_STATE_DW]);
+        sprintf(buf, "g0b%cc%2.2x1.zcr", 'a', current_obj_cursor);
+        Loader_LoadZCR(buf, &ObjCursors[0][MOUSE_UP]);
+        sprintf(buf, "g0b%cc%2.2x1.zcr", 'b', current_obj_cursor);
+        Loader_LoadZCR(buf, &ObjCursors[1][MOUSE_UP]);
+        sprintf(buf, "g0b%cc%2.2x1.zcr", 'c', current_obj_cursor);
+        Loader_LoadZCR(buf, &ObjCursors[0][MOUSE_DOWN]);
+        sprintf(buf, "g0b%cc%2.2x1.zcr", 'd', current_obj_cursor);
+        Loader_LoadZCR(buf, &ObjCursors[1][MOUSE_DOWN]);
     }
     else
     {
-        sprintf(buf, "%2.2didle%c.zcr", current_obj_cur, 'a');
-        Loader_LoadZCR(buf, &ObjCursors[0][CURSOR_STATE_UP]);
-        sprintf(buf, "%2.2didle%c.zcr", current_obj_cur, 'b');
-        Loader_LoadZCR(buf, &ObjCursors[0][CURSOR_STATE_DW]);
-        sprintf(buf, "%2.2dact%c.zcr", current_obj_cur, 'a');
-        Loader_LoadZCR(buf, &ObjCursors[1][CURSOR_STATE_UP]);
-        sprintf(buf, "%2.2dact%c.zcr", current_obj_cur, 'b');
-        Loader_LoadZCR(buf, &ObjCursors[1][CURSOR_STATE_DW]);
+        sprintf(buf, "%2.2didle%c.zcr", current_obj_cursor, 'a');
+        Loader_LoadZCR(buf, &ObjCursors[0][MOUSE_UP]);
+        sprintf(buf, "%2.2didle%c.zcr", current_obj_cursor, 'b');
+        Loader_LoadZCR(buf, &ObjCursors[0][MOUSE_DOWN]);
+        sprintf(buf, "%2.2dact%c.zcr", current_obj_cursor, 'a');
+        Loader_LoadZCR(buf, &ObjCursors[1][MOUSE_UP]);
+        sprintf(buf, "%2.2dact%c.zcr", current_obj_cursor, 'b');
+        Loader_LoadZCR(buf, &ObjCursors[1][MOUSE_DOWN]);
     }
 }
 
-void Mouse_SetCursor(int indx)
+void Mouse_SetCursor(int index)
 {
-    int8_t stt = CURSOR_STATE_UP;
+    int state = MouseDown(MOUSE_BTN_LEFT|MOUSE_BTN_RIGHT) ? MOUSE_DOWN : MOUSE_UP;
 
-    if (MouseDown(MOUSE_BTN_LEFT) || MouseDown(MOUSE_BTN_RIGHT))
-        stt = CURSOR_STATE_DW;
-
-    if (indx == CURSOR_OBJ_0)
-        cur = &ObjCursors[0][stt];
-    else if (indx == CURSOR_OBJ_1)
-        cur = &ObjCursors[1][stt];
+    if (index == CURSOR_OBJ_0)
+        cursor = &ObjCursors[0][state];
+    else if (index == CURSOR_OBJ_1)
+        cursor = &ObjCursors[1][state];
     else
-        cur = &DefCursors[indx][stt];
+        cursor = &DefCursors[index][state];
 
-    cursor_index = indx;
+    current_cursor = index;
 }
 
-Cursor_t *Mouse_GetCursor(int indx)
+bool Mouse_IsCurrentCur(int index)
 {
-    int8_t stt = CURSOR_STATE_UP;
-
-    if (MouseDown(MOUSE_BTN_LEFT) || MouseDown(MOUSE_BTN_RIGHT))
-        stt = CURSOR_STATE_DW;
-
-    if (indx == CURSOR_OBJ_0)
-        return &ObjCursors[0][stt];
-    else if (indx == CURSOR_OBJ_1)
-        return &ObjCursors[1][stt];
-    else
-        return &DefCursors[indx][stt];
+    return index == current_cursor;
 }
 
-bool Mouse_IsCurrentCur(int indx)
+void Mouse_DrawCursor()
 {
-    return indx == cursor_index;
-}
-
-void Mouse_DrawCursor(int x, int y)
-{
-    if (cur && DrawCursor)
+    if (GetgVarInt(SLOT_INVENTORY_MOUSE) != 0)
     {
-        Rend_BlitSurfaceXY(cur->img, Rend_GetScreen(), x - cur->ox, y - cur->oy);
+        if (GetgVarInt(SLOT_INVENTORY_MOUSE) != current_obj_cursor)
+            LoadObjCursor(GetgVarInt(SLOT_INVENTORY_MOUSE));
+
+        if (Mouse_IsCurrentCur(CURSOR_ACTIVE) || Mouse_IsCurrentCur(CURSOR_HANDPU) || Mouse_IsCurrentCur(CURSOR_IDLE))
+        {
+            if (Mouse_IsCurrentCur(CURSOR_ACTIVE) || Mouse_IsCurrentCur(CURSOR_HANDPU))
+                Mouse_SetCursor(CURSOR_OBJ_1);
+            else
+                Mouse_SetCursor(CURSOR_OBJ_0);
+        }
+    }
+
+    if (Rend_MouseInGamescr())
+    {
+        if (Rend_GetRenderer() == RENDER_PANA)
+        {
+            if (MouseX() < GAMESCREEN_X + GAMESCREEN_P)
+                Mouse_SetCursor(CURSOR_LEFTARROW);
+            if (MouseX() > GAMESCREEN_X + GAMESCREEN_W - GAMESCREEN_P)
+                Mouse_SetCursor(CURSOR_RIGHTARROW);
+        }
+
+        if (Rend_GetRenderer() == RENDER_TILT)
+        {
+            if (MouseY() < GAMESCREEN_Y + GAMESCREEN_P)
+                Mouse_SetCursor(CURSOR_ZUPARROW);
+            if (MouseY() > GAMESCREEN_Y + GAMESCREEN_H - GAMESCREEN_P)
+                Mouse_SetCursor(CURSOR_DOWNARROW);
+        }
+    }
+
+    if (cursor && draw_cursor)
+    {
+        Rend_BlitSurfaceXY(
+            cursor->img,
+            Rend_GetScreen(),
+            MouseX() - cursor->ox,
+            MouseY() - cursor->oy);
     }
 }
 
 int Mouse_GetCursorIndex(char *name)
 {
-    for (int i = 0; i < NUM_CURSORS; i++)
-        if (str_equals(name, CurNames[i]))
+    for (int i = 0; i < CURSOR_MAX; i++)
+        if (str_equals(name, Cursors[i].name))
             return i;
 
     return CURSOR_IDLE;
 }
 
-int Mouse_GetCurrentObjCur()
-{
-    return current_obj_cur;
-}
-
 void Mouse_ShowCursor()
 {
-    DrawCursor = true;
+    draw_cursor = true;
 }
 
 void Mouse_HideCursor()
 {
-    DrawCursor = false;
+    draw_cursor = false;
 }
 
 bool Mouse_InRect(int x, int y, int w, int h)
@@ -178,30 +201,20 @@ int Mouse_GetAngle(int x, int y, int x2, int y2) //not exact but near and fast
 {
     if (x == x2 && y == y2)
         return -1;
-    else if (x2 == x)
-    {
-        if (y > y2)
-            return 90;
-        else
-            return 270;
-    }
-    else if (y2 == y)
-    {
-        if (x < x2)
-            return 0;
-        else
-            return 180;
-    }
+
+    if (x2 == x)
+        return (y > y2) ? 90 : 270;
+
+    if (y2 == y)
+        return (x < x2) ? 0 : 180;
 
     // get angle in range (-90, 90) using arctangens
-    int16_t dist_x = x2 - x;
-    int16_t dist_y = y2 - y;
-    int16_t angle = atan(dist_y / (float)abs(dist_x)) * 57;
-
-    /* *(mul)57 ~ 180/3.1415 */
+    int dist_x = x2 - x;
+    int dist_y = y2 - y;
+    int angle = atan(dist_y / (float)abs(dist_x)) * 57;
 
     // do quarter modifications
-    int16_t quarter_index = (int16_t)(dist_x < 0) | ((int16_t)(dist_y > 0) << 1);
+    int quarter_index = (int)(dist_x < 0) | ((int)(dist_y > 0) << 1);
 
     switch (quarter_index)
     {

@@ -1,5 +1,14 @@
 #include "System.h"
 
+typedef struct
+{
+    int (*func)(char *, int, pzllst_t *);
+    char action[32];
+    char *param;
+    puzzlenode_t *owner;
+    int slot;
+} func_node_t;
+
 static void DeletePuzzleNode(puzzlenode_t *nod)
 {
     LOG_DEBUG("Deleting Puzzle #%d\n", nod->slot);

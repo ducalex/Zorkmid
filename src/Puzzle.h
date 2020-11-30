@@ -11,15 +11,6 @@ typedef struct
 
 typedef struct
 {
-    int (*func)(char *, int, pzllst_t *);
-    char action[32];
-    char *param;
-    puzzlenode_t *owner;
-    int slot;
-} func_node_t;
-
-typedef struct
-{
     int32_t slot1;
     int32_t slot2;
     uint8_t oper;

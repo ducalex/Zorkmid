@@ -143,16 +143,14 @@ void Anim_Load(animnode_t *nod, char *filename, int u1, int u2, int32_t mask, in
     {
         nod->anim_avi = NEW(anim_avi_t);
         nod->anim_avi->av = avi_openfile(filename, Rend_GetRenderer() == RENDER_PANA);
+        nod->anim_avi->lastfrm = -1;
 
         if (nod->framerate == 0)
-            nod->framerate = nod->anim_avi->av->header.mcrSecPframe / 1000; //~15fps
+            nod->framerate = nod->anim_avi->av->mcrSecPframe / 1000; //~15fps
 
-        nod->frames = nod->anim_avi->av->header.frames;
+        nod->frames = nod->anim_avi->av->frames;
         nod->rel_h = nod->anim_avi->av->w;
         nod->rel_w = nod->anim_avi->av->h;
-
-        nod->anim_avi->img = Rend_CreateSurface(nod->rel_w, nod->rel_h, 0);
-        nod->anim_avi->lastfrm = -1;
     }
     else if (str_ends_with(filename, ".rlf"))
     {
@@ -185,24 +183,7 @@ void Anim_Process(animnode_t *mnod)
 
     if (mnod->pos < mnod->end)
     {
-        if (mnod->anim_avi)
-        {
-            avi_renderframe(mnod->anim_avi->av, mnod->pos);
-            avi_blit(mnod->anim_avi->av, mnod->anim_avi->img);
-
-            SDL_Rect rect = {mnod->x, mnod->y, mnod->w, mnod->h};
-            Rend_BlitSurface(mnod->anim_avi->img, NULL, Rend_GetLocationScreenImage(), &rect);
-        }
-        else if (mnod->anim_rlf)
-        {
-            Rend_BlitSurfaceXY(
-                mnod->anim_rlf->img[mnod->pos],
-                Rend_GetLocationScreenImage(),
-                mnod->x,
-                mnod->y);
-        }
-
-        mnod->pos++;
+        Anim_RenderFrame(mnod, mnod->x, mnod->y, mnod->w, mnod->h, mnod->pos++);
     }
 
     if (mnod->pos >= mnod->end)
@@ -250,23 +231,23 @@ void Anim_RenderFrame(animnode_t *mnod, int x, int y, int w, int h, int frame)
     if (!mnod)
         return;
 
+    SDL_Rect rect = {x, y, w, h};
+    SDL_Surface *surf = NULL;
+
     if (mnod->anim_avi)
     {
         if (mnod->anim_avi->lastfrm != frame)
-        {
             avi_renderframe(mnod->anim_avi->av, frame);
-            avi_blit(mnod->anim_avi->av, mnod->anim_avi->img);
-        }
 
         mnod->anim_avi->lastfrm = frame;
-
-        SDL_Rect rect = {x, y, w, h};
-        Rend_BlitSurface(mnod->anim_avi->img, NULL, Rend_GetLocationScreenImage(), &rect);
+        surf = mnod->anim_avi->av->surf;
     }
     else if (mnod->anim_rlf)
     {
-        Rend_BlitSurfaceXY(mnod->anim_rlf->img[frame], Rend_GetLocationScreenImage(), x, y);
+        surf = mnod->anim_rlf->img[frame];
     }
+
+    Rend_BlitSurface(surf, NULL, Rend_GetLocationScreenImage(), &rect);
 }
 
 void Anim_DeleteAnimImage(anim_surf_t *anim)
@@ -286,9 +267,6 @@ void Anim_DeleteAnim(animnode_t *nod)
 {
     if (nod->anim_avi)
     {
-        if (nod->anim_avi->img)
-            SDL_FreeSurface(nod->anim_avi->img);
-
         avi_close(nod->anim_avi->av);
         free(nod->anim_avi);
     }

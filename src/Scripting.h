@@ -112,12 +112,6 @@
 #define NODE_RET_DELETE 1
 #define NODE_RET_NO 2
 
-typedef struct
-{
-    puzzlenode_t *nod[PuzzleStack];
-    int32_t cnt;
-} StateBoxEnt_t;
-
 typedef struct pzllst
 {
     char name[32];

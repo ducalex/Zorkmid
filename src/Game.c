@@ -11,16 +11,14 @@ static char *GamePath = "./";
 
 static const char **GameStrings;
 
-static uint32_t LastTick = 0;
-static uint32_t DeltaTime = 0;
-
-static bool beat = false;   // Indicates new Tick
-static uint64_t reltime = 0; // Realtime ticks for calculate game ticks
-static int frame_time = 0;
-
-static uint32_t time = 0;
-static int32_t frames = 0;
-static int32_t fps = 1;
+static uint32_t timer_last = 0;
+static uint32_t timer_delta = 0;
+static uint32_t timer_beat = false;
+static uint32_t timer_next_beat = 0;
+static uint32_t frame_time = 0;
+static uint32_t fps_timer = 0;
+static uint32_t fps_count = 0;
+static uint32_t fps_latch = 1;
 
 /* Input variables */
 static bool KeyHits[SDLK_LAST]; // Array with hitted keys (once per press)
@@ -36,59 +34,60 @@ static bool M_dbl_clk = false;
 //Resets game timer and set next realtime point to incriment game timer
 static void TimerInit(float throttle)
 {
-    beat = false;
-    frames = 0;
-    fps = 1;
     frame_time = ceil((1000.0 - (float)(DELAY << 1)) / (throttle));
-    reltime = Game_GetTime() + frame_time;
+    timer_last = Game_GetTime();
+    timer_next_beat = timer_last + frame_time;
+    timer_beat = false;
+    fps_timer = timer_last + 1000;
+    fps_count = 0;
+    fps_latch = 1;
 }
 
 //Process game timer.
-static void TimerTick()
+static void TimerUpdate()
 {
     uint32_t cur_time = Game_GetTime();
 
-    beat = reltime < cur_time; // New tick
-    if (beat)
-        reltime = cur_time + frame_time;
+    timer_beat = timer_next_beat < cur_time;
+    if (timer_next_beat < cur_time)
+        timer_next_beat = cur_time + frame_time;
 
     Game_Delay(DELAY);
 
+    // int sleep_until = timer_last + frame_time;
+    // while (Game_GetTime() < sleep_until && !SDL_PollEvent(NULL))
+    // {
+    //     Game_Delay(2);
+    // }
+
     cur_time = Game_GetTime();
 
-    //
-    if (LastTick != 0)
-        DeltaTime = cur_time - LastTick;
-    LastTick = cur_time;
+    timer_delta = cur_time - timer_last;
+    timer_last = cur_time;
 
-    // FPS
-    if (cur_time > time)
+    if (cur_time > fps_timer)
     {
-        fps = frames;
-        if (fps == 0)
-            fps = 1;
-        frames = 0;
-        time = cur_time + 1000;
+        fps_latch = fps_count ?: 1;
+        fps_count = 0;
+        fps_timer = cur_time + 1000;
     }
-    frames++;
+    fps_count++;
 }
 
 //Resturn true if new tick appeared
 bool Game_GetBeat()
 {
-    return beat;
+    return timer_beat;
 }
 
 uint32_t Game_GetDTime()
 {
-    if (DeltaTime == 0)
-        DeltaTime = 1;
-    return DeltaTime;
+    return (timer_delta == 0 || timer_delta > 1000) ? 1 : timer_delta;
 }
 
 float Game_GetFps()
 {
-    return fps;
+    return fps_latch;
 }
 
 void FlushKeybKey(SDLKey key)
@@ -355,17 +354,18 @@ void Game_Relocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X)
     }
 }
 
-void GameInit(const char *path)
+void Game_Init(const char *path)
 {
     SetGamePath(path);
     Loader_Init(path);
-    LoadGameStrings();
-    Mouse_LoadCursors();
-    Menu_LoadGraphics();
-
+    Mouse_Init();
+    Text_Init();
+    Menu_Init();
     ScrSys_Init();
-    ScrSys_LoadScript(GetUni(), "universe.scr", false, NULL);
 
+    LoadGameStrings();
+
+    ScrSys_LoadScript(GetUni(), "universe.scr", false, NULL);
     ScrSys_ChangeLocation(InitWorld, InitRoom, InitNode, InitView, 0, true);
 
     TimerInit(35.0);
@@ -383,7 +383,6 @@ void GameInit(const char *path)
         SetDirectgVarInt(SLOT_PANAROTATE_SPEED, 570);
     if (GetgVarInt(SLOT_KBD_ROTATE_SPEED) == 0)
         SetDirectgVarInt(SLOT_KBD_ROTATE_SPEED, 60);
-
     //\Hack
 }
 
@@ -507,7 +506,7 @@ void EasterEggsAndDebug()
     }
 }
 
-void GameLoop()
+void Game_Loop()
 {
     Mouse_SetCursor(CURSOR_IDLE);
 
@@ -561,7 +560,7 @@ void GameLoop()
             Controls_ProcessList(GetControlsList());
 
         if (!ScrSys_BreakExec())
-            Rend_RenderFunc();
+            Rend_RenderFrame();
     }
 
     if (NeedToLoadScript)
@@ -597,22 +596,20 @@ void GameLoop()
             if (Menu_GetVal() & MENU_BAR_EXIT)
                 game_try_quit();
     }
-
-    Rend_ScreenFlip();
 }
 
-void GameQuit()
+void Game_Quit()
 {
     SDL_SetGamma(1.0, 1.0, 1.0);
     SDL_Quit();
     exit(0);
 }
 
-void GameUpdate()
+void Game_Update()
 {
     SDL_Event event;
 
-    TimerTick();
+    TimerUpdate();
     FlushKeyHits();
 
     while (SDL_PollEvent(&event))
@@ -620,10 +617,10 @@ void GameUpdate()
         switch (event.type)
         {
         case SDL_QUIT:
-            GameQuit();
+            Game_Quit();
             break;
         case SDL_VIDEORESIZE:
-            Rend_SetVideoMode(event.resize.w, event.resize.h, -1, -1);
+            Rend_SetVideoMode(event.resize.w, event.resize.h, -1);
             break;
         case SDL_KEYDOWN:
             SetKeyHit(event.key.keysym.sym);
@@ -634,32 +631,28 @@ void GameUpdate()
     UpdateKeyboard();
 
     if ((KeyDown(SDLK_RALT) || KeyDown(SDLK_LALT)) && KeyHit(SDLK_RETURN))
-        Rend_SetVideoMode(640, 480, !FULLSCREEN, -1);
+        Rend_SetVideoMode(640, 480, !FULLSCREEN);
 }
 
 void game_timed_message(int32_t milsecs, const char *str)
 {
-    subrect_t *zzz = Rend_CreateSubRect(0, GAMESCREEN_H, GAMESCREEN_W, 68);
+    subrect_t *zzz = Text_CreateSubRect(0, GAMESCREEN_H, GAMESCREEN_W, 68);
     Text_DrawInOneLine(str, zzz->img);
-    Rend_DelaySubDelete(zzz, milsecs);
+    zzz->timer = milsecs;
 }
 
 void game_timed_debug_message(int32_t milsecs, const char *str)
 {
-    int32_t tmp_up = 40;
-    if (tmp_up < GAMESCREEN_Y)
-        tmp_up = GAMESCREEN_Y;
-    subrect_t *zzz = Rend_CreateSubRect(0, 0, GAMESCREEN_W, tmp_up);
+    subrect_t *zzz = Text_CreateSubRect(0, 0, GAMESCREEN_W, 20);
     Text_DrawInOneLine(str, zzz->img);
-    Rend_DelaySubDelete(zzz, milsecs);
+    zzz->timer = milsecs;
 }
 
 void game_delay_message(int32_t milsecs, const char *str)
 {
-    subrect_t *zzz = Rend_CreateSubRect(0, GAMESCREEN_H, GAMESCREEN_W, 68);
+    subrect_t *zzz = Text_CreateSubRect(0, GAMESCREEN_H, GAMESCREEN_W, 68);
     Text_DrawInOneLine(str, zzz->img);
-    Rend_RenderFunc();
-    Rend_ScreenFlip();
+    Rend_RenderFrame();
 
     int32_t cur_time = Game_GetTime();
     int32_t nexttime = cur_time + milsecs;
@@ -670,22 +663,20 @@ void game_delay_message(int32_t milsecs, const char *str)
 
     while (!KeyDown(SDLK_SPACE) && !KeyDown(SDLK_RETURN) && !KeyDown(SDLK_ESCAPE) && nexttime > cur_time)
     {
-        GameUpdate();
+        Game_Update();
         cur_time = Game_GetTime();
-        Rend_RenderFunc();
-        Rend_ScreenFlip();
+        Rend_RenderFrame();
         Game_Delay(DELAY);
     }
 
-    Rend_DeleteSubRect(zzz);
+    Text_DeleteSubRect(zzz);
 }
 
 bool game_question_message(const char *str)
 {
-    subrect_t *zzz = Rend_CreateSubRect(0, GAMESCREEN_H, GAMESCREEN_W, 68);
+    subrect_t *zzz = Text_CreateSubRect(0, GAMESCREEN_H, GAMESCREEN_W, 68);
     Text_DrawInOneLine(str, zzz->img);
-    Rend_RenderFunc();
-    Rend_ScreenFlip();
+    Rend_RenderFrame();
 
     FlushKeybKey(SDLK_y);
     FlushKeybKey(SDLK_n);
@@ -693,13 +684,12 @@ bool game_question_message(const char *str)
 
     while (!KeyDown(SDLK_y) && !KeyDown(SDLK_n) && !KeyDown(SDLK_o))
     {
-        GameUpdate();
-        Rend_RenderFunc();
-        Rend_ScreenFlip();
+        Game_Update();
+        Rend_RenderFrame();
         Game_Delay(DELAY);
     }
 
-    Rend_DeleteSubRect(zzz);
+    Text_DeleteSubRect(zzz);
 
     return (KeyDown(SDLK_y) || KeyDown(SDLK_o));
 }
@@ -707,5 +697,5 @@ bool game_question_message(const char *str)
 void game_try_quit()
 {
     if (game_question_message(Game_GetString(SYSTEM_STR_EXITPROMT)))
-        GameQuit();
+        Game_Quit();
 }

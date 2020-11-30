@@ -29,14 +29,14 @@ OBJS =  \
 linux: $(OBJS)
 	$(CC) -std=c99 -Wall -O3 -o $(TARGET) $(OBJS) $(LIBS) -I /usr/include/ -I /usr/include/SDL/
 
-linux_debug: $(OBJS)
-	$(CC) -std=c99 -DENABLE_TRACING -Wall -Og -o $(TARGET) $(OBJS) $(LIBS) -I /usr/include/ -I /usr/include/SDL/
-
-win32_debug: $(OBJS)
-	$(CC_WIN) -std=c99 -DENABLE_TRACING -Wall -Og -o $(TARGET).exe $(OBJS) $(LIBS_WIN) -I $(MINGW)/include/ -I $(MINGW)/include/SDL/
-
 win32: $(OBJS)
 	$(CC_WIN) -std=c99 -Wall -O3 -o $(TARGET).exe $(OBJS) $(LIBS_WIN) -I $(MINGW)/include/ -I $(MINGW)/include/SDL/
+
+linux_debug: $(OBJS)
+	$(CC) -std=c99 -DENABLE_TRACING -Wall -Og -pg -o $(TARGET) $(OBJS) $(LIBS) -I /usr/include/ -I /usr/include/SDL/
+
+win32_debug: $(OBJS)
+	$(CC_WIN) -std=c99 -DENABLE_TRACING -Wall -Og -pg -o $(TARGET).exe $(OBJS) $(LIBS_WIN) -I $(MINGW)/include/ -I $(MINGW)/include/SDL/
 
 clean:
 	rm -f $(TARGET) *.o

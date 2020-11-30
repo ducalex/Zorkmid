@@ -61,6 +61,8 @@ static int16_t lastbut_znem = -1;
 
 static int32_t znem_but_anim = menu_znemesis_butanim;
 
+#define BlitSurfaceToScreen(surf, x, y) Rend_BlitSurfaceXY(surf, Rend_GetScreen(), x, y)
+
 void Menu_SetVal(uint16_t val)
 {
     menu_bar_flag = val;
@@ -71,9 +73,9 @@ uint16_t Menu_GetVal()
     return menu_bar_flag;
 }
 
-void Menu_LoadGraphics()
+void Menu_Init()
 {
-    char buf[MINIBUFSZ];
+    char buf[MINIBUFSIZE];
 
     if (CUR_GAME == GAME_ZGI)
     {
@@ -112,11 +114,10 @@ void Menu_Update()
     {
         int menu_MAIN_X = ((WINDOW_W - 580) >> 1);
         mouse_on_item = -1;
+        inmenu = (MouseY() <= 40);
 
-        if (MouseY() <= 40)
+        if (inmenu)
         {
-            inmenu = true;
-
             switch (menu_mousefocus)
             {
             case menu_ITEM:
@@ -210,7 +211,6 @@ void Menu_Update()
                 break;
 
             case menu_MAIN:
-
                 SetgVarInt(SLOT_MENU_STATE, 2);
 
                 if (!menu_Scrolled[menu_MAIN])
@@ -276,14 +276,10 @@ void Menu_Update()
                         if (MouseUp(MOUSE_BTN_LEFT))
                             Game_Relocate(SaveWorld, SaveRoom, SaveNode, SaveView, 0);
                     }
-
                 break;
 
             default:
-
-                if (Mouse_InRect(menu_MAIN_X, 0,
-                                 menuback[menu_MAIN][1]->w,
-                                 8))
+                if (Mouse_InRect(menu_MAIN_X, 0, menuback[menu_MAIN][1]->w, 8))
                 {
                     menu_mousefocus = menu_MAIN;
                     menu_Scrolled[menu_MAIN] = false;
@@ -309,7 +305,6 @@ void Menu_Update()
         }
         else
         {
-            inmenu = false;
             SetDirectgVarInt(SLOT_MENU_STATE, 0);
             menu_mousefocus = -1;
         }
@@ -318,11 +313,10 @@ void Menu_Update()
     {
         int menu_MAIN_X = ((WINDOW_W - 512) >> 1);
         mouse_on_item = -1;
+        inmenu = (MouseY() <= 40);
 
-        if (MouseY() <= 40)
+        if (inmenu)
         {
-            inmenu = true;
-
             SetgVarInt(SLOT_MENU_STATE, 2);
 
             if (!scrolled_znem)
@@ -424,7 +418,6 @@ void Menu_Update()
         }
         else
         {
-            inmenu = false;
             SetDirectgVarInt(SLOT_MENU_STATE, 0);
             menu_mousefocus = -1;
             scrolled_znem = false;
@@ -448,154 +441,139 @@ void Menu_Update()
 
 void Menu_Draw()
 {
+    // Clear the menu area
+    SDL_Rect menu_rect = {0, 0, WINDOW_W, GAMESCREEN_Y};
+    Rend_FillRect(Rend_GetScreen(), &menu_rect, 0, 0, 0);
+
+    // Draw the menu
     if (CUR_GAME == GAME_ZGI)
     {
+        if (!inmenu)
+            return;
+
         int menu_MAIN_X = ((WINDOW_W - 580) >> 1);
-        if (inmenu)
+        char buf[MINIBUFSIZE];
+
+        if ((menu_mousefocus == menu_ITEM) && (menu_bar_flag & MENU_BAR_ITEM))
         {
-            char buf[MINIBUFSZ];
+            BlitSurfaceToScreen(menuback[menu_ITEM][0], menu_ScrollPos[menu_ITEM], 0);
 
-            switch (menu_mousefocus)
+            int item_count = GetgVarInt(SLOT_TOTAL_INV_AVAIL);
+            if (item_count == 0)
+                item_count = 20;
+
+            for (int i = 0; i < item_count; i++)
             {
-            case menu_ITEM:
-                if (menu_bar_flag & MENU_BAR_ITEM)
+                int itemspace = (menu_zgi_inv_w - menu_ITEM_SPACE) / item_count;
+                bool inrect = (mouse_on_item == i);
+
+                if (GetgVarInt(SLOT_START_SLOT + i) != 0)
                 {
-                    Rend_BlitSurfaceToScreen(menuback[menu_ITEM][0], menu_ScrollPos[menu_ITEM], 0);
+                    int itemnum = GetgVarInt(SLOT_START_SLOT + i);
 
-                    int item_count = GetgVarInt(SLOT_TOTAL_INV_AVAIL);
-                    if (item_count == 0)
-                        item_count = 20;
-
-                    for (int i = 0; i < item_count; i++)
+                    if (menupicto[itemnum][0] == NULL)
                     {
-                        int itemspace = (menu_zgi_inv_w - menu_ITEM_SPACE) / item_count;
-
-                        bool inrect = false;
-
-                        if (mouse_on_item == i)
-                            inrect = true;
-
-                        if (GetgVarInt(SLOT_START_SLOT + i) != 0)
-                        {
-                            int itemnum = GetgVarInt(SLOT_START_SLOT + i);
-
-                            if (menupicto[itemnum][0] == NULL)
-                            {
-                                sprintf(buf, "gmzwu%2.2x1.tga", itemnum);
-                                menupicto[itemnum][0] = Loader_LoadGFX(buf, 0, 0);
-                            }
-                            if (menupicto[itemnum][1] == NULL)
-                            {
-                                sprintf(buf, "gmzxu%2.2x1.tga", itemnum);
-                                menupicto[itemnum][1] = Loader_LoadGFX(buf, 0, 0);
-                            }
-                            if (inrect)
-                                Rend_BlitSurfaceToScreen(menupicto[itemnum][1], menu_ScrollPos[menu_ITEM] + itemspace * i, 0);
-                            else
-                                Rend_BlitSurfaceToScreen(menupicto[itemnum][0], menu_ScrollPos[menu_ITEM] + itemspace * i, 0);
-                        }
+                        sprintf(buf, "gmzwu%2.2x1.tga", itemnum);
+                        menupicto[itemnum][0] = Loader_LoadGFX(buf, 0, 0);
                     }
-                }
-                break;
-
-            case menu_MAGIC:
-                if (menu_bar_flag & MENU_BAR_MAGIC)
-                {
-                    Rend_BlitSurfaceToScreen(menuback[menu_MAGIC][0], WINDOW_W - menu_ScrollPos[menu_MAGIC], 0);
-
-                    for (int i = 0; i < 12; i++)
+                    if (menupicto[itemnum][1] == NULL)
                     {
-                        int itemnum;
-                        if (GetgVarInt(SLOT_REVERSED_SPELLBOOK) == 1)
-                            itemnum = 0xEE + i;
-                        else
-                            itemnum = 0xE0 + i;
-
-                        bool inrect = false;
-
-                        if (mouse_on_item == i)
-                            inrect = true;
-
-                        if (GetgVarInt(SLOT_SPELL_1 + i) != 0)
-                        {
-                            if (menupicto[itemnum][0] == NULL)
-                            {
-                                sprintf(buf, "gmzwu%2.2x1.tga", itemnum);
-                                menupicto[itemnum][0] = Loader_LoadGFX(buf, false, 0);
-                            }
-                            if (menupicto[itemnum][1] == NULL)
-                            {
-                                sprintf(buf, "gmzxu%2.2x1.tga", itemnum);
-                                menupicto[itemnum][1] = Loader_LoadGFX(buf, false, 0);
-                            }
-                            if (inrect)
-                                Rend_BlitSurfaceToScreen(menupicto[itemnum][1], WINDOW_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0);
-                            else
-                                Rend_BlitSurfaceToScreen(menupicto[itemnum][0], WINDOW_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC], 0);
-                        }
+                        sprintf(buf, "gmzxu%2.2x1.tga", itemnum);
+                        menupicto[itemnum][1] = Loader_LoadGFX(buf, 0, 0);
                     }
+                    BlitSurfaceToScreen(
+                        menupicto[itemnum][inrect],
+                        menu_ScrollPos[menu_ITEM] + itemspace * i,
+                        0);
                 }
-                break;
-
-            case menu_MAIN:
-
-                Rend_BlitSurfaceToScreen(menuback[menu_MAIN][0], menu_MAIN_X, menu_ScrollPos[menu_MAIN]);
-
-                //EXIT
-                if (menu_bar_flag & MENU_BAR_EXIT)
-                {
-                    if (mouse_on_item == menu_MAIN_IMAGE_EXIT)
-                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_EXIT][1], menu_MAIN_CENTER + menu_MAIN_EL_W,
-                                  menu_ScrollPos[menu_MAIN]);
-                    else
-                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_EXIT][0], menu_MAIN_CENTER + menu_MAIN_EL_W,
-                                  menu_ScrollPos[menu_MAIN]);
-                }
-
-                //SETTINGS
-                if (menu_bar_flag & MENU_BAR_SETTINGS)
-                {
-                    if (mouse_on_item == menu_MAIN_IMAGE_PREF)
-                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_PREF][1], menu_MAIN_CENTER,
-                                  menu_ScrollPos[menu_MAIN]);
-                    else
-                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_PREF][0], menu_MAIN_CENTER,
-                                  menu_ScrollPos[menu_MAIN]);
-                }
-
-                //LOAD
-                if (menu_bar_flag & MENU_BAR_RESTORE)
-                {
-                    if (mouse_on_item == menu_MAIN_IMAGE_REST)
-                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_REST][1], menu_MAIN_CENTER - menu_MAIN_EL_W,
-                                  menu_ScrollPos[menu_MAIN]);
-                    else
-                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_REST][0], menu_MAIN_CENTER - menu_MAIN_EL_W,
-                                  menu_ScrollPos[menu_MAIN]);
-                }
-
-                //SAVE
-                if (menu_bar_flag & MENU_BAR_SAVE)
-                {
-                    if (mouse_on_item == menu_MAIN_IMAGE_SAVE)
-                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_SAVE][1], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
-                                  menu_ScrollPos[menu_MAIN]);
-                    else
-                        Rend_BlitSurfaceToScreen(menubar[menu_MAIN_IMAGE_SAVE][0], menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
-                                  menu_ScrollPos[menu_MAIN]);
-                }
-
-                break;
-
-            default:
-                Rend_BlitSurfaceToScreen(menuback[menu_MAIN][1], menu_MAIN_X, 0);
-
-                if (menu_bar_flag & MENU_BAR_ITEM)
-                    Rend_BlitSurfaceToScreen(menuback[menu_ITEM][1], 0, 0);
-
-                if (menu_bar_flag & MENU_BAR_MAGIC)
-                    Rend_BlitSurfaceToScreen(menuback[menu_MAGIC][1], WINDOW_W - menu_zgi_inv_hot_w, 0);
             }
+        }
+        else if ((menu_mousefocus == menu_MAGIC) && (menu_bar_flag & MENU_BAR_MAGIC))
+        {
+            BlitSurfaceToScreen(menuback[menu_MAGIC][0], WINDOW_W - menu_ScrollPos[menu_MAGIC], 0);
+
+            for (int i = 0; i < 12; i++)
+            {
+                int itemnum;
+                if (GetgVarInt(SLOT_REVERSED_SPELLBOOK) == 1)
+                    itemnum = 0xEE + i;
+                else
+                    itemnum = 0xE0 + i;
+
+                bool inrect = (mouse_on_item == i);
+
+                if (GetgVarInt(SLOT_SPELL_1 + i) != 0)
+                {
+                    if (menupicto[itemnum][0] == NULL)
+                    {
+                        sprintf(buf, "gmzwu%2.2x1.tga", itemnum);
+                        menupicto[itemnum][0] = Loader_LoadGFX(buf, false, 0);
+                    }
+                    if (menupicto[itemnum][1] == NULL)
+                    {
+                        sprintf(buf, "gmzxu%2.2x1.tga", itemnum);
+                        menupicto[itemnum][1] = Loader_LoadGFX(buf, false, 0);
+                    }
+                    BlitSurfaceToScreen(
+                        menupicto[itemnum][inrect],
+                        WINDOW_W + menu_MAGIC_SPACE + menu_MAGIC_ITEM_W * i - menu_ScrollPos[menu_MAGIC],
+                        0);
+                }
+            }
+        }
+        else if (menu_mousefocus == menu_MAIN)
+        {
+            BlitSurfaceToScreen(menuback[menu_MAIN][0], menu_MAIN_X, menu_ScrollPos[menu_MAIN]);
+
+            if (menu_bar_flag & MENU_BAR_EXIT)
+            {
+                bool hover = mouse_on_item == menu_MAIN_IMAGE_EXIT;
+
+                BlitSurfaceToScreen(
+                    menubar[menu_MAIN_IMAGE_EXIT][hover],
+                    menu_MAIN_CENTER + menu_MAIN_EL_W,
+                    menu_ScrollPos[menu_MAIN]);
+            }
+
+            if (menu_bar_flag & MENU_BAR_SETTINGS)
+            {
+                bool hover = mouse_on_item == menu_MAIN_IMAGE_PREF;
+
+                BlitSurfaceToScreen(
+                    menubar[menu_MAIN_IMAGE_PREF][hover],
+                    menu_MAIN_CENTER,
+                    menu_ScrollPos[menu_MAIN]);
+            }
+
+            if (menu_bar_flag & MENU_BAR_RESTORE)
+            {
+                bool hover = mouse_on_item == menu_MAIN_IMAGE_REST;
+
+                BlitSurfaceToScreen(
+                    menubar[menu_MAIN_IMAGE_REST][hover],
+                    menu_MAIN_CENTER - menu_MAIN_EL_W,
+                    menu_ScrollPos[menu_MAIN]);
+            }
+
+            if (menu_bar_flag & MENU_BAR_SAVE)
+            {
+                bool hover = mouse_on_item == menu_MAIN_IMAGE_SAVE;
+
+                BlitSurfaceToScreen(
+                    menubar[menu_MAIN_IMAGE_SAVE][hover],
+                    menu_MAIN_CENTER - menu_MAIN_EL_W * 2,
+                    menu_ScrollPos[menu_MAIN]);
+            }
+        }
+        else
+        {
+            BlitSurfaceToScreen(menuback[menu_MAIN][1], menu_MAIN_X, 0);
+
+            if (menu_bar_flag & MENU_BAR_ITEM)
+                BlitSurfaceToScreen(menuback[menu_ITEM][1], 0, 0);
+
+            if (menu_bar_flag & MENU_BAR_MAGIC)
+                BlitSurfaceToScreen(menuback[menu_MAGIC][1], WINDOW_W - menu_zgi_inv_hot_w, 0);
         }
     }
     else
@@ -603,41 +581,37 @@ void Menu_Draw()
         int menu_MAIN_X = ((WINDOW_W - 512) >> 1);
         if (inmenu)
         {
-            Rend_BlitSurfaceToScreen(menubar_znem, menu_MAIN_X, scrollpos_znem);
+            BlitSurfaceToScreen(menubar_znem, menu_MAIN_X, scrollpos_znem);
 
-            //EXIT
             if (menu_bar_flag & MENU_BAR_EXIT)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_EXIT)
-                    Rend_BlitSurfaceToScreen(menubut_znem[menu_MAIN_IMAGE_EXIT][butframe_znem[menu_MAIN_IMAGE_EXIT]], menu_MAIN_X + znem_but4_x,
+                    BlitSurfaceToScreen(menubut_znem[menu_MAIN_IMAGE_EXIT][butframe_znem[menu_MAIN_IMAGE_EXIT]], menu_MAIN_X + znem_but4_x,
                               scrollpos_znem);
             }
 
-            //SETTINGS
             if (menu_bar_flag & MENU_BAR_SETTINGS)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_PREF)
-                    Rend_BlitSurfaceToScreen(menubut_znem[menu_MAIN_IMAGE_PREF][butframe_znem[menu_MAIN_IMAGE_PREF]], menu_MAIN_X + znem_but3_x,
+                    BlitSurfaceToScreen(menubut_znem[menu_MAIN_IMAGE_PREF][butframe_znem[menu_MAIN_IMAGE_PREF]], menu_MAIN_X + znem_but3_x,
                               scrollpos_znem);
             }
 
-            //LOAD
             if (menu_bar_flag & MENU_BAR_RESTORE)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_REST)
-                    Rend_BlitSurfaceToScreen(menubut_znem[menu_MAIN_IMAGE_REST][butframe_znem[menu_MAIN_IMAGE_REST]], menu_MAIN_X + znem_but2_x,
+                    BlitSurfaceToScreen(menubut_znem[menu_MAIN_IMAGE_REST][butframe_znem[menu_MAIN_IMAGE_REST]], menu_MAIN_X + znem_but2_x,
                               scrollpos_znem);
             }
 
-            //SAVE
             if (menu_bar_flag & MENU_BAR_SAVE)
             {
                 if (mouse_on_item == menu_MAIN_IMAGE_SAVE)
-                    Rend_BlitSurfaceToScreen(menubut_znem[menu_MAIN_IMAGE_SAVE][butframe_znem[menu_MAIN_IMAGE_SAVE]], menu_MAIN_X + znem_but1_x,
+                    BlitSurfaceToScreen(menubut_znem[menu_MAIN_IMAGE_SAVE][butframe_znem[menu_MAIN_IMAGE_SAVE]], menu_MAIN_X + znem_but1_x,
                               scrollpos_znem);
             }
         }
         else if (scrollpos_znem > -menubar_znem->h)
-            Rend_BlitSurfaceToScreen(menubar_znem, menu_MAIN_X, scrollpos_znem);
+            BlitSurfaceToScreen(menubar_znem, menu_MAIN_X, scrollpos_znem);
     }
 }

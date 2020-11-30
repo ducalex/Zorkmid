@@ -21,9 +21,9 @@
 #include <SDL/SDL_mixer.h>
 #include <SDL/SDL_rotozoom.h>
 
-#define STRBUFSIZE 0x400
-#define MINIBUFSZ  32
-#define PATHBUFSIZ 1024
+#define STRBUFSIZE  0x400
+#define MINIBUFSIZE 0x20
+#define PATHBUFSIZE 0x400
 #define MLIST_STACK 0x10
 
 #define NEW(type) (type *)calloc(1, sizeof(type))

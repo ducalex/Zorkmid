@@ -3,7 +3,6 @@
 int main(int argc, char **argv)
 {
     bool fullscreen = false;
-    bool widescreen = false;
     const char *path = "./";
 
     for (int i = 1; i < argc; i++)
@@ -11,10 +10,6 @@ int main(int argc, char **argv)
         if (str_equals(argv[i], "-f"))
         {
             fullscreen = true;
-        }
-        else if (str_equals(argv[i], "-w"))
-        {
-            widescreen = true;
         }
         else if (str_equals(argv[i], "-zgi"))
         {
@@ -30,17 +25,17 @@ int main(int argc, char **argv)
         }
     }
 
-    Rend_InitGraphics(fullscreen, widescreen);
+    Rend_InitGraphics(fullscreen);
     Sound_Init();
-    GameInit(path);
+    Game_Init(path);
 
     while (true)
     {
-        GameUpdate();
-        GameLoop();
+        Game_Update();
+        Game_Loop();
     }
 
-    GameQuit();
+    Game_Quit();
 
     return 0;
 }

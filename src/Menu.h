@@ -10,7 +10,7 @@
 
 void Menu_SetVal(uint16_t val);
 uint16_t Menu_GetVal();
-void Menu_LoadGraphics();
+void Menu_Init();
 void Menu_Update();
 void Menu_Draw();
 

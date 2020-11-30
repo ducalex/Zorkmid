@@ -8,8 +8,6 @@ extern int GAMESCREEN_P;
 extern int GAMESCREEN_H;
 extern int GAMESCREEN_X;
 extern int GAMESCREEN_Y;
-extern int GAMESCREEN_FLAT_X;
-extern int WIDESCREEN;
 extern int FULLSCREEN;
 
 #define GAMESCREEN_H_2 (GAMESCREEN_H >> 1)
@@ -56,7 +54,7 @@ typedef struct
     float param1;
 } distort_t;
 
-bool Rend_LoadGamescr(const char *file);
+void Rend_LoadGamescr(const char *file);
 int Rend_GetMouseGameX();
 int Rend_GetMouseGameY();
 bool Rend_MouseInGamescr();
@@ -74,14 +72,10 @@ float Rend_GetRendererAngle();
 float Rend_GetRendererLinscale();
 int Rend_GetRenderer();
 void Rend_MouseInteractOfRender();
-void Rend_RenderFunc();
-void Rend_SetVideoMode(int w, int h, int full, int wide);
-void Rend_InitGraphics(int full, int wide);
+void Rend_RenderFrame();
+void Rend_SetVideoMode(int w, int h, int full);
+void Rend_InitGraphics(int full);
 void Rend_SetDelay(int32_t delay);
-subrect_t *Rend_CreateSubRect(int x, int y, int w, int h);
-void Rend_DeleteSubRect(subrect_t *erect);
-void Rend_ProcessSubs();
-void Rend_DelaySubDelete(subrect_t *sub, int32_t time);
 void Rend_ScreenFlip();
 void Rend_SetGamma(float val);
 float Rend_GetGamma();
@@ -90,13 +84,11 @@ action_res_t *Rend_CreateNode(int type);
 int Rend_ProcessNode(action_res_t *nod);
 int Rend_DeleteNode(action_res_t *nod);
 
-SDL_Surface *Rend_CreateSurface(int x, int y, int mode);
+SDL_Surface *Rend_CreateSurface(int w, int h, int mode);
 SDL_Surface *Rend_GetLocationScreenImage();
 SDL_Surface *Rend_GetGameScreen();
 SDL_Surface *Rend_GetScreen();
 
-void Rend_DrawImageToGameScreen(SDL_Surface *src, int x, int y);
-void Rend_BlitSurfaceToScreen(SDL_Surface *src, int x, int y);
 void Rend_BlitSurfaceXY(SDL_Surface *src, SDL_Surface *dst, int x, int y);
 void Rend_BlitSurface(SDL_Surface *src, SDL_Rect *src_rct, SDL_Surface *dst, SDL_Rect *dst_rct);
 void Rend_SetColorKey(SDL_Surface *surf, uint8_t r, uint8_t g, uint8_t b);

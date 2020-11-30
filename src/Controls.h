@@ -72,7 +72,7 @@ typedef struct
 {
     bool flat; //true - flat, false - warp
     Rect_t rectangle;
-    char distance_id[MINIBUFSZ];
+    char distance_id[MINIBUFSIZE];
     Rect_t hotspot;
     int32_t *eligible_objects;
     int32_t eligable_cnt;

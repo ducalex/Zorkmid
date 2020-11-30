@@ -3,6 +3,14 @@
 static int FocusInput = 0;
 static bool pushChangeMouse = false;
 
+static void DrawImageToGameScreen(SDL_Surface *scr, int x, int y)
+{
+    if (Rend_GetRenderer() == RENDER_TILT)
+        y = y + GAMESCREEN_H_2 - GetgVarInt(SLOT_VIEW_POS);
+
+    Rend_BlitSurfaceXY(scr, Rend_GetGameScreen(), x, y);
+}
+
 static void ctrl_setvenus(ctrlnode_t *nod)
 {
     if (nod->venus >= 0)
@@ -69,7 +77,7 @@ static void control_slot_draw(ctrlnode_t *nod)
             if ((slut->rectangle.h - slut->rectangle.y) > slut->srf->h)
                 drawy = slut->rectangle.y + ((slut->rectangle.h - slut->rectangle.y) - slut->srf->h) / 2;
 
-            Rend_DrawImageToGameScreen(slut->srf, drawx + GAMESCREEN_FLAT_X, drawy);
+            DrawImageToGameScreen(slut->srf, drawx, drawy);
         }
     }
     else
@@ -100,7 +108,7 @@ static void control_input_draw(ctrlnode_t *ct)
 
             inp->textchanged = false;
         }
-        Rend_DrawImageToGameScreen(inp->rect, inp->rectangle.x + GAMESCREEN_FLAT_X, inp->rectangle.y);
+        DrawImageToGameScreen(inp->rect, inp->rectangle.x, inp->rectangle.y);
     }
     else
         inp->textwidth = 0;
@@ -114,7 +122,7 @@ static void control_input_draw(ctrlnode_t *ct)
                 Rend_BlitSurfaceXY(
                     inp->cursor->img[inp->frame],
                     Rend_GetGameScreen(),
-                    inp->rectangle.x + GAMESCREEN_FLAT_X + inp->textwidth,
+                    inp->rectangle.x + inp->textwidth,
                     inp->rectangle.y);
 
                 inp->period -= Game_GetDTime();
@@ -634,7 +642,7 @@ static void control_titler_draw(ctrlnode_t *ct)
     titlernode_t *titler = ct->node.titler;
 
     if (titler->surface)
-        Rend_DrawImageToGameScreen(titler->surface, titler->rectangle.x + GAMESCREEN_FLAT_X, titler->rectangle.y);
+        DrawImageToGameScreen(titler->surface, titler->rectangle.x, titler->rectangle.y);
 }
 
 static void control_hotmv_draw(ctrlnode_t *ct)
@@ -1109,7 +1117,7 @@ static int Parse_Control_Flat()
 static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     char tmpbuf[STRBUFSIZE];
-    char filename[MINIBUFSZ];
+    char filename[MINIBUFSIZE];
     int32_t t1, t2, t3, t4;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_LEVER);
@@ -1262,7 +1270,7 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
 static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     char tmpbuf[STRBUFSIZE];
-    char filename[MINIBUFSZ];
+    char filename[MINIBUFSIZE];
     char *str;
     int32_t t1, t2, t3, t4, tt;
 
@@ -1298,7 +1306,7 @@ static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "animation"))
         {
-            char file[MINIBUFSZ];
+            char file[MINIBUFSIZE];
             sscanf(GetParams(str), "%s", file);
             hotm->anm = NEW(animnode_t);
             Anim_Load(hotm->anm, file, 0, 0, 0, 0);
@@ -1443,7 +1451,7 @@ static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
-    char fln[MINIBUFSZ];
+    char fln[MINIBUFSIZE];
     char *str;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_SAVE);
@@ -1674,7 +1682,7 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
     AddToMList(controlst, ctnode);
     ctnode->slot = slot;
 
-    char filename[MINIBUFSZ];
+    char filename[MINIBUFSIZE];
 
     while (!mfeof(fl))
     {
@@ -1773,7 +1781,7 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
         paint->rectangle.w,
         paint->rectangle.h
     };
-    SDL_BlitSurface(tmp, &rect, paint->paint, NULL);
+    Rend_BlitSurface(tmp, &rect, paint->paint, NULL);
     SDL_FreeSurface(tmp);
 
     return good;
@@ -1944,7 +1952,7 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
     fistnode_t *fist = ctnode->node.fist;
     ctnode->slot = slot;
 
-    char filename[MINIBUFSZ];
+    char filename[MINIBUFSIZE];
 
     while (!mfeof(fl))
     {
@@ -1983,8 +1991,8 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
     if (lines)
     {
         int32_t t1, t2, t3, t4, t5, t6;
-        char s1[MINIBUFSZ];
-        char s2[MINIBUFSZ];
+        char s1[MINIBUFSIZE];
+        char s2[MINIBUFSIZE];
 
         for (int pos = 0; lines[pos] != NULL; pos++)
         {
