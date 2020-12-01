@@ -26,8 +26,11 @@
 #define PATHBUFSIZE 0x400
 #define MLIST_STACK 0x10
 
-#define NEW(type) (type *)calloc(1, sizeof(type))
-#define NEW_ARRAY(type, n) (type *)calloc((n), sizeof(type))
+#define Z_ALLOC(n) ({LOG_DEBUG("Allocating %d bytes\n", n); calloc(1, n);})
+#define Z_FREE(obj) {LOG_DEBUG("Freeing bytes\n"); free((void*)obj); /*obj = NULL;*/}
+#define NEW(type) (type *)Z_ALLOC(sizeof(type))
+#define NEW_ARRAY(type, n) (type *)Z_ALLOC(sizeof(type) * (n))
+#define DELETE(obj) Z_FREE(obj)
 
 #define Z_PANIC(x...)                                           \
     {                                                           \

@@ -159,8 +159,8 @@ int Sound_DeleteNode(action_res_t *nod)
 
         SetGNode(nod->slot, NULL);
 
-        free(nod->nodes.node_music);
-        free(nod);
+        DELETE(nod->nodes.node_music);
+        DELETE(nod);
 
         return NODE_RET_DELETE;
 
@@ -174,8 +174,8 @@ int Sound_DeleteNode(action_res_t *nod)
         if (nod->nodes.node_sync->sub != NULL)
             Text_DeleteSubtitles(nod->nodes.node_sync->sub);
 
-        free(nod->nodes.node_sync);
-        free(nod);
+        DELETE(nod->nodes.node_sync);
+        DELETE(nod);
 
         return NODE_RET_DELETE;
 
@@ -191,7 +191,7 @@ int Sound_DeleteNode(action_res_t *nod)
         if (nod->slot > 0)
             SetGNode(nod->slot, NULL);
 
-        free(nod);
+        DELETE(nod);
 
         return NODE_RET_DELETE;
 

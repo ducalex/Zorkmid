@@ -1473,10 +1473,10 @@ static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
             sprintf(fln, CTRL_SAVE_SAVES, i + 1);
             if (Loader_FindFile(fln) != NULL)
                 strcpy(sv->Names[i], saves[i]);
-            free(saves[i]);
+            DELETE(saves[i]);
         }
 
-        free(saves);
+        DELETE(saves);
     }
 
     while (!mfeof(fl))
@@ -1582,7 +1582,7 @@ static int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
                     titler->strings[titler->num_strings++] = strings[i];
                 }
 
-                free(strings);
+                DELETE(strings);
             }
         }
     }
@@ -2100,9 +2100,9 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
                     }
                 }
             }
-            free(lines[pos]);
+            DELETE(lines[pos]);
         }
-        free(lines);
+        DELETE(lines);
     }
     else
         good = 0;
@@ -2195,7 +2195,7 @@ static int Parse_Control_Safe(MList *controlst, mfile_t *fl, uint32_t slot)
 
 static void ctrl_Delete_PushNode(ctrlnode_t *nod)
 {
-    free(nod->node.push);
+    DELETE(nod->node.push);
 }
 
 static void ctrl_Delete_SlotNode(ctrlnode_t *nod)
@@ -2203,8 +2203,8 @@ static void ctrl_Delete_SlotNode(ctrlnode_t *nod)
     if (nod->node.slot->srf)
         SDL_FreeSurface(nod->node.slot->srf);
     if (nod->node.slot->eligible_objects)
-        free(nod->node.slot->eligible_objects);
-    free(nod->node.slot);
+        DELETE(nod->node.slot->eligible_objects);
+    DELETE(nod->node.slot);
 }
 
 static void ctrl_Delete_InputNode(ctrlnode_t *nod)
@@ -2213,33 +2213,33 @@ static void ctrl_Delete_InputNode(ctrlnode_t *nod)
         Anim_DeleteAnimImage(nod->node.inp->cursor);
     if (nod->node.inp->rect)
         SDL_FreeSurface(nod->node.inp->rect);
-    free(nod->node.inp);
+    DELETE(nod->node.inp);
 }
 
 static void ctrl_Delete_SaveNode(ctrlnode_t *nod)
 {
-    free(nod->node.svld);
+    DELETE(nod->node.svld);
 }
 
 static void ctrl_Delete_LeverNode(ctrlnode_t *nod)
 {
     if (nod->node.lev->anm != NULL)
         Anim_DeleteAnim(nod->node.lev->anm);
-    free(nod->node.lev);
+    DELETE(nod->node.lev);
 }
 
 static void ctrl_Delete_SafeNode(ctrlnode_t *nod)
 {
     if (nod->node.safe->anm != NULL)
         Anim_DeleteAnim(nod->node.safe->anm);
-    free(nod->node.safe);
+    DELETE(nod->node.safe);
 }
 
 static void ctrl_Delete_FistNode(ctrlnode_t *nod)
 {
     if (nod->node.fist->anm != NULL)
         Anim_DeleteAnim(nod->node.fist->anm);
-    free(nod->node.fist);
+    DELETE(nod->node.fist);
 }
 
 static void ctrl_Delete_HotmovNode(ctrlnode_t *nod)
@@ -2247,19 +2247,19 @@ static void ctrl_Delete_HotmovNode(ctrlnode_t *nod)
     if (nod->node.hotmv->anm != NULL)
         Anim_DeleteAnim(nod->node.hotmv->anm);
     if (nod->node.hotmv->frame_list != NULL)
-        free(nod->node.hotmv->frame_list);
-    free(nod->node.hotmv);
+        DELETE(nod->node.hotmv->frame_list);
+    DELETE(nod->node.hotmv);
 }
 
 static void ctrl_Delete_PaintNode(ctrlnode_t *nod)
 {
     if (nod->node.paint->brush != NULL)
-        free(nod->node.paint->brush);
+        DELETE(nod->node.paint->brush);
     if (nod->node.paint->eligible_objects != NULL)
-        free(nod->node.paint->eligible_objects);
+        DELETE(nod->node.paint->eligible_objects);
     if (nod->node.paint->paint != NULL)
         SDL_FreeSurface(nod->node.paint->paint);
-    free(nod->node.paint);
+    DELETE(nod->node.paint);
 }
 
 static void ctrl_Delete_TitlerNode(ctrlnode_t *nod)
@@ -2268,8 +2268,8 @@ static void ctrl_Delete_TitlerNode(ctrlnode_t *nod)
         SDL_FreeSurface(nod->node.titler->surface);
     for (int i = 0; i < CTRL_TITLER_MAX_STRINGS; i++)
         if (nod->node.titler->strings[i] != NULL)
-            free(nod->node.titler->strings[i]);
-    free(nod->node.titler);
+            DELETE(nod->node.titler->strings[i]);
+    DELETE(nod->node.titler);
 }
 
 void Controls_Draw()
@@ -2387,7 +2387,7 @@ void Controls_FlushList(MList *lst)
             ctrl_Delete_TitlerNode(nod);
             break;
         }
-        free(nod);
+        DELETE(nod);
 
         NextMList(lst);
     }

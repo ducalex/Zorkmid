@@ -22,7 +22,7 @@ int Timer_DeleteNode(action_res_t *nod)
 
     SetGNode(nod->slot, NULL);
 
-    free(nod);
+    DELETE(nod);
 
     return NODE_RET_DELETE;
 }

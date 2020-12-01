@@ -849,8 +849,8 @@ int Rend_DeleteNode(action_res_t *nod)
             SetgVarInt(nod->slot, 2);
         }
 
-        free(nod->nodes.distort);
-        free(nod);
+        DELETE(nod->nodes.distort);
+        DELETE(nod);
 
         return NODE_RET_DELETE;
     }
@@ -865,7 +865,7 @@ int Rend_DeleteNode(action_res_t *nod)
             SetGNode(nod->slot, NULL);
         }
 
-        free(nod);
+        DELETE(nod);
 
         return NODE_RET_DELETE;
     }
@@ -998,15 +998,15 @@ static void DeleteEffect(uint32_t index)
         if (effect->effect.ef0.ampls)
         {
             for (int i = 0; i < effect->effect.ef0.frame_cnt; i++)
-                free(effect->effect.ef0.ampls[i]);
-            free(effect->effect.ef0.ampls);
+                DELETE(effect->effect.ef0.ampls[i]);
+            DELETE(effect->effect.ef0.ampls);
         }
         if (effect->effect.ef0.surface)
             SDL_FreeSurface(effect->effect.ef0.surface);
         break;
     case EFFECT_LIGH:
         if (effect->effect.ef1.map)
-            free(effect->effect.ef1.map);
+            DELETE(effect->effect.ef1.map);
 
         if (effect->effect.ef1.surface)
             SDL_FreeSurface(effect->effect.ef1.surface);
@@ -1019,7 +1019,7 @@ static void DeleteEffect(uint32_t index)
         if (effect->effect.ef9.mask)
             SDL_FreeSurface(effect->effect.ef9.mask);
         if (effect->effect.ef9.cloud_mod)
-            free(effect->effect.ef9.cloud_mod);
+            DELETE(effect->effect.ef9.cloud_mod);
         break;
     }
 
@@ -1163,8 +1163,8 @@ int32_t Rend_EF_Wave_Setup(int32_t delay, int32_t frames, int32_t s_x, int32_t s
     if (ef->effect.ef0.ampls)
     {
         for (int i = 0; i < ef->effect.ef0.frame_cnt; i++)
-            free(ef->effect.ef0.ampls[i]);
-        free(ef->effect.ef0.ampls);
+            DELETE(ef->effect.ef0.ampls[i]);
+        DELETE(ef->effect.ef0.ampls);
     }
 
     if (!ef->effect.ef0.surface)

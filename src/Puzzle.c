@@ -21,7 +21,7 @@ static void DeletePuzzleNode(puzzlenode_t *nod)
         StartMList(criteries);
         while (!EndOfMList(criteries))
         {
-            free(DataMList(criteries));
+            DELETE(DataMList(criteries));
             NextMList(criteries);
         }
         DeleteMList(criteries);
@@ -35,13 +35,13 @@ static void DeletePuzzleNode(puzzlenode_t *nod)
     {
         func_node_t *fun = (func_node_t *)DataMList(nod->ResList);
         if (fun->param != NULL)
-            free(fun->param);
-        free(fun);
+            DELETE(fun->param);
+        DELETE(fun);
         NextMList(nod->ResList);
     }
     DeleteMList(nod->ResList);
 
-    free(nod);
+    DELETE(nod);
 }
 
 pzllst_t *Puzzle_CreateList(const char *name)

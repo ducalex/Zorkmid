@@ -191,7 +191,7 @@ void ScrSys_ClearStateBox()
     for (int i = 0; i < VAR_SLOTS_MAX; i++)
     {
         if (StateBox[i] != NULL)
-            free(StateBox[i]);
+            DELETE(StateBox[i]);
         StateBox[i] = NULL;
     }
 }
@@ -849,11 +849,11 @@ void ScrSys_LoadPreferences()
                 }
             }
         }
-        free(rows[pos]);
+        DELETE(rows[pos]);
         pos++;
     }
 
-    free(rows);
+    DELETE(rows);
 }
 
 void ScrSys_SavePreferences()

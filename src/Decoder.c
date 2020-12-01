@@ -281,7 +281,7 @@ avi_file_t *avi_openfile(const char *filename, uint8_t translate)
 
 ERROR:
     fclose(file);
-    free(av);
+    DELETE(av);
     return NULL;
 }
 
@@ -374,7 +374,7 @@ Mix_Chunk *avi_get_audio(avi_file_t *av)
         av->atrk->size,
         av->atrk->tag == 0x11);
 
-    free(buffer);
+    DELETE(buffer);
 
     return chunk;
 }
@@ -422,13 +422,13 @@ void avi_close(avi_file_t *av)
         fclose(av->fp);
     if (av->surf)
         SDL_FreeSurface(av->surf);
-    free(av->buf);
-    free(av->atrk);
-    free(av->vtrk);
-    free(av->idx);
-    free(av->vframes);
-    free(av->achunks);
-    free(av);
+    DELETE(av->buf);
+    DELETE(av->atrk);
+    DELETE(av->vtrk);
+    DELETE(av->idx);
+    DELETE(av->vframes);
+    DELETE(av->achunks);
+    DELETE(av);
 }
 
 Mix_Chunk *wav_create(const void *data, size_t data_len, int channels, int freq, int bits, int adpcm)

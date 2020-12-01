@@ -208,11 +208,11 @@ void DeleteMList(MList *lst)
         while (lst->CurNode)
         {
             nxt = lst->CurNode->next;
-            free(lst->CurNode);
+            DELETE(lst->CurNode);
             lst->CurNode = nxt;
         }
     }
-    free(lst);
+    DELETE(lst);
 }
 
 void FlushMList(MList *lst)
@@ -224,7 +224,7 @@ void FlushMList(MList *lst)
         while (lst->CurNode)
         {
             nxt = lst->CurNode->next;
-            free(lst->CurNode);
+            DELETE(lst->CurNode);
             lst->CurNode = nxt;
         }
     }
@@ -267,7 +267,7 @@ void DeleteCurrent(MList *lst)
     else
         nod = lst->Head;
 
-    free(lst->CurNode);
+    DELETE(lst->CurNode);
 
     lst->stkpos = 0; //Clean Stack!
     lst->CurNode = nod;

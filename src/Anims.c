@@ -83,7 +83,7 @@ int Anim_DeleteNode(action_res_t *nod)
             SetgVarInt(nod->slot, 2);
             SetGNode(nod->slot, NULL);
         }
-        free(nod);
+        DELETE(nod);
 
         return NODE_RET_DELETE;
     }
@@ -108,7 +108,7 @@ int Anim_DeleteNode(action_res_t *nod)
 
         SetGNode(nod->slot, NULL);
         Anim_DeleteAnim(nod->nodes.node_animpre);
-        free(nod);
+        DELETE(nod);
 
         return NODE_RET_DELETE;
     }
@@ -120,8 +120,8 @@ int Anim_DeleteNode(action_res_t *nod)
             SetGNode(nod->slot, NULL);
         }
         SetgVarInt(nod->nodes.node_animpreplay->pointingslot, 2);
-        free(nod->nodes.node_animpreplay);
-        free(nod);
+        DELETE(nod->nodes.node_animpreplay);
+        DELETE(nod);
 
         return NODE_RET_DELETE;
     }
@@ -259,8 +259,8 @@ void Anim_DeleteAnimImage(anim_surf_t *anim)
         if (anim->img[i])
             SDL_FreeSurface(anim->img[i]);
 
-    free(anim->img);
-    free(anim);
+    DELETE(anim->img);
+    DELETE(anim);
 }
 
 void Anim_DeleteAnim(animnode_t *nod)
@@ -268,7 +268,7 @@ void Anim_DeleteAnim(animnode_t *nod)
     if (nod->anim_avi)
     {
         avi_close(nod->anim_avi->av);
-        free(nod->anim_avi);
+        DELETE(nod->anim_avi);
     }
 
     if (nod->anim_rlf)
@@ -276,5 +276,5 @@ void Anim_DeleteAnim(animnode_t *nod)
         Anim_DeleteAnimImage(nod->anim_rlf);
     }
 
-    free(nod);
+    DELETE(nod);
 }

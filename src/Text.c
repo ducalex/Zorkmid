@@ -657,7 +657,7 @@ int Text_DeleteTTYText(action_res_t *nod)
         SetGNode(nod->slot, NULL);
     }
 
-    free(nod);
+    DELETE(nod);
 
     return NODE_RET_DELETE;
 }
@@ -801,7 +801,7 @@ subtitles_t *Text_LoadSubtitles(char *filename)
 
             if (tmp->txt == NULL)
             {
-                free(tmp);
+                DELETE(tmp);
                 return NULL;
             }
 
@@ -864,12 +864,12 @@ void Text_DeleteSubtitles(subtitles_t *sub)
     if (sub->txt)
     {
         for (int i = 0; i < sub->count; i++)
-            free(sub->txt[i]);
-        free(sub->txt);
+            DELETE(sub->txt[i]);
+        DELETE(sub->txt);
     }
     Text_DeleteSubRect(sub->SubRect);
-    free(sub->subs);
-    free(sub);
+    DELETE(sub->subs);
+    DELETE(sub);
 }
 
 subrect_t *Text_CreateSubRect(int x, int y, int w, int h)
@@ -922,7 +922,7 @@ void Text_DrawSubtitles()
         if (subrec->todelete)
         {
             SDL_FreeSurface(subrec->img);
-            free(subrec);
+            DELETE(subrec);
             DeleteCurrent(sublist);
         }
         else
