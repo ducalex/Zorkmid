@@ -1,6 +1,20 @@
 #include "System.h"
 
-static MList *sublist = NULL;
+#define TXT_JUSTIFY_CENTER 0
+#define TXT_JUSTIFY_LEFT 1
+#define TXT_JUSTIFY_RIGHT 2
+
+#define TXT_RET_NOTHING 0x0
+#define TXT_RET_FNTCHG 0x1
+#define TXT_RET_FNTSTL 0x2
+#define TXT_RET_NEWLN 0x4
+#define TXT_RET_HASSTBOX 0x8
+
+#define TXT_CFG_BUF_MAX_LEN 512
+#define TXT_CFG_TEXTURES_LINES 256
+#define TXT_CFG_TEXTURES_PER_LINE 6
+
+static MList sublist;
 
 static SDL_Surface *RenderUTF8(TTF_Font *fnt, const char *text, txt_style_t *style)
 {
@@ -9,64 +23,47 @@ static SDL_Surface *RenderUTF8(TTF_Font *fnt, const char *text, txt_style_t *sty
     return TTF_RenderUTF8_Solid(fnt, text, clr);
 }
 
-static int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_t len)
+static uint8_t txt_parse_txt_params(txt_style_t *style, const char *str, size_t len)
 {
     char buf[TXT_CFG_BUF_MAX_LEN];
-    memcpy(buf, strin, len);
+    memcpy(buf, str, len);
     buf[len] = 0x0;
 
-    int8_t retval = TXT_RET_NOTHING;
-
-    char *token;
-
     const char *find = " ";
-
-    // font with "item what i want"
-    const char *fontitem = str_find(buf, "font");
-    if (fontitem != NULL)
-    {
-        fontitem += 5; // to next item
-        if (fontitem[0] == '"')
-        {
-            fontitem++;
-
-            size_t len = 0;
-            while (fontitem[len] != '"' && fontitem[len] >= ' ')
-            {
-                style->fontname[len] = fontitem[len];
-                len++;
-            }
-            style->fontname[len] = 0;
-        }
-        else
-        {
-            size_t len = 0;
-            while (fontitem[len] > ' ')
-            {
-                style->fontname[len] = fontitem[len];
-                len++;
-            }
-            style->fontname[len] = 0;
-        }
-        retval |= TXT_RET_FNTCHG;
-    }
-
-    token = strtok(buf, find);
-
-    bool gooood;
+    const char *token = strtok(buf, find);
+    uint8_t retval = TXT_RET_NOTHING;
 
     while (token != NULL)
     {
-        gooood = true;
-
-        if (str_starts_with(token, "blue"))
+        if (str_equals(token, "font"))
         {
-            token = strtok(NULL, find);
-            if (token == NULL)
-                gooood = false;
-            else
+            if ((token = strtok(NULL, find)))
             {
-                int32_t tmp = atoi(token);
+                if (token[0] == '"')
+                {
+                    strcpy(style->fontname, token + 1);
+                    while (token && token[strlen(token)-1] != '"')
+                    {
+                        if ((token = strtok(NULL, find)))
+                        {
+                            strcat(style->fontname, " ");
+                            strcat(style->fontname, token);
+                        }
+                    }
+                    style->fontname[strlen(style->fontname)-1] = 0;
+                }
+                else
+                {
+                    strcpy(style->fontname, token);
+                }
+                retval |= TXT_RET_FNTCHG;
+            }
+        }
+        else if (str_equals(token, "blue"))
+        {
+            if ((token = strtok(NULL, find)))
+            {
+                int tmp = atoi(token);
                 if (style->blue != tmp)
                 {
                     style->blue = tmp;
@@ -74,14 +71,11 @@ static int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_
                 }
             }
         }
-        else if (str_starts_with(token, "red"))
+        else if (str_equals(token, "red"))
         {
-            token = strtok(NULL, find);
-            if (token == NULL)
-                gooood = false;
-            else
+            if ((token = strtok(NULL, find)))
             {
-                int32_t tmp = atoi(token);
+                int tmp = atoi(token);
                 if (style->red != tmp)
                 {
                     style->red = tmp;
@@ -89,14 +83,11 @@ static int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_
                 }
             }
         }
-        else if (str_starts_with(token, "green"))
+        else if (str_equals(token, "green"))
         {
-            token = strtok(NULL, find);
-            if (token == NULL)
-                gooood = false;
-            else
+            if ((token = strtok(NULL, find)))
             {
-                int32_t tmp = atoi(token);
+                int tmp = atoi(token);
                 if (style->green != tmp)
                 {
                     style->green = tmp;
@@ -104,7 +95,7 @@ static int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_
                 }
             }
         }
-        else if (str_starts_with(token, "newline"))
+        else if (str_equals(token, "newline"))
         {
             if ((retval & TXT_RET_NEWLN) == 0)
                 style->newline = 0;
@@ -112,14 +103,11 @@ static int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_
             style->newline++;
             retval |= TXT_RET_NEWLN;
         }
-        else if (str_starts_with(token, "point"))
+        else if (str_equals(token, "point"))
         {
-            token = strtok(NULL, find);
-            if (token == NULL)
-                gooood = false;
-            else
+            if ((token = strtok(NULL, find)))
             {
-                int32_t tmp = atoi(token);
+                int tmp = atoi(token);
                 if (style->size != tmp)
                 {
                     style->size = tmp;
@@ -127,154 +115,99 @@ static int8_t txt_parse_txt_params(txt_style_t *style, const char *strin, int32_
                 }
             }
         }
-        else if (str_starts_with(token, "escapement"))
+        else if (str_equals(token, "escapement"))
         {
-            token = strtok(NULL, find);
-            if (token == NULL)
-                gooood = false;
-            else
+            if ((token = strtok(NULL, find)))
                 style->escapement = atoi(token);
         }
-        else if (str_starts_with(token, "italic"))
+        else if (str_equals(token, "italic"))
         {
-            token = strtok(NULL, find);
-            if (token == NULL)
-                gooood = false;
-            else if (str_starts_with(token, "on"))
+            if ((token = strtok(NULL, find)))
             {
-                if (style->italic != TXT_STYLE_VAR_TRUE)
+                int status = str_equals(token, "on");
+                if (style->italic != status)
                 {
-                    style->italic = TXT_STYLE_VAR_TRUE;
+                    style->italic = status;
                     retval |= TXT_RET_FNTSTL;
                 }
             }
-            else if (str_starts_with(token, "off"))
-            {
-                if (style->italic != TXT_STYLE_VAR_FALSE)
-                {
-                    style->italic = TXT_STYLE_VAR_FALSE;
-                    retval |= TXT_RET_FNTSTL;
-                }
-            }
-            else
-                gooood = false;
         }
-        else if (str_starts_with(token, "underline"))
+        else if (str_equals(token, "underline"))
         {
-            token = strtok(NULL, find);
-            if (token == NULL)
-                gooood = false;
-            else if (str_starts_with(token, "on"))
+            if ((token = strtok(NULL, find)))
             {
-                if (style->underline != TXT_STYLE_VAR_TRUE)
+                int status = str_equals(token, "on");
+                if (style->underline != status)
                 {
-                    style->underline = TXT_STYLE_VAR_TRUE;
+                    style->underline = status;
                     retval |= TXT_RET_FNTSTL;
                 }
             }
-            else if (str_starts_with(token, "off"))
-            {
-                if (style->underline != TXT_STYLE_VAR_FALSE)
-                {
-                    style->underline = TXT_STYLE_VAR_FALSE;
-                    retval |= TXT_RET_FNTSTL;
-                }
-            }
-            else
-                gooood = false;
         }
-        else if (str_starts_with(token, "strikeout"))
+        else if (str_equals(token, "strikeout"))
         {
-            token = strtok(NULL, find);
-            if (token == NULL)
-                gooood = false;
-            else if (str_starts_with(token, "on"))
+            if ((token = strtok(NULL, find)))
             {
-                if (style->strikeout != TXT_STYLE_VAR_TRUE)
+                int status = str_equals(token, "on");
+                if (style->strikeout != status)
                 {
-                    style->strikeout = TXT_STYLE_VAR_TRUE;
+                    style->strikeout = status;
                     retval |= TXT_RET_FNTSTL;
                 }
             }
-            else if (str_starts_with(token, "off"))
-            {
-                if (style->strikeout != TXT_STYLE_VAR_FALSE)
-                {
-                    style->strikeout = TXT_STYLE_VAR_FALSE;
-                    retval |= TXT_RET_FNTSTL;
-                }
-            }
-            else
-                gooood = false;
         }
-        else if (str_starts_with(token, "bold"))
+        else if (str_equals(token, "bold"))
         {
-            token = strtok(NULL, find);
-            if (token == NULL)
-                gooood = false;
-            else if (str_starts_with(token, "on"))
+            if ((token = strtok(NULL, find)))
             {
-                if (style->bold != TXT_STYLE_VAR_TRUE)
+                int status = str_equals(token, "on");
+                if (style->bold != status)
                 {
-                    style->bold = TXT_STYLE_VAR_TRUE;
+                    style->bold = status;
                     retval |= TXT_RET_FNTSTL;
                 }
             }
-            else if (str_starts_with(token, "off"))
-            {
-                if (style->bold != TXT_STYLE_VAR_FALSE)
-                {
-                    style->bold = TXT_STYLE_VAR_FALSE;
-                    retval |= TXT_RET_FNTSTL;
-                }
-            }
-            else
-                gooood = false;
         }
-        else if (str_starts_with(token, "skipcolor"))
+        else if (str_equals(token, "skipcolor"))
         {
-            token = strtok(NULL, find);
-            if (token == NULL)
-                gooood = false;
-            else if (str_starts_with(token, "on"))
-                style->skipcolor = TXT_STYLE_VAR_TRUE;
-            else if (str_starts_with(token, "off"))
-                style->skipcolor = TXT_STYLE_VAR_FALSE;
-            else
-                gooood = false;
+            if ((token = strtok(NULL, find)))
+            {
+                int status = str_equals(token, "on");
+                if (style->skipcolor != status)
+                {
+                    style->skipcolor = status;
+                    retval |= TXT_RET_FNTSTL;
+                }
+            }
         }
-        else if (str_starts_with(token, "image"))
+        else if (str_equals(token, "image"))
         {
             //token = strtok(NULL,find);
         }
-        else if (str_starts_with(token, "statebox"))
+        else if (str_equals(token, "statebox"))
         {
-            token = strtok(NULL, find);
-            if (token == NULL)
-                gooood = false;
-            else
+            if ((token = strtok(NULL, find)))
             {
                 style->statebox = atoi(token);
                 retval |= TXT_RET_HASSTBOX;
             }
         }
-        else if (str_starts_with(token, "justify"))
+        else if (str_equals(token, "justify"))
         {
-            token = strtok(NULL, find);
-            if (token == NULL)
-                gooood = false;
-            else if (str_starts_with(token, "center"))
-                style->justify = TXT_JUSTIFY_CENTER;
-            else if (str_starts_with(token, "left"))
-                style->justify = TXT_JUSTIFY_LEFT;
-            else if (str_starts_with(token, "right"))
-                style->justify = TXT_JUSTIFY_RIGHT;
-            else
-                gooood = false;
+            if ((token = strtok(NULL, find)))
+            {
+                if (str_equals(token, "center"))
+                    style->justify = TXT_JUSTIFY_CENTER;
+                else if (str_equals(token, "left"))
+                    style->justify = TXT_JUSTIFY_LEFT;
+                else if (str_equals(token, "right"))
+                    style->justify = TXT_JUSTIFY_RIGHT;
+                else
+                    LOG_WARN("Invalid token following justify: '%s'\n", token);
+            }
         }
 
-        if (gooood)
-            token = strtok(NULL, find);
+        token = strtok(NULL, find);
     }
     return retval;
 }
@@ -287,7 +220,7 @@ static void ttynewline(ttytext_t *tty)
 
 static void ttyscroll(ttytext_t *tty)
 {
-    int32_t scroll = 0;
+    int scroll = 0;
     while (tty->dy - scroll > tty->h - tty->style.size)
         scroll += tty->style.size;
     SDL_Surface *tmp = Rend_CreateSurface(tty->w, tty->h, 0);
@@ -303,7 +236,7 @@ static void outchartotty(uint16_t chr, ttytext_t *tty)
 
     SDL_Surface *tmp_surf = TTF_RenderGlyph_Solid(tty->fnt, chr, clr);
 
-    int32_t minx, maxx, miny, maxy, advice;
+    int minx, maxx, miny, maxy, advice;
     TTF_GlyphMetrics(tty->fnt, chr, &minx, &maxx, &miny, &maxy, &advice);
 
     if (tty->dx + advice > tty->w)
@@ -319,17 +252,16 @@ static void outchartotty(uint16_t chr, ttytext_t *tty)
     SDL_FreeSurface(tmp_surf);
 }
 
-static int32_t getglyphwidth(TTF_Font *fnt, uint16_t chr)
+static int getglyphwidth(TTF_Font *fnt, uint16_t chr)
 {
-    int32_t minx, maxx, miny, maxy, advice;
+    int minx, maxx, miny, maxy, advice;
     TTF_GlyphMetrics(fnt, chr, &minx, &maxx, &miny, &maxy, &advice);
     return advice;
 }
 
 void Text_Init()
 {
-    sublist = CreateMList();
-    // Load all fonts here
+    FlushMList(&sublist);
 }
 
 void Text_InitStyle(txt_style_t *style)
@@ -341,22 +273,22 @@ void Text_InitStyle(txt_style_t *style)
     style->green = 255;
     style->red = 255;
     strcpy(style->fontname, "Arial");
-    style->bold = TXT_STYLE_VAR_FALSE;
     style->escapement = 0;
-    style->italic = TXT_STYLE_VAR_FALSE;
     style->justify = TXT_JUSTIFY_LEFT;
     style->newline = 0;
     style->size = 12;
-    style->skipcolor = TXT_STYLE_VAR_FALSE;
-    style->strikeout = TXT_STYLE_VAR_FALSE;
-    style->underline = TXT_STYLE_VAR_FALSE;
+    style->bold = false;
+    style->italic = false;
+    style->strikeout = false;
+    style->underline = false;
+    style->skipcolor = false;
     style->statebox = 0;
 }
 
 void Text_GetStyle(txt_style_t *style, const char *strin)
 {
-    int32_t strt = -1;
-    int32_t endt = -1;
+    int strt = -1;
+    int endt = -1;
 
     size_t t_len = strlen(strin);
 
@@ -375,23 +307,21 @@ void Text_GetStyle(txt_style_t *style, const char *strin)
 
 void Text_SetStyle(TTF_Font *font, txt_style_t *fnt_stl)
 {
-    int32_t temp_stl = 0;
+    int style = 0;
 
-    if (fnt_stl->bold == TXT_STYLE_VAR_TRUE)
-        temp_stl |= TTF_STYLE_BOLD;
+    if (fnt_stl->bold)
+        style |= TTF_STYLE_BOLD;
+    if (fnt_stl->italic)
+        style |= TTF_STYLE_ITALIC;
+    if (fnt_stl->underline)
+        style |= TTF_STYLE_UNDERLINE;
+    if (fnt_stl->strikeout)
+        style |= TTF_STYLE_STRIKETHROUGH;
 
-    if (fnt_stl->italic == TXT_STYLE_VAR_TRUE)
-        temp_stl |= TTF_STYLE_ITALIC;
-
-    if (fnt_stl->underline == TXT_STYLE_VAR_TRUE)
-        temp_stl |= TTF_STYLE_UNDERLINE;
-
-#ifdef TTF_STYLE_STRIKETHROUGH
-    if (fnt_stl->strikeout == TXT_STYLE_VAR_TRUE)
-        temp_stl |= TTF_STYLE_STRIKETHROUGH;
-#endif
-
-    TTF_SetFontStyle(font, temp_stl);
+    if (TTF_GetFontStyle(font) != style)
+    {
+        TTF_SetFontStyle(font, style);
+    }
 }
 
 size_t Text_Draw(const char *txt, txt_style_t *fnt_stl, SDL_Surface *dst)
@@ -427,34 +357,31 @@ size_t Text_Draw(const char *txt, txt_style_t *fnt_stl, SDL_Surface *dst)
 void Text_DrawInOneLine(const char *text, SDL_Surface *dst)
 {
     txt_style_t style, style2;
-    Text_InitStyle(&style);
-    int32_t strt = -1;
-    int32_t endt = -1;
-    int32_t i = 0;
-    int32_t dx = 0, dy = 0;
-    int32_t txt_w, txt_h;
-    int32_t txtpos = 0;
+    int strt = -1;
+    int endt = -1;
+    int i = 0;
+    int dx = 0, dy = 0;
+    int txt_w, txt_h;
+    int txtpos = 0;
+    int prevbufspace = 0;
+    int prevtxtspace = 0;
+    int currentline = 0;
+    int currentlineitm = 0;
     char buf[TXT_CFG_BUF_MAX_LEN];
     char buf2[TXT_CFG_BUF_MAX_LEN];
+    int8_t TxtJustify[TXT_CFG_TEXTURES_LINES];
+    int8_t TxtPoint[TXT_CFG_TEXTURES_LINES];
+    SDL_Surface *TxtSurfaces[TXT_CFG_TEXTURES_LINES][TXT_CFG_TEXTURES_PER_LINE];
+    size_t stringlen = strlen(text);
+    TTF_Font *font = NULL;
+
+    memset(TxtSurfaces, 0, sizeof(TxtSurfaces));
     memset(buf, 0, TXT_CFG_BUF_MAX_LEN);
     memset(buf2, 0, TXT_CFG_BUF_MAX_LEN);
 
-    SDL_Surface *TxtSurfaces[TXT_CFG_TEXTURES_LINES][TXT_CFG_TEXTURES_PER_LINE];
-    int32_t currentline = 0, currentlineitm = 0;
-
-    int8_t TxtJustify[TXT_CFG_TEXTURES_LINES];
-    int8_t TxtPoint[TXT_CFG_TEXTURES_LINES];
-
-    memset(TxtSurfaces, 0, sizeof(TxtSurfaces));
-
-    int32_t stringlen = strlen(text);
-
-    TTF_Font *font = NULL;
-
+    Text_InitStyle(&style);
     font = Loader_LoadFont(style.fontname, style.size);
     Text_SetStyle(font, &style);
-
-    int32_t prevbufspace = 0, prevtxtspace = 0;
 
     while (i < stringlen)
     {
@@ -490,14 +417,17 @@ void Text_DrawInOneLine(const char *text, SDL_Surface *dst)
                     txtpos = 0;
                     dx += txt_w;
                 }
+
                 if (ret & TXT_RET_FNTCHG)
                 {
                     TTF_CloseFont(font);
                     font = Loader_LoadFont(style.fontname, style.size);
                     Text_SetStyle(font, &style);
                 }
-                if (ret & TXT_RET_FNTSTL)
+                else if (ret & TXT_RET_FNTSTL)
+                {
                     Text_SetStyle(font, &style);
+                }
 
                 if (ret & TXT_RET_NEWLN)
                 {
@@ -668,87 +598,87 @@ int Text_ProcessTTYText(action_res_t *nod)
         return NODE_RET_NO;
 
     ttytext_t *tty = nod->nodes.tty_text;
-    char buf[MINIBUFSIZE];
 
     tty->nexttime -= Game_GetDTime();
 
-    if (tty->nexttime < 0)
+    if (tty->nexttime >= 0)
     {
-        if (tty->txtpos < tty->txtsize)
+        return NODE_RET_OK;
+    }
+
+    if (tty->txtpos >= tty->txtsize)
+    {
+        Text_DeleteTTYText(nod);
+        return NODE_RET_DELETE;
+    }
+
+    if (tty->txtbuf[tty->txtpos] == '<')
+    {
+        int32_t strt = tty->txtpos, endt = 0, ret = 0;
+        while (tty->txtbuf[tty->txtpos] != '>' && tty->txtpos < tty->txtsize)
+            tty->txtpos++;
+        endt = tty->txtpos;
+        if (strt != -1)
+            if ((endt - strt - 1) > 0)
+                ret = txt_parse_txt_params(&tty->style, tty->txtbuf + strt + 1, endt - strt - 1);
+
+        if (ret & (TXT_RET_FNTCHG | TXT_RET_FNTSTL | TXT_RET_NEWLN))
         {
-            if (tty->txtbuf[tty->txtpos] == '<')
+            if (ret & TXT_RET_FNTCHG)
             {
-                int32_t strt = tty->txtpos, endt = 0, ret = 0;
-                while (tty->txtbuf[tty->txtpos] != '>' && tty->txtpos < tty->txtsize)
-                    tty->txtpos++;
-                endt = tty->txtpos;
-                if (strt != -1)
-                    if ((endt - strt - 1) > 0)
-                        ret = txt_parse_txt_params(&tty->style, tty->txtbuf + strt + 1, endt - strt - 1);
-
-                if (ret & (TXT_RET_FNTCHG | TXT_RET_FNTSTL | TXT_RET_NEWLN))
-                {
-                    if (ret & TXT_RET_FNTCHG)
-                    {
-                        TTF_CloseFont(tty->fnt);
-                        tty->fnt = Loader_LoadFont(tty->style.fontname, tty->style.size);
-                        Text_SetStyle(tty->fnt, &tty->style);
-                    }
-                    if (ret & TXT_RET_FNTSTL)
-                        Text_SetStyle(tty->fnt, &tty->style);
-
-                    if (ret & TXT_RET_NEWLN)
-                        ttynewline(tty);
-                }
-
-                if (ret & TXT_RET_HASSTBOX)
-                {
-                    int t_len = sprintf(buf, "%d", GetgVarInt(tty->style.statebox));
-                    for (int j = 0; j < t_len; j++)
-                        outchartotty(buf[j], tty);
-                }
-
-                tty->txtpos++;
+                TTF_CloseFont(tty->fnt);
+                tty->fnt = Loader_LoadFont(tty->style.fontname, tty->style.size);
+                Text_SetStyle(tty->fnt, &tty->style);
             }
+            if (ret & TXT_RET_FNTSTL)
+                Text_SetStyle(tty->fnt, &tty->style);
+
+            if (ret & TXT_RET_NEWLN)
+                ttynewline(tty);
+        }
+
+        if (ret & TXT_RET_HASSTBOX)
+        {
+            char buf[MINIBUFSIZE];
+            int t_len = sprintf(buf, "%d", GetgVarInt(tty->style.statebox));
+            for (int j = 0; j < t_len; j++)
+                outchartotty(buf[j], tty);
+        }
+
+        tty->txtpos++;
+    }
+    else
+    {
+        int8_t charsz = GetUtf8CharSize(tty->txtbuf[tty->txtpos]);
+        uint16_t chr = ReadUtf8Char(&tty->txtbuf[tty->txtpos]);
+
+        if (chr == ' ')
+        {
+            int i = tty->txtpos + charsz;
+            int width = getglyphwidth(tty->fnt, chr);
+
+            while (i < tty->txtsize && tty->txtbuf[i] != ' ' && tty->txtbuf[i] != '<')
+            {
+
+                int8_t chsz = GetUtf8CharSize(tty->txtbuf[i]);
+                uint16_t uchr = ReadUtf8Char(&tty->txtbuf[i]);
+
+                width += getglyphwidth(tty->fnt, uchr);
+
+                i += chsz;
+            }
+            if (tty->dx + width > tty->w)
+                ttynewline(tty);
             else
-            {
-                int8_t charsz = GetUtf8CharSize(tty->txtbuf[tty->txtpos]);
-                uint16_t chr = ReadUtf8Char(&tty->txtbuf[tty->txtpos]);
-
-                if (chr == ' ')
-                {
-                    int32_t i = tty->txtpos + charsz;
-                    int32_t width = getglyphwidth(tty->fnt, chr);
-
-                    while (i < tty->txtsize && tty->txtbuf[i] != ' ' && tty->txtbuf[i] != '<')
-                    {
-
-                        int8_t chsz = GetUtf8CharSize(tty->txtbuf[i]);
-                        uint16_t uchr = ReadUtf8Char(&tty->txtbuf[i]);
-
-                        width += getglyphwidth(tty->fnt, uchr);
-
-                        i += chsz;
-                    }
-                    if (tty->dx + width > tty->w)
-                        ttynewline(tty);
-                    else
-                        outchartotty(chr, tty);
-                }
-                else
-                    outchartotty(chr, tty);
-
-                tty->txtpos += charsz;
-            }
-            tty->nexttime = tty->delay;
-            Rend_BlitSurfaceXY(tty->img, Rend_GetLocationScreenImage(), tty->x, tty->y);
+                outchartotty(chr, tty);
         }
         else
-        {
-            Text_DeleteTTYText(nod);
-            return NODE_RET_DELETE;
-        }
+            outchartotty(chr, tty);
+
+        tty->txtpos += charsz;
     }
+    tty->nexttime = tty->delay;
+    Rend_BlitSurfaceXY(tty->img, Rend_GetLocationScreenImage(), tty->x, tty->y);
 
     return NODE_RET_OK;
 }
@@ -887,7 +817,7 @@ subrect_t *Text_CreateSubRect(int x, int y, int w, int h)
     tmp->timer = -1;
     tmp->img = Rend_CreateSurface(w, h, 0);
 
-    AddToMList(sublist, tmp);
+    AddToMList(&sublist, tmp);
 
     return tmp;
 }
@@ -907,10 +837,10 @@ void Text_DrawSubtitles()
     };
     Rend_FillRect(screen, &msg_rect, 0, 0, 0);
 
-    StartMList(sublist);
-    while (!EndOfMList(sublist))
+    StartMList(&sublist);
+    while (!EndOfMList(&sublist))
     {
-        subrect_t *subrec = (subrect_t *)DataMList(sublist);
+        subrect_t *subrec = (subrect_t *)DataMList(&sublist);
 
         if (subrec->timer >= 0)
         {
@@ -923,7 +853,7 @@ void Text_DrawSubtitles()
         {
             SDL_FreeSurface(subrec->img);
             DELETE(subrec);
-            DeleteCurrent(sublist);
+            DeleteCurrentMList(&sublist);
         }
         else
         {
@@ -931,6 +861,6 @@ void Text_DrawSubtitles()
             Rend_BlitSurface(subrec->img, NULL, screen, &rect);
         }
 
-        NextMList(sublist);
+        NextMList(&sublist);
     }
 }

@@ -156,8 +156,8 @@ action_res_t *GetGNode(uint32_t indx);
 void SetGNode(uint32_t indx, action_res_t *data);
 void SetgVarInt(uint32_t indx, int var);
 int GetgVarInt(uint32_t indx);
+int *GetgVarRef(uint32_t indx);
 void SetDirectgVarInt(uint32_t indx, int var);
-int *GetDirectgVarInt(uint32_t indx);
 
 void ScrSys_Init();
 void ScrSys_LoadScript(pzllst_t *lst, const char *filename, bool control, MList *controlst);

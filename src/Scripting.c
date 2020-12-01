@@ -714,7 +714,7 @@ void ScrSys_ProcessActionsList()
         }
 
         if (result == NODE_RET_DELETE)
-            DeleteCurrent(lst);
+            DeleteCurrentMList(lst);
 
         NextMList(lst);
     }
@@ -779,7 +779,7 @@ void ScrSys_FlushResourcesByOwner(pzllst_t *owner)
                 result = ScrSys_DeleteActionNode(nod);
 
             if (result == NODE_RET_DELETE)
-                DeleteCurrent(all);
+                DeleteCurrentMList(all);
         }
 
         NextMList(all);
@@ -797,7 +797,7 @@ void ScrSys_FlushResourcesByType(int type)
 
         if (nod->node_type == type && nod->first_process == true)
             if (ScrSys_DeleteActionNode(nod) == NODE_RET_DELETE)
-                DeleteCurrent(all);
+                DeleteCurrentMList(all);
 
         NextMList(all);
     }
