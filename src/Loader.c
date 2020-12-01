@@ -543,7 +543,7 @@ void Loader_LoadZCR(const char *file, Cursor_t *cur)
     }
     else
     {
-        LOG_DEBUG("  > Using fallback mechanism\n");
+        LOG_WARN("  > Using fallback mechanism\n");
         char tmp[64];
         strcpy(tmp, file);
         int len = strlen(tmp);

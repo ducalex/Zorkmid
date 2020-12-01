@@ -115,7 +115,7 @@
 typedef struct pzllst
 {
     char name[32];
-    MList *_list;
+    MList puzzles;
     puzzlenode_t *stack[PuzzleStack];
     int16_t stksize;
     uint8_t exec_times;

@@ -4,8 +4,8 @@
 typedef struct
 {
     uint16_t slot;   //puzzle slot
-    MList *CritList; //Criteria list of lists criteria
-    MList *ResList;  //results list
+    MList CritList; //Criteria list of lists criteria
+    MList ResList;  //results list
     pzllst_t *owner;
 } puzzlenode_t;
 

@@ -12,23 +12,129 @@ static action_res_t *gNodes[30000];
 static uint8_t Flags[30000];
 static StateBoxEnt_t *StateBox[30000];
 
-static const char *PreferencesFile = NULL;
+static pzllst_t *uni = NULL;   // universe script
+static pzllst_t *world = NULL; // world script
+static pzllst_t *room = NULL;  // room script
+static pzllst_t *view = NULL;  // view script
+
+static MList controls;  // Controls
+static MList actions;   // Sounds, animations, ttytexts, and others
 
 static bool BreakExecute = false;
 
-static pzllst_t *uni = NULL;   //universe script
-static pzllst_t *world = NULL; //world script
-static pzllst_t *room = NULL;  //room script
-static pzllst_t *view = NULL;  //view script
-
-static MList *controls = NULL;   // Controls
-static MList *actions = NULL; //sounds, animations, ttytexts and other.
+static const char *PreferencesFile = NULL;
 
 static uint8_t SaveBuffer[512 * 1024];
 static uint32_t SaveCurrentSize = 0;
 
-void FillStateBoxFromList(pzllst_t *lst);
-void ShakeStateBox(uint32_t indx);
+
+static void AddPuzzleToStateBox(int slot, puzzlenode_t *pzlnd)
+{
+    StateBoxEnt_t *ent = StateBox[slot];
+
+    if (ent == NULL)
+    {
+        ent = NEW(StateBoxEnt_t);
+        StateBox[slot] = ent;
+        ent->cnt = 0;
+    }
+    if (ent->cnt < PuzzleStack)
+    {
+        ent->nod[ent->cnt] = pzlnd;
+        ent->cnt++;
+    }
+}
+
+static void FillStateBoxFromList(pzllst_t *lst)
+{
+    StartMList(&lst->puzzles);
+    while (!EndOfMList(&lst->puzzles))
+    {
+        puzzlenode_t *pzlnod = (puzzlenode_t *)DataMList(&lst->puzzles);
+
+        AddPuzzleToStateBox(pzlnod->slot, pzlnod);
+
+        StartMList(&pzlnod->CritList);
+        while (!EndOfMList(&pzlnod->CritList))
+        {
+            MList *CriteriaLst = (MList *)DataMList(&pzlnod->CritList);
+
+            int prevslot = 0;
+            StartMList(CriteriaLst);
+            while (!EndOfMList(CriteriaLst))
+            {
+                crit_node_t *crtnod = (crit_node_t *)DataMList(CriteriaLst);
+
+                if (prevslot != crtnod->slot1)
+                    AddPuzzleToStateBox(crtnod->slot1, pzlnod);
+
+                prevslot = crtnod->slot1;
+
+                NextMList(CriteriaLst);
+            }
+
+            NextMList(&pzlnod->CritList);
+        }
+        NextMList(&lst->puzzles);
+    }
+}
+
+static void AddStateBoxToStk(puzzlenode_t *pzl)
+{
+    pzllst_t *owner = pzl->owner;
+    if (owner->stksize < PuzzleStack)
+    {
+        if (owner->stksize > 0)
+        {
+            int32_t numb = 0;
+            for (int32_t i = owner->stksize - 1; i >= 0 && owner->stack[i] != NULL; i--)
+            {
+                if (owner->stack[i] == pzl)
+                {
+                    if (numb < MaxPuzzlesInStack)
+                        numb++;
+                    else
+                        return;
+                }
+            }
+        }
+
+        owner->stack[owner->stksize] = pzl;
+        owner->stksize++;
+    }
+    else
+    {
+        LOG_WARN("Can't add pzl# %d to Stack\n", pzl->slot);
+    }
+}
+
+static void ShakeStateBox(uint32_t indx)
+{
+    //Nemesis don't use statebox, but this engine does, well make for nemesis it non revert.
+    if (!StateBox[indx])
+        return;
+
+    if (CUR_GAME == GAME_NEM)
+    {
+        for (int i = 0; i < StateBox[indx]->cnt; i++)
+            AddStateBoxToStk(StateBox[indx]->nod[i]);
+    }
+    else
+    {
+        for (int i = StateBox[indx]->cnt - 1; i >= 0; i--)
+            AddStateBoxToStk(StateBox[indx]->nod[i]);
+    }
+}
+
+static void FlushStateBox()
+{
+    for (int i = 0; i < VAR_SLOTS_MAX; i++)
+    {
+        if (StateBox[i] != NULL)
+            DELETE(StateBox[i]);
+        StateBox[i] = NULL;
+    }
+}
 
 pzllst_t *GetUni()
 {
@@ -52,18 +158,18 @@ pzllst_t *Getview()
 
 MList *GetControlsList()
 {
-    return controls;
+    return &controls;
 }
 
 MList *GetActionsList()
 {
-    return actions;
+    return &actions;
 }
 
 void ScrSys_AddToActionsList(void *nod)
 {
-    if (actions && nod)
-        AddToMList(actions, nod);
+    if (nod)
+        AddToMList(&actions, nod);
 }
 
 void SetgVarInt(uint32_t indx, int var)
@@ -139,12 +245,13 @@ void ScrSys_Init()
     memset(gVars, 0x0, sizeof(gVars));
     memset(gNodes, 0x0, sizeof(gNodes));
 
+    FlushMList(&actions);
+    FlushMList(&controls);
+
     view = Puzzle_CreateList("view");
     room = Puzzle_CreateList("room");
     world = Puzzle_CreateList("world");
     uni = Puzzle_CreateList("universe");
-    controls = CreateMList();
-    actions = CreateMList();
 
     //needed for znemesis
     SetDirectgVarInt(SLOT_CPU, 1);
@@ -184,16 +291,6 @@ void ScrSys_LoadScript(pzllst_t *lst, const char *filename, bool control, MList 
     }
 
     mfclose(fl);
-}
-
-void ScrSys_ClearStateBox()
-{
-    for (int i = 0; i < VAR_SLOTS_MAX; i++)
-    {
-        if (StateBox[i] != NULL)
-            DELETE(StateBox[i]);
-        StateBox[i] = NULL;
-    }
 }
 
 void ScrSys_PrepareSaveBuffer()
@@ -431,7 +528,7 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         }
     }
 
-    ScrSys_ClearStateBox();
+    FlushStateBox();
 
     if (temp.World == SaveWorld && temp.Room == SaveRoom &&
         temp.Node == SaveNode && temp.View == SaveView)
@@ -451,7 +548,7 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         ScrSys_FlushResourcesByOwner(view);
 
         Puzzle_FlushList(view);
-        Controls_FlushList(controls);
+        Controls_FlushList(&controls);
 
         tm[0] = temp.World;
         tm[1] = temp.Room;
@@ -460,7 +557,7 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
         tm[4] = 0;
         sprintf(buf, "%s.scr", tm);
 
-        ScrSys_LoadScript(view, buf, true, controls);
+        ScrSys_LoadScript(view, buf, true, &controls);
     }
 
     if (temp.Room != GetgVarInt(SLOT_ROOM) ||
@@ -510,117 +607,19 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
     BreakExecute = false;
 }
 
-void AddPuzzleToStateBox(int slot, puzzlenode_t *pzlnd)
-{
-    StateBoxEnt_t *ent = StateBox[slot];
-
-    if (ent == NULL)
-    {
-        ent = NEW(StateBoxEnt_t);
-        StateBox[slot] = ent;
-        ent->cnt = 0;
-    }
-    if (ent->cnt < PuzzleStack)
-    {
-        ent->nod[ent->cnt] = pzlnd;
-        ent->cnt++;
-    }
-}
-
-void FillStateBoxFromList(pzllst_t *lst)
-{
-    StartMList(lst->_list);
-    while (!EndOfMList(lst->_list))
-    {
-        puzzlenode_t *pzlnod = (puzzlenode_t *)DataMList(lst->_list);
-
-        AddPuzzleToStateBox(pzlnod->slot, pzlnod);
-
-        StartMList(pzlnod->CritList);
-        while (!EndOfMList(pzlnod->CritList))
-        {
-            MList *CriteriaLst = (MList *)DataMList(pzlnod->CritList);
-
-            int prevslot = 0;
-            StartMList(CriteriaLst);
-            while (!EndOfMList(CriteriaLst))
-            {
-                crit_node_t *crtnod = (crit_node_t *)DataMList(CriteriaLst);
-
-                if (prevslot != crtnod->slot1)
-                    AddPuzzleToStateBox(crtnod->slot1, pzlnod);
-
-                prevslot = crtnod->slot1;
-
-                NextMList(CriteriaLst);
-            }
-
-            NextMList(pzlnod->CritList);
-        }
-        NextMList(lst->_list);
-    }
-}
-
-void AddStateBoxToStk(puzzlenode_t *pzl)
-{
-    pzllst_t *owner = pzl->owner;
-    if (owner->stksize < PuzzleStack)
-    {
-        if (owner->stksize > 0)
-        {
-            int32_t numb = 0;
-            for (int32_t i = owner->stksize - 1; i >= 0 && owner->stack[i] != NULL; i--)
-            {
-                if (owner->stack[i] == pzl)
-                {
-                    if (numb < MaxPuzzlesInStack)
-                        numb++;
-                    else
-                        return;
-                }
-            }
-        }
-
-        owner->stack[owner->stksize] = pzl;
-        owner->stksize++;
-    }
-    else
-    {
-        LOG_WARN("Can't add pzl# %d to Stack\n", pzl->slot);
-    }
-}
-
-void ShakeStateBox(uint32_t indx)
-{
-    //Nemesis don't use statebox, but this engine does, well make for nemesis it non revert.
-    if (!StateBox[indx])
-        return;
-
-    if (CUR_GAME == GAME_NEM)
-    {
-        for (int i = 0; i < StateBox[indx]->cnt; i++)
-            AddStateBoxToStk(StateBox[indx]->nod[i]);
-    }
-    else
-    {
-        for (int i = StateBox[indx]->cnt - 1; i >= 0; i--)
-            AddStateBoxToStk(StateBox[indx]->nod[i]);
-    }
-}
-
 void ScrSys_ExecPuzzleList(pzllst_t *lst)
 {
     if (lst->exec_times < 2)
     {
-        StartMList(lst->_list);
-        while (!EndOfMList(lst->_list))
+        StartMList(&lst->puzzles);
+        while (!EndOfMList(&lst->puzzles))
         {
-            if (Puzzle_TryExec((puzzlenode_t *)DataMList(lst->_list)) == ACTION_BREAK)
+            if (Puzzle_TryExec((puzzlenode_t *)DataMList(&lst->puzzles)) == ACTION_BREAK)
             {
                 BreakExecute = true;
                 break;
             }
-            NextMList(lst->_list);
+            NextMList(&lst->puzzles);
         }
         lst->exec_times++;
     }
@@ -841,9 +840,9 @@ void ScrSys_LoadPreferences()
             par = str_ltrim(par + 1);
             for (int j = 0; prefs[j].name != NULL; j++)
             {
-                if (str_starts_with(rows[pos], prefs[j].name))
+                if (str_equals(rows[pos], prefs[j].name))
                 {
-                    LOG_INFO("'%s' = '%d'\n", prefs[j].name, atoi(par));
+                    LOG_DEBUG("'%s' = '%d'\n", prefs[j].name, atoi(par));
                     SetDirectgVarInt(prefs[j].slot, atoi(par));
                     break;
                 }
