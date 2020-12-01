@@ -33,14 +33,14 @@ typedef struct
     FManNode_t *node;
 } mfile_t;
 
-void Loader_Init(const char *dir);
-const char *Loader_FindFile(const char *name);
-TTF_Font *Loader_LoadFont(const char *name, int size);
-Mix_Chunk *Loader_LoadSound(const char *file);
-SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, int32_t key_555);
-anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555);
-char **Loader_LoadSTR(const char *file);
-void Loader_LoadZCR(const char *file, Cursor_t *cur);
+void Loader_Init(const char *assets_dir);
+const char *Loader_FindFile(const char *filename);
+TTF_Font *Loader_LoadFont(const char *filename, int size);
+Mix_Chunk *Loader_LoadSound(const char *filename);
+SDL_Surface *Loader_LoadGFX(const char *filename, bool transpose, int32_t key_555);
+anim_surf_t *Loader_LoadRLF(const char *filename, bool transpose, int32_t mask_555);
+char **Loader_LoadSTR(const char *filename);
+void Loader_LoadZCR(const char *filename, Cursor_t *cur);
 
 mfile_t *mfopen(const char *filename);
 mfile_t *mfopen_txt(const char *filename);

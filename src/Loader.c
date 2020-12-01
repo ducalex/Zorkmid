@@ -287,7 +287,7 @@ Mix_Chunk *Loader_LoadSound(const char *file)
 
     if (!mfp)
     {
-        LOG_WARN("File '%s' not found\n", file);
+        LOG_WARN("Sound file '%s' not found\n", file);
     }
     else if (str_ends_with(file, "wav"))
     {
@@ -469,7 +469,7 @@ SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, int32_t key_555)
     mfile_t *mfp = mfopen(file);
     if (!mfp)
     {
-        LOG_WARN("GFX File '%s' not found\n", file);
+        LOG_WARN("GFX file '%s' not found\n", file);
         return NULL;
     }
 
@@ -510,64 +510,39 @@ void Loader_LoadZCR(const char *file, Cursor_t *cur)
 {
     LOG_DEBUG("Loading ZCR file '%s'\n", file);
 
-    mfile_t *f = mfopen(file);
-    if (f)
+    mfile_t *mfp = mfopen(file);
+    if (!mfp)
     {
-        uint32_t magic = 0;
-        mfread(&magic, 4, f);
-        if (magic == MAGIC_ZCR)
-        {
-            uint16_t x = 0, y = 0, w = 0, h = 0;
-            mfread(&x, 2, f);
-            mfread(&y, 2, f);
-            mfread(&w, 2, f);
-            mfread(&h, 2, f);
+        LOG_WARN("Cursor file '%s' not found\n", file);
+        return;
+    }
 
-            cur->ox = x;
-            cur->oy = y;
+    uint32_t magic = 0;
+    mfread(&magic, 4, mfp);
 
-            cur->img = Rend_CreateSurface(w, h, 0);
-            Rend_SetColorKey(cur->img, 0, 0, 0);
+    if (magic == MAGIC_ZCR)
+    {
+        uint16_t w = 0, h = 0;
+        mfread(&cur->ox, 2, mfp);
+        mfread(&cur->oy, 2, mfp);
+        mfread(&w, 2, mfp);
+        mfread(&h, 2, mfp);
 
-            SDL_LockSurface(cur->img);
+        cur->img = Rend_CreateSurface(w, h, 0);
+        Rend_SetColorKey(cur->img, 0, 0, 0);
 
-            mfread(cur->img->pixels, 2 * w * h, f);
+        SDL_LockSurface(cur->img);
 
-            SDL_UnlockSurface(cur->img);
-        }
-        else
-        {
-            LOG_WARN("File '%s' is not ZCR\n", file);
-        }
-        mfclose(f);
+        mfread(cur->img->pixels, 2 * w * h, mfp);
+
+        SDL_UnlockSurface(cur->img);
     }
     else
     {
-        LOG_WARN("  > Using fallback mechanism\n");
-        char tmp[64];
-        strcpy(tmp, file);
-        int len = strlen(tmp);
-
-        cur->img = Loader_LoadGFX(tmp, false, 0x0000);
-
-        if (cur->img == NULL)
-            return;
-
-        tmp[len - 3] = 'p';
-        tmp[len - 2] = 'o';
-        tmp[len - 1] = 'i';
-        tmp[len] = 'n';
-        tmp[len + 1] = 't';
-        tmp[len + 2] = 0x0;
-
-        mfile_t *f = mfopen(tmp);
-        if (f)
-        {
-            mfread(&cur->ox, 2, f);
-            mfread(&cur->oy, 2, f);
-            mfclose(f);
-        }
+        LOG_WARN("Cursor file '%s' is not valid ZCR\n", file);
     }
+
+    mfclose(mfp);
 }
 
 TTF_Font *Loader_LoadFont(const char *name, int size)
@@ -748,7 +723,9 @@ anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555)
 
     mfile_t *f = mfopen(file);
     if (!f)
-        Z_PANIC("RLF File %s not found\n", file);
+    {
+        Z_PANIC("Anim file %s not found\n", file);
+    }
 
     rlf_header_t hd;
     rlf_cinf_t cin;
@@ -763,7 +740,7 @@ anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555)
 
     if (hd.magic != MAGIC_RLF)
     {
-        LOG_WARN("File '%s' is not valid RLF\n", file);
+        LOG_WARN("Anim file '%s' is not valid RLF\n", file);
         return NULL;
     }
 
@@ -852,28 +829,35 @@ char **Loader_LoadSTR(const char *filename)
 {
     char line_buffer[STRBUFSIZE];
     int lines = 1;
+    int pos = 0;
+    char **strings;
 
     mfile_t *mfp = mfopen_txt(filename);
-    if (!mfp)
-        return NULL;
-
-    for (int i = 0; i < mfp->size; i++)
+    if (mfp)
     {
-        if (mfp->buffer[i] == '\n')
-            lines++;
+        for (int i = 0; i < mfp->size; i++)
+        {
+            if (mfp->buffer[i] == '\n')
+                lines++;
+        }
+
+        strings = NEW_ARRAY(char *, lines);
+
+        while (!mfeof(mfp))
+        {
+            mfgets(line_buffer, STRBUFSIZE, mfp);
+            strings[pos++] = str_trim(line_buffer);
+        }
+
+        mfclose(mfp);
+    }
+    else
+    {
+        LOG_WARN("Strings file '%s' not found\n", filename);
+        strings = NEW_ARRAY(char *, lines);
     }
 
-    char **strings = NEW_ARRAY(char *, lines + 10);
-    int pos = 0;
-
-    while (!mfeof(mfp))
-    {
-        mfgets(line_buffer, STRBUFSIZE, mfp);
-        strings[pos++] = str_trim(line_buffer);
-    }
     strings[pos] = NULL;
-
-    mfclose(mfp);
 
     return strings;
 }
