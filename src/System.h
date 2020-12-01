@@ -84,7 +84,7 @@ void PrevMList(MList *lst);
 void *DataMList(MList *lst);
 void DeleteMList(MList *lst);
 void FlushMList(MList *lst);
-void DeleteCurrent(MList *lst);
+void DeleteCurrentMList(MList *lst);
 bool EndOfMList(MList *lst);
 bool PushMList(MList *lst);
 bool PopMList(MList *lst);

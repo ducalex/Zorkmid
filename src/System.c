@@ -192,29 +192,19 @@ void PrevMList(MList *lst)
         lst->CurNode = lst->CurNode->prev;
 }
 
+//Return true on EOF of list
+bool EndOfMList(MList *lst)
+{
+    return (lst->CurNode == NULL);
+}
+
 //Get data of element
 void *DataMList(MList *lst)
 {
     return lst->CurNode->data;
 }
 
-//Delete list object and delete all nodes assigned to list
-void DeleteMList(MList *lst)
-{
-    if (lst->count > 0)
-    {
-        MList_node *nxt = lst->Head->next;
-        lst->CurNode = lst->Head;
-        while (lst->CurNode)
-        {
-            nxt = lst->CurNode->next;
-            DELETE(lst->CurNode);
-            lst->CurNode = nxt;
-        }
-    }
-    DELETE(lst);
-}
-
+//Delete all nodes assigned to list
 void FlushMList(MList *lst)
 {
     if (lst->count > 0)
@@ -238,7 +228,14 @@ void FlushMList(MList *lst)
     lst->dontstp = false;
 }
 
-void DeleteCurrent(MList *lst)
+//Delete list object and delete all nodes assigned to list
+void DeleteMList(MList *lst)
+{
+    FlushMList(lst);
+    DELETE(lst);
+}
+
+void DeleteCurrentMList(MList *lst)
 {
     if (lst->stkpos != 0)
         Z_PANIC("???");
@@ -304,10 +301,4 @@ bool PopMList(MList *lst)
     lst->CurNode = lst->Stack[lst->stkpos];
 
     return true;
-}
-
-//Return true on EOF of list
-bool EndOfMList(MList *lst)
-{
-    return (lst->CurNode == NULL);
 }

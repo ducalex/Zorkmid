@@ -278,7 +278,7 @@ static inline int action_animplay(char *params, int aSlot, pzllst_t *owner)
             if (nd->slot == aSlot)
             {
                 Anim_DeleteNode(nd);
-                DeleteCurrent(all);
+                DeleteCurrentMList(all);
             }
 
         NextMList(all);
@@ -670,7 +670,7 @@ static int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
             else
                 ScrSys_DeleteActionNode(nod);
 
-            DeleteCurrent(all);
+            DeleteCurrentMList(all);
             break;
         }
 

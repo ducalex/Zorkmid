@@ -88,7 +88,7 @@ int GetgVarInt(uint32_t indx)
     return 0;
 }
 
-int *GetDirectgVarInt(uint32_t indx)
+int *GetgVarRef(uint32_t indx)
 {
     if (indx < VAR_SLOTS_MAX)
         return &gVars[indx];

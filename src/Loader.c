@@ -574,6 +574,8 @@ TTF_Font *Loader_LoadFont(const char *name, int size)
 {
     FManNode_t *node = FindFManNode(name);
 
+    LOG_DEBUG("Font %s requested\n", name);
+
     if (!node)
     {
         if (str_starts_with(name, "Times"))
@@ -879,92 +881,46 @@ char **Loader_LoadSTR(const char *filename)
 
 
 /******************************* File access *******************************/
-static void txt_wide_to_utf8(mfile_t *file)
+static void ucs2_to_utf8(mfile_t *file)
 {
-    const char *file_buf = mfbuffer(file);
-    size_t size = file->size * 2;
+    const uint8_t *input = mfbuffer(file);
+    char *output = (char *)input;
     size_t pos = 0;
 
-    char *buf = NEW_ARRAY(char, size);
-
     file->pos = 0;
-    while (file->pos < file->size && pos < size)
-    {
-        if (file_buf[file->pos] == 0xD)
-        {
-            buf[pos] = 0xD;
-            pos++;
-            file->pos++;
-            if (file->pos < file->size)
-                if (file_buf[file->pos] == 0xA)
-                {
-                    if (pos < size)
-                    {
-                        buf[pos] = 0xA;
-                        pos++;
-                    }
-                    file->pos++;
-                    if (file->pos < file->size)
-                        if (file_buf[file->pos] == 0x0)
-                            file->pos++;
-                }
-        }
-        else
-        {
-            if (file->pos + 1 < file->size)
-            {
-                uint16_t ch = (file_buf[file->pos] & 0xFF) | ((file_buf[file->pos + 1] << 8) & 0xFF00);
-                if (ch < 0x80)
-                {
-                    buf[pos] = ch & 0x7F;
-                    pos++;
-                }
-                else if (ch >= 0x80 && ch < 0x800)
-                {
-                    if (pos + 1 < size)
-                    {
-                        buf[pos] = 0xC0 | ((ch >> 6) & 0x1F);
-                        pos++;
-                        buf[pos] = 0x80 | ((ch)&0x3F);
-                        pos++;
-                    }
-                }
-                else if (ch >= 0x800 && ch < 0x10000)
-                {
-                    if (pos + 2 < size)
-                    {
-                        buf[pos] = 0xE0 | ((ch >> 12) & 0xF);
-                        pos++;
-                        buf[pos] = 0x80 | ((ch >> 6) & 0x3F);
-                        pos++;
-                        buf[pos] = 0x80 | ((ch)&0x3F);
-                        pos++;
-                    }
-                }
-                else if (ch >= 0x10000 && ch < 0x200000)
-                {
-                    if (pos + 3 < size)
-                    {
-                        buf[pos] = 0xF0;
-                        pos++;
-                        buf[pos] = 0x80 | ((ch >> 12) & 0x3F);
-                        pos++;
-                        buf[pos] = 0x80 | ((ch >> 6) & 0x3F);
-                        pos++;
-                        buf[pos] = 0x80 | ((ch)&0x3F);
-                        pos++;
-                    }
-                }
 
-                file->pos += 2;
-            }
+    while ((file->pos + 1) < file->size)
+    {
+        uint16_t ch = input[file->pos] | (input[file->pos + 1] << 8);
+
+        if (ch == 0x0A0D) // \r\n is special
+        {
+            output[pos++] = '\n';
+            if (input[file->pos + 2] == 0x0)
+                file->pos++;
         }
+        else if (ch < 0x80)
+        {
+            output[pos++] = ch & 0x7F;
+        }
+        else if (ch < 0x800)
+        {
+            output[pos++] = 0xC0 | ((ch >> 6) & 0x1F);
+            output[pos++] = 0x80 | ((ch) & 0x3F);
+        }
+        else if (ch < 0x10000)
+        {
+            output[pos++] = 0xE0 | ((ch >> 12) & 0xF);
+            output[pos++] = 0x80 | ((ch >> 6) & 0x3F);
+            output[pos++] = 0x80 | ((ch) & 0x3F);
+        }
+
+        file->pos += 2;
     }
 
-    DELETE(file_buf);
     file->pos = 0;
     file->size = pos;
-    file->buffer = buf;
+    file->buffer = realloc(file->buffer, pos);
 }
 
 mfile_t *mfopen(const char *filename)
@@ -1018,7 +974,7 @@ mfile_t *mfopen_txt(const char *filename)
     for (size_t i = 0; i < file->size - 2; i++)
         if (file->buffer[i] == 0 && file->buffer[i + 2] == 0)
         {
-            txt_wide_to_utf8(file);
+            ucs2_to_utf8(file);
             break;
         }
 

@@ -438,7 +438,7 @@ void Rend_InitGraphics(int full)
         Z_PANIC("Unable to init SDL: %s\n", SDL_GetError());
     }
 
-    view_X = GetDirectgVarInt(SLOT_VIEW_POS);
+    view_X = GetgVarRef(SLOT_VIEW_POS);
     tilt_gap = GAMESCREEN_H_2;
 
     Rend_SetVideoMode(640, 480, full);
