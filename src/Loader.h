@@ -9,16 +9,33 @@
 
 typedef struct
 {
+    FILE *fl;
+    uint32_t xor_key;
+} zfs_arch_t;
+
+typedef struct
+{
+    char *name;
+    char *path;
+    size_t size;
+    struct {
+        zfs_arch_t *archive;
+        size_t offset;
+    } zfs;
+} FManNode_t;
+
+typedef struct
+{
     char *buffer;
     size_t size;
     size_t pos;
     FILE *fp;
-    void *zfs;
+    FManNode_t *node;
 } mfile_t;
 
 void Loader_Init(const char *dir);
-const char *Loader_FindFile(const char *chr);
-TTF_Font *Loader_LoadFont(char *name, int size);
+const char *Loader_FindFile(const char *name);
+TTF_Font *Loader_LoadFont(const char *name, int size);
 Mix_Chunk *Loader_LoadSound(const char *file);
 SDL_Surface *Loader_LoadGFX(const char *file, bool transpose, int32_t key_555);
 anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555);

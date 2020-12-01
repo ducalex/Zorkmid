@@ -6,19 +6,6 @@
 /******************************* Assets management *******************************/
 typedef struct
 {
-    FILE *fl;
-    uint32_t xor_key;
-} zfs_arch_t;
-
-typedef struct
-{
-    uint32_t offset;
-    uint32_t size;
-    zfs_arch_t *archive;
-} zfs_file_t;
-
-typedef struct
-{
     uint32_t magic;
     uint32_t unk1;
     uint32_t unk2;
@@ -40,82 +27,69 @@ typedef struct
 
 typedef struct
 {
-    char *name;
-    char *path;
-    size_t size;
-    zfs_file_t *zfs;
-} FManNode_t;
+    size_t count;
+    FManNode_t items[0x800];
+} FManBucket_t;
 
-typedef struct BinTreeNd_s
+static FManBucket_t FManBuckets[0x100];
+
+static const uint8_t PT[0x100] = {
+    0x9C, 0xCE, 0x13, 0x78, 0xE9, 0xDE, 0x7F, 0xB5, 0xDD, 0x62, 0x39, 0x96, 0x5C, 0x10, 0x5F, 0xCB,
+    0xFF, 0x36, 0xC8, 0x7A, 0xC5, 0xB2, 0x9F, 0x2E, 0x1E, 0x39, 0xC8, 0xD3, 0x1D, 0xC1, 0x70, 0x0B,
+    0x7A, 0x52, 0xD1, 0x5F, 0x42, 0x08, 0xCA, 0x3F, 0x4E, 0x5D, 0x0A, 0x5A, 0xBD, 0xEF, 0x1E, 0x97,
+    0xB8, 0x56, 0xD5, 0x7E, 0xA7, 0x12, 0x61, 0x2B, 0x49, 0x0D, 0x3B, 0x33, 0x03, 0xBC, 0xC7, 0xE1,
+    0xC2, 0x60, 0x5E, 0xD4, 0x17, 0xFA, 0x39, 0xDD, 0x00, 0x80, 0xF2, 0xED, 0x32, 0x8B, 0x93, 0x71,
+    0xB7, 0xFF, 0xDB, 0x69, 0xA1, 0xD3, 0xF3, 0x9C, 0xE5, 0x63, 0x13, 0x88, 0xB0, 0x5B, 0xA7, 0x7B,
+    0x22, 0x07, 0xD6, 0xEA, 0x85, 0xE6, 0xE9, 0xA0, 0x03, 0x22, 0xB4, 0xFE, 0x64, 0x2B, 0x45, 0x0E,
+    0xD5, 0x67, 0xA5, 0x77, 0x4C, 0xDE, 0xD6, 0x49, 0xAE, 0x80, 0x8D, 0x3C, 0xBE, 0xA3, 0x14, 0xA7,
+    0xA4, 0x73, 0x3F, 0xE4, 0xB5, 0xDF, 0x42, 0x34, 0xC0, 0x39, 0x12, 0x0E, 0x3B, 0xF9, 0xA5, 0x99,
+    0x7B, 0xF4, 0xCA, 0xEF, 0x4E, 0x91, 0x5D, 0x45, 0x9C, 0xCF, 0xC2, 0x1F, 0x59, 0x89, 0xA6, 0x23,
+    0xBF, 0x85, 0x35, 0x53, 0x0D, 0xCD, 0x92, 0x42, 0x59, 0xF9, 0xAF, 0x3F, 0xFC, 0xB1, 0x8D, 0xE2,
+    0xB2, 0x98, 0x7C, 0x44, 0x08, 0x02, 0xDF, 0x13, 0x2E, 0xDB, 0x6C, 0xC7, 0xED, 0x9B, 0x9D, 0xC4,
+    0x59, 0xB5, 0x2A, 0x04, 0x5C, 0x45, 0xA5, 0xCF, 0x2E, 0xEA, 0x60, 0x8C, 0x15, 0x7E, 0xBF, 0x77,
+    0xE5, 0xF6, 0x5F, 0xB7, 0x2F, 0x13, 0xB2, 0x7C, 0x52, 0xBB, 0xF9, 0x01, 0xBF, 0x1C, 0x33, 0x2F,
+    0x8D, 0x7F, 0xC7, 0x18, 0x71, 0xAC, 0xC6, 0x67, 0x9B, 0x1C, 0xDD, 0xBE, 0x04, 0x62, 0xE4, 0x4B,
+    0xAD, 0x9C, 0xC5, 0xA6, 0x3F, 0x83, 0xC3, 0xAE, 0x98, 0x04, 0x34, 0x7D, 0x81, 0xED, 0x62, 0x08,
+};
+
+static uint8_t hash_l(const char *str)
 {
-    struct BinTreeNd_s *zero;
-    struct BinTreeNd_s *one;
-    FManNode_t *nod;
-} BinTreeNd_t;
+    uint8_t *bytes = (uint8_t *)str;
+    uint8_t hash = 0, c;
 
-static BinTreeNd_t *root = NULL;
-static MList *BinNodesList = NULL;
-static MList *FontList;
+    while ((c = *bytes++))
+        hash = PT[(uint8_t)(hash ^ tolower(c))];
 
-static void AddFManNode(FManNode_t *nod)
-{
-    char buffer[255];
-    int32_t t_len = strlen(nod->name);
-
-    for (int i = 0; i < t_len; i++)
-        buffer[i] = tolower(nod->name[i]);
-
-    buffer[t_len] = 0x0;
-
-    BinTreeNd_t **treenod = &root;
-    t_len = strlen(buffer);
-    for (int j = 0; j < t_len; j++)
-        for (int i = 0; i < 8; i++)
-        {
-            int bit = ((buffer[j]) >> i) & 1;
-            if (bit)
-                treenod = &((*treenod)->one);
-            else
-                treenod = &((*treenod)->zero);
-
-            if (*treenod == NULL)
-            {
-                *treenod = NEW(BinTreeNd_t);
-                AddToMList(BinNodesList, *treenod);
-            }
-        }
-    if ((*treenod)->nod == NULL) //we don't need to reSet nodes (ADDON and patches don't work without it)
-        (*treenod)->nod = nod;
-    else if ((*treenod)->nod->size < 10 && nod->size >= 10)
-        (*treenod)->nod = nod;
+    return hash;
 }
 
-static FManNode_t *FindFManNode(const char *chr)
+static void AddFManNode(FManNode_t *node)
 {
-    char buffer[255];
-    int32_t t_len = strlen(chr);
-    for (int i = 0; i < t_len; i++)
-        buffer[i] = tolower(chr[i]);
+    FManBucket_t *bucket = &FManBuckets[hash_l(node->name)];
 
-    buffer[t_len] = 0x0;
+    if (bucket->count + 1 >= (sizeof(FManBucket_t) / sizeof(FManNode_t)))
+    {
+        Z_PANIC("FManBucket %d overflow!\n", hash_l(node->name));
+    }
 
-    BinTreeNd_t *treenod = root;
+    memcpy(&bucket->items[bucket->count++], node, sizeof(FManNode_t));
+}
 
-    t_len = strlen(buffer);
-    for (int j = 0; j < t_len; j++)
-        for (int i = 0; i < 8; i++)
+static FManNode_t *FindFManNode(const char *name)
+{
+    FManBucket_t *bucket = &FManBuckets[hash_l(name)];
+
+    // We start from the end because files added later should
+    // override files added earlier.
+    for (int i = bucket->count - 1; i >= 0; --i)
+    {
+        if (str_equals(name, bucket->items[i].name))
         {
-            int bit = ((buffer[j]) >> i) & 1;
-            if (bit)
-                treenod = treenod->one;
-            else
-                treenod = treenod->zero;
-
-            if (treenod == NULL)
-                return NULL;
+            return &bucket->items[i];
         }
+    }
 
-    return treenod->nod;
+    return NULL;
 }
 
 static void OpenZFS(const char *file)
@@ -148,7 +122,6 @@ static void OpenZFS(const char *file)
 
         for (uint32_t i = 0; i < hdr.files_perblock; i++)
         {
-            //fseek(f,pos,0);
             zfs_file_header_t fil;
             fread(&fil, sizeof(fil), 1, fl);
 
@@ -156,15 +129,13 @@ static void OpenZFS(const char *file)
             {
                 LOG_DEBUG("Adding file from zfs : %s\n", fil.name);
 
-                FManNode_t *nod = NEW(FManNode_t);
-                nod->path = strdup(fil.name);
-                nod->name = nod->path;
-                nod->zfs = NEW(zfs_file_t);
-                nod->zfs->archive = tmp;
-                nod->zfs->offset = fil.offset;
-                nod->zfs->size = fil.size;
-                nod->size = fil.size;
-                AddFManNode(nod);
+                FManNode_t node;
+                node.path = strdup(fil.name);
+                node.name = node.path;
+                node.size = fil.size;
+                node.zfs.archive = tmp;
+                node.zfs.offset = fil.offset;
+                AddFManNode(&node);
             }
         }
     }
@@ -174,7 +145,9 @@ static void FindAssets(const char *dir)
 {
     char path[PATHBUFSIZE];
     struct stat statbuf;
-    int len = strlen(dir);
+    size_t len = strlen(dir);
+    TTF_Font *font;
+    FManNode_t node;
 
     strcpy(path, dir);
 
@@ -212,28 +185,26 @@ static void FindAssets(const char *dir)
         {
             OpenZFS(path);
         }
-        else if (str_ends_with(path, ".TTF"))
-        {
-            LOG_DEBUG("Adding font : %s\n", path);
-            TTF_Font *fnt = TTF_OpenFont(path, 10);
-            if (fnt != NULL)
-            {
-                graph_font_t *tmpfnt = NEW(graph_font_t);
-                strncpy(tmpfnt->name, TTF_FontFaceFamilyName(fnt), sizeof(tmpfnt->name)-1);
-                strncpy(tmpfnt->path, path, sizeof(path));
-                AddToMList(FontList, tmpfnt);
-                TTF_CloseFont(fnt);
-            }
-        }
         else
         {
-            LOG_DEBUG("Adding game file : %s\n", path);
-            FManNode_t *nod = NEW(FManNode_t);
-            nod->path = strdup(path);
-            nod->name = nod->path + len + 1;
-            nod->zfs = NULL;
-            nod->size = statbuf.st_size;
-            AddFManNode(nod);
+            node.path = strdup(path);
+            node.size = statbuf.st_size;
+            node.zfs.archive = NULL;
+            node.zfs.offset = 0;
+
+            if (str_ends_with(path, ".TTF") && (font = TTF_OpenFont(path, 10)))
+            {
+                node.name = strdup(TTF_FontFaceFamilyName(font));
+                LOG_DEBUG("Adding font : %s\n", node.name);
+                TTF_CloseFont(font);
+            }
+            else
+            {
+                node.name = node.path + len + 1;
+                LOG_DEBUG("Adding game file : %s\n", node.name);
+            }
+
+            AddFManNode(&node);
         }
     }
     closedir(dr);
@@ -241,20 +212,23 @@ static void FindAssets(const char *dir)
 
 void Loader_Init(const char *dir)
 {
-    FontList = CreateMList();
-    BinNodesList = CreateMList();
-    root = NEW(BinTreeNd_t);
-    AddToMList(BinNodesList, root);
     FindAssets(Game_GetPath());
     // Load working dir (this would allow us to override without touching the original assets)
     // FindAssets(".");
+
+    LOG_DEBUG("Loader init completed, bucket status:\n");
+
+    for (int i = 0; i < 0x100; i++)
+    {
+        LOG_DEBUG(" - Bucket %d has %d items\n", i, FManBuckets[i].count);
+    }
 }
 
 const char *Loader_FindFile(const char *filename)
 {
     FManNode_t *nod = FindFManNode(filename);
 
-    if (nod && nod->zfs == NULL)
+    if (nod && nod->zfs.archive == NULL)
         return nod->path;
 
     struct stat statbuf;
@@ -596,7 +570,7 @@ void Loader_LoadZCR(const char *file, Cursor_t *cur)
     }
 }
 
-TTF_Font *Loader_LoadFont(char *name, int size)
+TTF_Font *Loader_LoadFont(const char *name, int size)
 {
     graph_font_t *fnt = NULL;
 
@@ -824,7 +798,7 @@ anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555)
                 else if (frm.type == 0x48524C45)
                     HRLE(buf2, frm_data, frm.size - frm.offset, sz_frame);
             }
-            free(frm_data);
+            DELETE(frm_data);
         }
 
         SDL_Surface *srf = Rend_CreateSurface(atmp->info.w, atmp->info.h, 0);
@@ -862,7 +836,7 @@ anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555)
 
     mfclose(f);
 
-    free(buf2);
+    DELETE(buf2);
 
     return atmp;
 }
@@ -985,7 +959,7 @@ static void txt_wide_to_utf8(mfile_t *file)
         }
     }
 
-    free((void*)file_buf);
+    DELETE(file_buf);
     file->pos = 0;
     file->size = pos;
     file->buffer = buf;
@@ -996,13 +970,13 @@ mfile_t *mfopen(const char *filename)
     FManNode_t *node = FindFManNode(filename);
     if (node)
     {
-        if (node->zfs)
+        if (node->zfs.archive)
         {
             LOG_DEBUG("Opening file '%s' from ZFS archive\n", filename);
             mfile_t *tmp = NEW(mfile_t);
 
             tmp->size = node->size;
-            tmp->zfs = node->zfs;
+            tmp->node = node;
 
             return tmp;
         }
@@ -1019,6 +993,7 @@ mfile_t *mfopen(const char *filename)
         mfile_t *tmp = NEW(mfile_t);
 
         fseek(fp, 0, SEEK_END);
+        tmp->node = node;
         tmp->size = ftell(fp);
         tmp->fp = fp;
 
@@ -1054,20 +1029,19 @@ const void *mfbuffer(mfile_t *file)
     {
         file->buffer = NEW_ARRAY(char, file->size + 4);
 
-        if (file->zfs)
+        if (file->node && file->node->zfs.archive)
         {
-            zfs_file_t *zfile = (zfs_file_t *)file->zfs;
-            file->zfs = NULL; // We no longer need the file pointer
+            fseek(file->node->zfs.archive->fl, file->node->zfs.offset, SEEK_SET);
+            fread(file->buffer, file->size, 1, file->node->zfs.archive->fl);
 
-            fseek(zfile->archive->fl, zfile->offset, SEEK_SET);
-            fread(file->buffer, file->size, 1, zfile->archive->fl);
-
-            if (zfile->archive->xor_key)
+            if (file->node->zfs.archive->xor_key)
             {
                 size_t count = file->size >> 2;
                 for (size_t i = 0; i < count; i++)
-                    ((uint32_t*)file->buffer)[i] ^= zfile->archive->xor_key;
+                    ((uint32_t*)file->buffer)[i] ^= file->node->zfs.archive->xor_key;
             }
+
+            file->node = NULL; // We no longer need the file pointer
         }
         else
         {
@@ -1121,8 +1095,8 @@ void mfclose(mfile_t *file)
         if (file->fp)
             fclose(file->fp);
         if (file->buffer)
-            free(file->buffer);
-        free(file);
+            DELETE(file->buffer);
+        DELETE(file);
     }
 }
 
