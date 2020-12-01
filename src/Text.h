@@ -55,12 +55,6 @@ typedef struct
 
 typedef struct
 {
-    char name[128];
-    char path[PATHBUFSIZE];
-} graph_font_t;
-
-typedef struct
-{
     int start;
     int stop;
     int sub;

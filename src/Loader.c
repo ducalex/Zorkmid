@@ -572,22 +572,24 @@ void Loader_LoadZCR(const char *file, Cursor_t *cur)
 
 TTF_Font *Loader_LoadFont(const char *name, int size)
 {
-    graph_font_t *fnt = NULL;
+    FManNode_t *node = FindFManNode(name);
 
-    StartMList(FontList);
-    while (!EndOfMList(FontList))
+    if (!node)
     {
-        fnt = (graph_font_t *)DataMList(FontList);
-        if (str_equals(fnt->name, name)) // str_starts_with
-            break;
-
-        NextMList(FontList);
+        if (str_starts_with(name, "Times"))
+            node = FindFManNode("Liberation Serif");
+        else if (str_starts_with(name, "Courrier"))
+            node = FindFManNode("Liberation Mono");
+        else
+            node = FindFManNode("Liberation Sans");
     }
 
-    if (fnt == NULL)
-        return NULL;
+    if (!node)
+    {
+        Z_PANIC("Font %s not found\n", name);
+    }
 
-    return TTF_OpenFont(fnt->path, size);
+    return TTF_OpenFont(node->path, size);
 }
 /***************************** END Bitmaps *****************************/
 
