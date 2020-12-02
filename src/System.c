@@ -129,11 +129,102 @@ char *str_trim(const char *buffer)
     return strdup("");
 }
 
-//Creates single linked-list object
-MList *CreateMList()
+dynstack_t *CreateStack(int blocksize)
 {
-    return NEW(MList);
+    dynstack_t *stack = NEW(dynstack_t);
+
+    stack->blocksize = blocksize;
+    stack->is_heap = true;
+    ResizeStack(stack);
+
+    return stack;
 }
+
+void ResizeStack(dynstack_t *stack)
+{
+    ASSERT(stack != NULL);
+
+    if (stack->blocksize == 0)
+        stack->blocksize = 64;
+
+    int new_capacity = stack->blocksize * ((stack->count / stack->blocksize) + 1);
+    if (new_capacity != stack->capacity)
+    {
+        LOG_DEBUG("Resizing stack %p from %d items to %d items\n", stack, stack->capacity, new_capacity);
+        stack->items = realloc(stack->items, new_capacity * sizeof(void*));
+        stack->capacity = new_capacity;
+    }
+}
+
+void SpliceStack(dynstack_t *stack, int index)
+{
+    ASSERT(stack != NULL);
+
+    int pos = 0;
+
+    for (int i = 0; i < stack->count; i++)
+        if (stack->items[i] != NULL)
+            stack->items[pos++] = stack->items[i];
+
+    stack->count = pos;
+}
+
+void PushToStack(dynstack_t *stack, void *item)
+{
+    ASSERT(stack != NULL);
+
+    if (stack->count + 1 >= stack->capacity)
+        ResizeStack(stack);
+
+    stack->items[stack->count++] = item;
+}
+
+void *PopFromStack(dynstack_t *stack)
+{
+    ASSERT(stack != NULL);
+
+    if (stack->count == 0)
+        return NULL;
+
+    if (stack->capacity - stack->count >= stack->blocksize * 2)
+        ResizeStack(stack);
+
+    stack->count--;
+
+    return stack->items[stack->count - 1];
+}
+
+void *PeekStack(dynstack_t *stack)
+{
+    ASSERT(stack != NULL);
+
+    if (stack->count == 0)
+        return NULL;
+
+    return stack->items[stack->count - 1];
+}
+
+void FlushStack(dynstack_t *stack)
+{
+    ASSERT(stack != NULL);
+
+    stack->count = 0;
+    ResizeStack(stack);
+}
+
+void DeleteStack(dynstack_t *stack)
+{
+    ASSERT(stack != NULL);
+
+    DELETE(stack->items);
+
+    if (!stack->is_heap) // clean up static object
+        memset(stack, 0, sizeof(dynstack_t));
+    else
+        DELETE(stack);
+}
+
+
 
 //Adds item to linked-list
 MList_node *AddToMList(MList *lst, void *item)
@@ -226,13 +317,6 @@ void FlushMList(MList *lst)
     lst->indx = 0;
     lst->stkpos = 0;
     lst->dontstp = false;
-}
-
-//Delete list object and delete all nodes assigned to list
-void DeleteMList(MList *lst)
-{
-    FlushMList(lst);
-    DELETE(lst);
 }
 
 void DeleteCurrentMList(MList *lst)

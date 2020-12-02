@@ -274,12 +274,11 @@ static inline int action_animplay(char *params, int aSlot, pzllst_t *owner)
     {
         action_res_t *nd = (action_res_t *)DataMList(all);
 
-        if (nd->node_type == NODE_TYPE_ANIMPLAY)
-            if (nd->slot == aSlot)
-            {
-                Anim_DeleteNode(nd);
-                DeleteCurrentMList(all);
-            }
+        if (nd->slot == aSlot && nd->node_type == NODE_TYPE_ANIMPLAY)
+        {
+            Anim_DeleteNode(nd);
+            DeleteCurrentMList(all);
+        }
 
         NextMList(all);
     }

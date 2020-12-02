@@ -14,7 +14,7 @@
 #define TXT_CFG_TEXTURES_LINES 256
 #define TXT_CFG_TEXTURES_PER_LINE 6
 
-static MList sublist;
+static dynstack_t *active_subs;
 
 static SDL_Surface *RenderUTF8(TTF_Font *fnt, const char *text, txt_style_t *style)
 {
@@ -261,7 +261,7 @@ static int getglyphwidth(TTF_Font *fnt, uint16_t chr)
 
 void Text_Init()
 {
-    FlushMList(&sublist);
+    active_subs = CreateStack(16);
 }
 
 void Text_InitStyle(txt_style_t *style)
@@ -817,7 +817,7 @@ subrect_t *Text_CreateSubRect(int x, int y, int w, int h)
     tmp->timer = -1;
     tmp->img = Rend_CreateSurface(w, h, 0);
 
-    AddToMList(&sublist, tmp);
+    PushToStack(active_subs, tmp);
 
     return tmp;
 }
@@ -837,10 +837,12 @@ void Text_DrawSubtitles()
     };
     Rend_FillRect(screen, &msg_rect, 0, 0, 0);
 
-    StartMList(&sublist);
-    while (!EndOfMList(&sublist))
+    for (int i = 0; i < active_subs->count; i++)
     {
-        subrect_t *subrec = (subrect_t *)DataMList(&sublist);
+        subrect_t *subrec = (subrect_t *)active_subs->items[i];
+
+        if (subrec == NULL) // Item was deleted
+            continue;
 
         if (subrec->timer >= 0)
         {
@@ -853,14 +855,12 @@ void Text_DrawSubtitles()
         {
             SDL_FreeSurface(subrec->img);
             DELETE(subrec);
-            DeleteCurrentMList(&sublist);
+            active_subs->items[i] = NULL;
         }
         else
         {
             SDL_Rect rect = {subrec->x + GAMESCREEN_X, subrec->y + GAMESCREEN_Y - 5, 0, 0};
             Rend_BlitSurface(subrec->img, NULL, screen, &rect);
         }
-
-        NextMList(&sublist);
     }
 }

@@ -56,41 +56,33 @@ static void DeletePuzzleNode(puzzlenode_t *nod)
 {
     LOG_DEBUG("Deleting Puzzle #%d\n", nod->slot);
 
-    StartMList(&nod->CritList);
-    while (!EndOfMList(&nod->CritList))
+    for (int i = 0; i < nod->CritList.count; i++)
     {
-        MList *critlist = DataMList(&nod->CritList);
-        StartMList(critlist);
-        while (!EndOfMList(critlist))
+        dynstack_t *critlist = (dynstack_t *)nod->CritList.items[i];
+        for (int j = 0; j < critlist->count; j++)
         {
-            DELETE(DataMList(critlist));
-            DeleteCurrentMList(critlist);
+            DELETE(critlist->items[j]);
         }
-        DELETE(critlist);
-        NextMList(&nod->CritList);
+        DeleteStack(critlist);
     }
-    FlushMList(&nod->CritList);
+    DeleteStack(&nod->CritList);
 
-    StartMList(&nod->ResList);
-    while (!EndOfMList(&nod->ResList))
+    for (int i = 0; i < nod->ResList.count; i++)
     {
-        DELETE(DataMList(&nod->ResList));
-        NextMList(&nod->ResList);
+        DELETE(nod->ResList.items[i]);
     }
-    FlushMList(&nod->ResList);
+    DeleteStack(&nod->ResList);
 
     DELETE(nod);
 }
 
 static void FlushPuzzleList(pzllst_t *lst)
 {
-    StartMList(&lst->puzzles);
-    while (!EndOfMList(&lst->puzzles))
+    for (int i = 0; i < lst->puzzles->count; i++)
     {
-        DeletePuzzleNode((puzzlenode_t *)DataMList(&lst->puzzles));
-        NextMList(&lst->puzzles);
+        DeletePuzzleNode((puzzlenode_t *)lst->puzzles->items[i]);
     }
-    FlushMList(&lst->puzzles);
+    FlushStack(lst->puzzles);
 
     lst->exec_times = 0;
     lst->stksize = 0;
@@ -130,9 +122,9 @@ static void ParsePuzzleCriteria(puzzlenode_t *pzl, mfile_t *fl)
     char buf[STRBUFSIZE];
     char *str;
 
-    MList *crit_nodes_lst = CreateMList();
+    dynstack_t *crit_nodes_lst = CreateStack(32);
 
-    AddToMList(&pzl->CritList, crit_nodes_lst);
+    PushToStack(&pzl->CritList, crit_nodes_lst);
 
     while (!mfeof(fl))
     {
@@ -146,7 +138,7 @@ static void ParsePuzzleCriteria(puzzlenode_t *pzl, mfile_t *fl)
         else if (str[0] == '[')
         {
             crit_node_t *nod = NEW(crit_node_t);
-            AddToMList(crit_nodes_lst, nod);
+            PushToStack(crit_nodes_lst, nod);
 
             sscanf(&str[1], "%d", &nod->slot1);
 
@@ -199,7 +191,7 @@ static void ParsePuzzleCriteria(puzzlenode_t *pzl, mfile_t *fl)
     }
 }
 
-static void ParsePuzzleResultAction(char *str, MList *lst)
+static void ParsePuzzleResultAction(char *str, dynstack_t *list)
 {
     char buf[255];
     const char *params = " ";
@@ -222,10 +214,10 @@ static void ParsePuzzleResultAction(char *str, MList *lst)
     }
 
     res_node_t *nod = NEW(res_node_t);
+    PushToStack(list, nod);
     strcpy(nod->action, buf);
     strcpy(nod->params, params);
     nod->slot = slot;
-    AddToMList(lst, nod);
 }
 
 static void ParsePuzzleResults(puzzlenode_t *pzl, mfile_t *fl)
@@ -273,7 +265,7 @@ static void ParsePuzzle(pzllst_t *lst, mfile_t *fl, char *ctstr)
                 SetgVarInt(slot, 0);
 
             LOG_DEBUG("Created Puzzle %d\n", slot);
-            AddToMList(&lst->puzzles, pzl);
+            PushToStack(lst->puzzles, pzl);
             return;
         }
         else if (str_starts_with(str, "criteria"))
@@ -295,14 +287,13 @@ static void ParsePuzzle(pzllst_t *lst, mfile_t *fl, char *ctstr)
     DeletePuzzleNode(pzl);
 }
 
-static bool ProcessCriteries(MList *lst)
+static bool ProcessCriteries(dynstack_t *lst)
 {
     bool tmp = true;
 
-    StartMList(lst);
-    while (!EndOfMList(lst))
+    for (int i = 0; i < lst->count; i++)
     {
-        crit_node_t *critnd = (crit_node_t *)DataMList(lst);
+        crit_node_t *critnd = (crit_node_t *)lst->items[i];
 
         LOG_DEBUG("  [%d] %d [%d] %d\n", critnd->slot1, critnd->oper, critnd->slot2, critnd->var2);
 
@@ -327,9 +318,8 @@ static bool ProcessCriteries(MList *lst)
 
         if (!tmp)
             break;
-
-        NextMList(lst);
     }
+
     return tmp;
 }
 
@@ -349,19 +339,15 @@ static int ExecPuzzle(puzzlenode_t *pzlnod)
     {
         bool match = false;
 
-        StartMList(&pzlnod->CritList);
-        while (!EndOfMList(&pzlnod->CritList))
+        for (int i = 0; i < pzlnod->CritList.count; i++)
         {
-            MList *criteries = (MList *)DataMList(&pzlnod->CritList);
-
-            if (ProcessCriteries(criteries))
+            if (ProcessCriteries(pzlnod->CritList.items[i]))
             {
                 match = true;
                 break;
             }
-
-            NextMList(&pzlnod->CritList);
         }
+
         if (!match)
             return ACTION_NORMAL;
     }
@@ -370,15 +356,13 @@ static int ExecPuzzle(puzzlenode_t *pzlnod)
 
     SetgVarInt(pzlnod->slot, 1);
 
-    StartMList(&pzlnod->ResList);
-    while (!EndOfMList(&pzlnod->ResList))
+    for (int i = 0; i < pzlnod->ResList.count; i++)
     {
-        res_node_t *fun = (res_node_t *)DataMList(&pzlnod->ResList);
-        if (Actions_Run(fun->action, fun->params, fun->slot, pzlnod->owner) == ACTION_BREAK)
+        res_node_t *res = (res_node_t *)pzlnod->ResList.items[i];
+        if (Actions_Run(res->action, res->params, res->slot, pzlnod->owner) == ACTION_BREAK)
         {
             return ACTION_BREAK;
         }
-        NextMList(&pzlnod->ResList);
     }
 
     return ACTION_NORMAL;
@@ -403,35 +387,27 @@ static void AddPuzzleToStateBox(int slot, puzzlenode_t *pzlnd)
 
 static void FillStateBoxFromList(pzllst_t *lst)
 {
-    StartMList(&lst->puzzles);
-    while (!EndOfMList(&lst->puzzles))
+    for (int i = 0; i < lst->puzzles->count; i++)
     {
-        puzzlenode_t *pzlnod = (puzzlenode_t *)DataMList(&lst->puzzles);
+        puzzlenode_t *pzlnod = (puzzlenode_t *)lst->puzzles->items[i];
 
         AddPuzzleToStateBox(pzlnod->slot, pzlnod);
 
-        StartMList(&pzlnod->CritList);
-        while (!EndOfMList(&pzlnod->CritList))
+        for (int j = 0; j < pzlnod->CritList.count; j++)
         {
-            MList *CriteriaLst = (MList *)DataMList(&pzlnod->CritList);
+            dynstack_t *CriteriaLst = (dynstack_t *)pzlnod->CritList.items[j];
 
             int prevslot = 0;
-            StartMList(CriteriaLst);
-            while (!EndOfMList(CriteriaLst))
+            for (int k = 0; k < CriteriaLst->count; k++)
             {
-                crit_node_t *crtnod = (crit_node_t *)DataMList(CriteriaLst);
+                crit_node_t *crtnod = (crit_node_t *)CriteriaLst->items[k];
 
                 if (prevslot != crtnod->slot1)
                     AddPuzzleToStateBox(crtnod->slot1, pzlnod);
 
                 prevslot = crtnod->slot1;
-
-                NextMList(CriteriaLst);
             }
-
-            NextMList(&pzlnod->CritList);
         }
-        NextMList(&lst->puzzles);
     }
 }
 
@@ -596,6 +572,11 @@ void ScrSys_Init()
         VAR_SLOTS_MAX = 30000;
     }
 
+    uni.puzzles = CreateStack(512);
+    room.puzzles = CreateStack(512);
+    view.puzzles = CreateStack(512);
+    world.puzzles = CreateStack(512);
+
     //needed for znemesis
     SetDirectgVarInt(SLOT_CPU, 1);
     SetDirectgVarInt(SLOT_PLATFORM, 0);
@@ -666,11 +647,10 @@ void ScrSys_PrepareSaveBuffer()
 
     buffpos = 28;
 
-    MList *lst = GetActionsList();
-    StartMList(lst);
-    while (!EndOfMList(lst))
+    StartMList(&actions);
+    while (!EndOfMList(&actions))
     {
-        action_res_t *nod = (action_res_t *)DataMList(lst);
+        action_res_t *nod = (action_res_t *)DataMList(&actions);
         if (nod->node_type == NODE_TYPE_TIMER)
         {
             SaveBuffer[buffpos] = 'T';
@@ -692,7 +672,7 @@ void ScrSys_PrepareSaveBuffer()
             buffpos += 16;
         }
 
-        NextMList(lst);
+        NextMList(&actions);
     }
 
     SaveBuffer[buffpos] = 'F';
@@ -733,16 +713,15 @@ void ScrSys_PrepareSaveBuffer()
     for (int i = 0; i < VAR_SLOTS_MAX; i++)
         tmp2[i] = GetgVarInt(i);
 
-    lst = GetActionsList();
-    StartMList(lst);
-    while (!EndOfMList(lst))
+    StartMList(&actions);
+    while (!EndOfMList(&actions))
     {
-        action_res_t *nod = (action_res_t *)DataMList(lst);
+        action_res_t *nod = (action_res_t *)DataMList(&actions);
         if (nod->node_type == NODE_TYPE_MUSIC)
             if (nod->slot > 0)
                 tmp2[nod->slot] = 2;
 
-        NextMList(lst);
+        NextMList(&actions);
     }
 
     buffpos += VAR_SLOTS_MAX * 2;
@@ -931,15 +910,13 @@ void ScrSys_ExecPuzzleList(pzllst_t *lst)
 {
     if (lst->exec_times < 2)
     {
-        StartMList(&lst->puzzles);
-        while (!EndOfMList(&lst->puzzles))
+        for (int i = 0; i < lst->puzzles->count; i++)
         {
-            if (ExecPuzzle((puzzlenode_t *)DataMList(&lst->puzzles)) == ACTION_BREAK)
+            if (ExecPuzzle((puzzlenode_t *)lst->puzzles->items[i]) == ACTION_BREAK)
             {
                 BreakExecute = true;
                 break;
             }
-            NextMList(&lst->puzzles);
         }
         lst->exec_times++;
     }
@@ -984,14 +961,12 @@ void ScrSys_SetBreak()
 
 void ScrSys_ProcessActionsList()
 {
-    MList *lst = GetActionsList();
-
     int result = NODE_RET_OK;
 
-    StartMList(lst);
-    while (!EndOfMList(lst))
+    StartMList(&actions);
+    while (!EndOfMList(&actions))
     {
-        action_res_t *nod = (action_res_t *)DataMList(lst);
+        action_res_t *nod = (action_res_t *)DataMList(&actions);
 
         nod->first_process = true;
 
@@ -1033,9 +1008,9 @@ void ScrSys_ProcessActionsList()
         }
 
         if (result == NODE_RET_DELETE)
-            DeleteCurrentMList(lst);
+            DeleteCurrentMList(&actions);
 
-        NextMList(lst);
+        NextMList(&actions);
     }
 }
 
@@ -1065,25 +1040,21 @@ int ScrSys_DeleteActionNode(action_res_t *nod)
 
 void ScrSys_FlushActionsList()
 {
-    MList *all = GetActionsList();
-
-    StartMList(all);
-    while (!EndOfMList(all))
+    StartMList(&actions);
+    while (!EndOfMList(&actions))
     {
-        ScrSys_DeleteActionNode((action_res_t *)DataMList(all));
-        NextMList(all);
+        ScrSys_DeleteActionNode((action_res_t *)DataMList(&actions));
+        NextMList(&actions);
     }
-    FlushMList(all);
+    FlushMList(&actions);
 }
 
 void ScrSys_FlushResourcesByOwner(pzllst_t *owner)
 {
-    MList *all = GetActionsList();
-
-    StartMList(all);
-    while (!EndOfMList(all))
+    StartMList(&actions);
+    while (!EndOfMList(&actions))
     {
-        action_res_t *nod = (action_res_t *)DataMList(all);
+        action_res_t *nod = (action_res_t *)DataMList(&actions);
 
         if (nod->owner == owner)
         {
@@ -1098,27 +1069,25 @@ void ScrSys_FlushResourcesByOwner(pzllst_t *owner)
                 result = ScrSys_DeleteActionNode(nod);
 
             if (result == NODE_RET_DELETE)
-                DeleteCurrentMList(all);
+                DeleteCurrentMList(&actions);
         }
 
-        NextMList(all);
+        NextMList(&actions);
     }
 }
 
 void ScrSys_FlushResourcesByType(int type)
 {
-    MList *all = GetActionsList();
-
-    StartMList(all);
-    while (!EndOfMList(all))
+    StartMList(&actions);
+    while (!EndOfMList(&actions))
     {
-        action_res_t *nod = (action_res_t *)DataMList(all);
+        action_res_t *nod = (action_res_t *)DataMList(&actions);
 
         if (nod->node_type == type && nod->first_process == true)
             if (ScrSys_DeleteActionNode(nod) == NODE_RET_DELETE)
-                DeleteCurrentMList(all);
+                DeleteCurrentMList(&actions);
 
-        NextMList(all);
+        NextMList(&actions);
     }
 }
 

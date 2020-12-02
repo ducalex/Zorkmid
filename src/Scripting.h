@@ -114,15 +114,15 @@ typedef struct pzllst pzllst_t;
 
 typedef struct
 {
-    uint16_t slot;   //puzzle slot
-    MList CritList; //Criteria list of lists criteria
-    MList ResList;  //results list
+    uint16_t slot;         //puzzle slot
+    dynstack_t CritList;   //Criteria list of lists criteria
+    dynstack_t ResList;    //results list
     pzllst_t *owner;
 } puzzlenode_t;
 
 typedef struct pzllst
 {
-    MList puzzles;
+    dynstack_t *puzzles;
     puzzlenode_t *stack[PuzzleStack];
     size_t stksize;
     size_t exec_times;

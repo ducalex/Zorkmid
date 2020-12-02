@@ -48,8 +48,19 @@
 #define LOG_INFO(f, ...) fprintf(stderr, "[INFO] (%s) " f, __func__, ##__VA_ARGS__)
 #define LOG_WARN(f, ...) fprintf(stderr, "[WARNING] (%s) " f, __func__, ##__VA_ARGS__)
 
+#define ASSERT(expr) {if (!(expr)) Z_PANIC("Assertion failed");}
+
 typedef struct struct_action_res action_res_t;
 typedef struct ctrlnode ctrlnode_t;
+
+typedef struct
+{
+    void **items;
+    size_t count;
+    size_t capacity;
+    size_t blocksize;
+    bool   is_heap;
+} dynstack_t;
 
 //node structure
 typedef struct MList_node_s
@@ -74,19 +85,26 @@ typedef struct
 } MList;
 
 //Linked-list functions
-MList *CreateMList();
 MList_node *AddToMList(MList *lst, void *item);
 void StartMList(MList *lst);
 void LastMList(MList *lst);
 void NextMList(MList *lst);
 void PrevMList(MList *lst);
 void *DataMList(MList *lst);
-void DeleteMList(MList *lst);
 void FlushMList(MList *lst);
 void DeleteCurrentMList(MList *lst);
 bool EndOfMList(MList *lst);
 bool PushMList(MList *lst);
 bool PopMList(MList *lst);
+
+dynstack_t *CreateStack(int blocksize);
+void ResizeStack(dynstack_t *stack);
+void PushToStack(dynstack_t *stack, void *item);
+void *PopFromStack(dynstack_t *stack);
+void *PeekStack(dynstack_t *stack);
+void FlushStack(dynstack_t *stack);
+void SpliceStack(dynstack_t *stack, int index);
+void DeleteStack(dynstack_t *stack);
 
 char *PrepareString(char *buf);
 char *GetParams(char *str);
