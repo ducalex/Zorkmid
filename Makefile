@@ -16,7 +16,6 @@ OBJS =  \
 	src/Menu.c\
 	src/Mouse.c\
 	src/main.c\
-	src/Puzzle.c\
 	src/Render.c\
 	src/Scripting.c\
  	src/Sound.c\

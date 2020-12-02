@@ -2,6 +2,21 @@
 
 typedef struct
 {
+    int32_t slot1;
+    int32_t slot2;
+    uint8_t oper;
+    bool var2; //if true: slot2 is slot; false: slot2 - number
+} crit_node_t;
+
+typedef struct
+{
+    char action[32];
+    char params[128];
+    int slot;
+} res_node_t;
+
+typedef struct
+{
     puzzlenode_t *nod[PuzzleStack];
     int32_t cnt;
 } StateBoxEnt_t;
@@ -12,10 +27,10 @@ static action_res_t *gNodes[30000];
 static uint8_t Flags[30000];
 static StateBoxEnt_t *StateBox[30000];
 
-static pzllst_t *uni = NULL;   // universe script
-static pzllst_t *world = NULL; // world script
-static pzllst_t *room = NULL;  // room script
-static pzllst_t *view = NULL;  // view script
+static pzllst_t uni;   // universe script
+static pzllst_t world; // world script
+static pzllst_t room;  // room script
+static pzllst_t view;  // view script
 
 static MList controls;  // Controls
 static MList actions;   // Sounds, animations, ttytexts, and others
@@ -25,8 +40,349 @@ static bool BreakExecute = false;
 static const char *PreferencesFile = NULL;
 
 static uint8_t SaveBuffer[512 * 1024];
-static uint32_t SaveCurrentSize = 0;
+static size_t SaveCurrentSize = 0;
 
+
+const char *GetPuzzleListName(pzllst_t *lst)
+{
+    if (lst == &uni)    return "universe";
+    if (lst == &world)  return "word";
+    if (lst == &room)   return "room";
+    if (lst == &view)   return "view";
+    return "Unknown";
+}
+
+static void DeletePuzzleNode(puzzlenode_t *nod)
+{
+    LOG_DEBUG("Deleting Puzzle #%d\n", nod->slot);
+
+    StartMList(&nod->CritList);
+    while (!EndOfMList(&nod->CritList))
+    {
+        MList *critlist = DataMList(&nod->CritList);
+        StartMList(critlist);
+        while (!EndOfMList(critlist))
+        {
+            DELETE(DataMList(critlist));
+            DeleteCurrentMList(critlist);
+        }
+        DELETE(critlist);
+        NextMList(&nod->CritList);
+    }
+    FlushMList(&nod->CritList);
+
+    StartMList(&nod->ResList);
+    while (!EndOfMList(&nod->ResList))
+    {
+        DELETE(DataMList(&nod->ResList));
+        NextMList(&nod->ResList);
+    }
+    FlushMList(&nod->ResList);
+
+    DELETE(nod);
+}
+
+static void FlushPuzzleList(pzllst_t *lst)
+{
+    StartMList(&lst->puzzles);
+    while (!EndOfMList(&lst->puzzles))
+    {
+        DeletePuzzleNode((puzzlenode_t *)DataMList(&lst->puzzles));
+        NextMList(&lst->puzzles);
+    }
+    FlushMList(&lst->puzzles);
+
+    lst->exec_times = 0;
+    lst->stksize = 0;
+}
+
+static void ParsePuzzleFlags(puzzlenode_t *pzl, mfile_t *fl)
+{
+    char buf[STRBUFSIZE];
+    char *str;
+
+    while (!mfeof(fl))
+    {
+        mfgets(buf, STRBUFSIZE, fl);
+        str = PrepareString(buf);
+
+        if (str[0] == '}')
+        {
+            return;
+        }
+        else if (str_starts_with(str, "once_per_inst"))
+        {
+            ScrSys_SetFlag(pzl->slot, ScrSys_GetFlag(pzl->slot) | FLAG_ONCE_PER_I);
+        }
+        else if (str_starts_with(str, "do_me_now"))
+        {
+            ScrSys_SetFlag(pzl->slot, ScrSys_GetFlag(pzl->slot) | FLAG_DO_ME_NOW);
+        }
+        else if (str_starts_with(str, "disabled"))
+        {
+            ScrSys_SetFlag(pzl->slot, ScrSys_GetFlag(pzl->slot) | FLAG_DISABLED);
+        }
+    }
+}
+
+static void ParsePuzzleCriteria(puzzlenode_t *pzl, mfile_t *fl)
+{
+    char buf[STRBUFSIZE];
+    char *str;
+
+    MList *crit_nodes_lst = CreateMList();
+
+    AddToMList(&pzl->CritList, crit_nodes_lst);
+
+    while (!mfeof(fl))
+    {
+        mfgets(buf, STRBUFSIZE, fl);
+        str = PrepareString(buf);
+
+        if (str[0] == '}')
+        {
+            return;
+        }
+        else if (str[0] == '[')
+        {
+            crit_node_t *nod = NEW(crit_node_t);
+            AddToMList(crit_nodes_lst, nod);
+
+            sscanf(&str[1], "%d", &nod->slot1);
+
+            int ij;
+            int32_t t_len = strlen(str);
+            for (ij = 0; ij < t_len; ij++)
+            {
+                if (str[ij] == '!')
+                {
+                    nod->oper = CRIT_OP_NOT;
+                    break;
+                }
+                else if (str[ij] == '>')
+                {
+                    nod->oper = CRIT_OP_GRE;
+                    break;
+                }
+                else if (str[ij] == '<')
+                {
+                    nod->oper = CRIT_OP_LEA;
+                    break;
+                }
+                else if (str[ij] == '=')
+                {
+                    nod->oper = CRIT_OP_EQU;
+                    break;
+                }
+            }
+
+            for (ij++; ij < t_len; ij++)
+            {
+                if (str[ij] == '[')
+                {
+                    sscanf(&str[ij + 1], "%d", &nod->slot2);
+                    nod->var2 = true;
+                    break;
+                }
+                else if (str[ij] != 0x20 && str[ij] != 0x09)
+                {
+                    sscanf(&str[ij], "%d", &nod->slot2);
+                    nod->var2 = false;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            LOG_WARN("Criteria parsing error in: '%s'\n", str);
+        }
+    }
+}
+
+static void ParsePuzzleResultAction(char *str, MList *lst)
+{
+    char buf[255];
+    const char *params = " ";
+    int slot = 0;
+    int len = strlen(str);
+
+    memset(buf, 0, 255);
+
+    for (int i = 0; i < len; i++)
+    {
+        if (str[i] != '(' && str[i] != 0x20 && str[i] != 0x09 && str[i] != '#' && str[i] != 0x00 && str[i] != ':')
+            buf[i] = str[i];
+        else
+        {
+            if (str[i] == ':')
+                slot = atoi(str + i + 1);
+            params = GetParams(str + i);
+            break;
+        }
+    }
+
+    res_node_t *nod = NEW(res_node_t);
+    strcpy(nod->action, buf);
+    strcpy(nod->params, params);
+    nod->slot = slot;
+    AddToMList(lst, nod);
+}
+
+static void ParsePuzzleResults(puzzlenode_t *pzl, mfile_t *fl)
+{
+    char buf[STRBUFSIZE];
+
+    while (!mfeof(fl))
+    {
+        mfgets(buf, STRBUFSIZE, fl);
+
+        // Format is `action: background: event: other`
+        char *str = PrepareString(buf);
+        char *str2;
+
+        if (str[0] == '}')
+            return;
+        else if ((str2 = strchr(str, ':')))
+            ParsePuzzleResultAction(str2 + 1, &pzl->ResList);
+        else
+            LOG_WARN("Results parsing error in: '%s'\n", str);
+    }
+}
+
+static void ParsePuzzle(pzllst_t *lst, mfile_t *fl, char *ctstr)
+{
+    char buf[STRBUFSIZE];
+    uint32_t slot;
+
+    sscanf(ctstr, "puzzle:%d", &slot);
+
+    puzzlenode_t *pzl = NEW(puzzlenode_t);
+    pzl->owner = lst;
+    pzl->slot = slot;
+
+    ScrSys_SetFlag(pzl->slot, 0);
+
+    while (!mfeof(fl))
+    {
+        mfgets(buf, STRBUFSIZE, fl);
+        char *str = PrepareString(buf);
+
+        if (str[0] == '}') // We've reached the end!
+        {
+            if ((ScrSys_GetFlag(pzl->slot) & FLAG_ONCE_PER_I))
+                SetgVarInt(slot, 0);
+
+            LOG_DEBUG("Created Puzzle %d\n", slot);
+            AddToMList(&lst->puzzles, pzl);
+            return;
+        }
+        else if (str_starts_with(str, "criteria"))
+        {
+            ParsePuzzleCriteria(pzl, fl);
+        }
+        else if (str_starts_with(str, "results"))
+        {
+            ParsePuzzleResults(pzl, fl);
+        }
+        else if (str_starts_with(str, "flags"))
+        {
+            ParsePuzzleFlags(pzl, fl);
+        }
+    }
+
+    // If we reach that point the parsing failed...
+    LOG_WARN("Failed to parse puzzle '%s'...", ctstr);
+    DeletePuzzleNode(pzl);
+}
+
+static bool ProcessCriteries(MList *lst)
+{
+    bool tmp = true;
+
+    StartMList(lst);
+    while (!EndOfMList(lst))
+    {
+        crit_node_t *critnd = (crit_node_t *)DataMList(lst);
+
+        LOG_DEBUG("  [%d] %d [%d] %d\n", critnd->slot1, critnd->oper, critnd->slot2, critnd->var2);
+
+        int tmp1 = GetgVarInt(critnd->slot1);
+        int tmp2 = critnd->var2 ? GetgVarInt(critnd->slot2) : critnd->slot2;
+
+        switch (critnd->oper)
+        {
+        case CRIT_OP_EQU:
+            tmp &= (tmp1 == tmp2);
+            break;
+        case CRIT_OP_GRE:
+            tmp &= (tmp1 > tmp2);
+            break;
+        case CRIT_OP_LEA:
+            tmp &= (tmp1 < tmp2);
+            break;
+        case CRIT_OP_NOT:
+            tmp &= (tmp1 != tmp2);
+            break;
+        }
+
+        if (!tmp)
+            break;
+
+        NextMList(lst);
+    }
+    return tmp;
+}
+
+static int ExecPuzzle(puzzlenode_t *pzlnod)
+{
+    if (ScrSys_GetFlag(pzlnod->slot) & FLAG_DISABLED)
+        return ACTION_NORMAL;
+
+    if (GetgVarInt(pzlnod->slot) == 1)
+        return ACTION_NORMAL;
+
+    if (pzlnod->owner->exec_times == 0)
+        if (!(ScrSys_GetFlag(pzlnod->slot) & FLAG_DO_ME_NOW))
+            return ACTION_NORMAL;
+
+    if (pzlnod->CritList.count > 0)
+    {
+        bool match = false;
+
+        StartMList(&pzlnod->CritList);
+        while (!EndOfMList(&pzlnod->CritList))
+        {
+            MList *criteries = (MList *)DataMList(&pzlnod->CritList);
+
+            if (ProcessCriteries(criteries))
+            {
+                match = true;
+                break;
+            }
+
+            NextMList(&pzlnod->CritList);
+        }
+        if (!match)
+            return ACTION_NORMAL;
+    }
+
+    LOG_DEBUG("Running puzzle %d (%s)\n", pzlnod->slot, GetPuzzleListName(pzlnod->owner));
+
+    SetgVarInt(pzlnod->slot, 1);
+
+    StartMList(&pzlnod->ResList);
+    while (!EndOfMList(&pzlnod->ResList))
+    {
+        res_node_t *fun = (res_node_t *)DataMList(&pzlnod->ResList);
+        if (Actions_Run(fun->action, fun->params, fun->slot, pzlnod->owner) == ACTION_BREAK)
+        {
+            return ACTION_BREAK;
+        }
+        NextMList(&pzlnod->ResList);
+    }
+
+    return ACTION_NORMAL;
+}
 
 static void AddPuzzleToStateBox(int slot, puzzlenode_t *pzlnd)
 {
@@ -138,22 +494,22 @@ static void FlushStateBox()
 
 pzllst_t *GetUni()
 {
-    return uni;
+    return &uni;
 }
 
 pzllst_t *Getworld()
 {
-    return world;
+    return &world;
 }
 
 pzllst_t *Getroom()
 {
-    return room;
+    return &room;
 }
 
 pzllst_t *Getview()
 {
-    return view;
+    return &view;
 }
 
 MList *GetControlsList()
@@ -240,19 +596,6 @@ void ScrSys_Init()
         VAR_SLOTS_MAX = 30000;
     }
 
-    memset(StateBox, 0x0, sizeof(StateBox));
-    memset(Flags, 0x0, sizeof(Flags));
-    memset(gVars, 0x0, sizeof(gVars));
-    memset(gNodes, 0x0, sizeof(gNodes));
-
-    FlushMList(&actions);
-    FlushMList(&controls);
-
-    view = Puzzle_CreateList("view");
-    room = Puzzle_CreateList("room");
-    world = Puzzle_CreateList("world");
-    uni = Puzzle_CreateList("universe");
-
     //needed for znemesis
     SetDirectgVarInt(SLOT_CPU, 1);
     SetDirectgVarInt(SLOT_PLATFORM, 0);
@@ -282,7 +625,7 @@ void ScrSys_LoadScript(pzllst_t *lst, const char *filename, bool control, MList 
 
         if (str_starts_with(str, "puzzle"))
         {
-            Puzzle_Parse(lst, fl, str);
+            ParsePuzzle(lst, fl, str);
         }
         else if (str_starts_with(str, "control") && control)
         {
@@ -462,7 +805,7 @@ void ScrSys_LoadGame(char *file)
         mfread(&time, 4, f);
 
         sprintf(buf, "%d", time / 100);
-        Actions_Run("timer", buf, slot, view);
+        Actions_Run("timer", buf, slot, &view);
     }
 
     mfread(&tmp, 4, f);
@@ -499,18 +842,13 @@ void ScrSys_LoadGame(char *file)
     ScrSys_LoadPreferences();
 }
 
-void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X, bool force_all) // world / room / view
+void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t n, uint8_t v, int32_t X, bool force_all) // world / room / view
 {
-    Location_t temp;
-    temp.World = w;
-    temp.Room = r;
-    temp.Node = v1;
-    temp.View = v2;
-    temp.X = X;
+    char buf[32];
 
     if (GetgVarInt(SLOT_WORLD) != SystemWorld || GetgVarInt(SLOT_ROOM) != SystemRoom)
     {
-        if (temp.World == SystemWorld && temp.Room == SystemRoom)
+        if (w == SystemWorld && r == SystemRoom)
         {
             SetDirectgVarInt(SLOT_MENU_LASTWORLD, GetgVarInt(SLOT_WORLD));
             SetDirectgVarInt(SLOT_MENU_LASTROOM, GetgVarInt(SLOT_ROOM));
@@ -530,76 +868,58 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
 
     FlushStateBox();
 
-    if (temp.World == SaveWorld && temp.Room == SaveRoom &&
-        temp.Node == SaveNode && temp.View == SaveView)
+    if (w == SaveWorld && r == SaveRoom && n == SaveNode && v == SaveView)
     {
         ScrSys_PrepareSaveBuffer();
     }
 
-    char buf[32];
-    char tm[5];
-
-    if (temp.View != GetgVarInt(SLOT_VIEW) ||
-        temp.Node != GetgVarInt(SLOT_NODE) ||
-        temp.Room != GetgVarInt(SLOT_ROOM) ||
-        temp.World != GetgVarInt(SLOT_WORLD) ||
-        force_all || view == NULL)
+    if (v != GetgVarInt(SLOT_VIEW) || n != GetgVarInt(SLOT_NODE) ||
+        r != GetgVarInt(SLOT_ROOM) || w != GetgVarInt(SLOT_WORLD) ||
+        force_all)
     {
-        ScrSys_FlushResourcesByOwner(view);
+        ScrSys_FlushResourcesByOwner(&view);
 
-        Puzzle_FlushList(view);
+        FlushPuzzleList(&view);
         Controls_FlushList(&controls);
 
-        tm[0] = temp.World;
-        tm[1] = temp.Room;
-        tm[2] = temp.Node;
-        tm[3] = temp.View;
-        tm[4] = 0;
-        sprintf(buf, "%s.scr", tm);
+        sprintf(buf, "%c%c%c%c.scr", w, r, n, v);
 
-        ScrSys_LoadScript(view, buf, true, &controls);
+        ScrSys_LoadScript(&view, buf, true, &controls);
     }
 
-    if (temp.Room != GetgVarInt(SLOT_ROOM) ||
-        temp.World != GetgVarInt(SLOT_WORLD) ||
-        force_all || room == NULL)
+    if (r != GetgVarInt(SLOT_ROOM) || w != GetgVarInt(SLOT_WORLD) || force_all)
     {
-        ScrSys_FlushResourcesByOwner(room);
+        ScrSys_FlushResourcesByOwner(&room);
 
-        Puzzle_FlushList(room);
+        FlushPuzzleList(&room);
 
-        tm[0] = temp.World;
-        tm[1] = temp.Room;
-        tm[2] = 0;
-        sprintf(buf, "%s.scr", tm);
+        sprintf(buf, "%c%c.scr", w, r);
 
-        ScrSys_LoadScript(room, buf, false, NULL);
+        ScrSys_LoadScript(&room, buf, false, NULL);
     }
 
-    if (temp.World != GetgVarInt(SLOT_WORLD) || force_all || world == NULL)
+    if (w != GetgVarInt(SLOT_WORLD) || force_all)
     {
-        ScrSys_FlushResourcesByOwner(world);
+        ScrSys_FlushResourcesByOwner(&world);
 
-        Puzzle_FlushList(world);
+        FlushPuzzleList(&world);
 
-        tm[0] = temp.World;
-        tm[1] = 0;
-        sprintf(buf, "%s.scr", tm);
+        sprintf(buf, "%c.scr", w);
 
-        ScrSys_LoadScript(world, buf, false, NULL);
+        ScrSys_LoadScript(&world, buf, false, NULL);
 
         Mouse_ShowCursor();
     }
 
-    FillStateBoxFromList(uni);
-    FillStateBoxFromList(view);
-    FillStateBoxFromList(room);
-    FillStateBoxFromList(world);
+    FillStateBoxFromList(&uni);
+    FillStateBoxFromList(&view);
+    FillStateBoxFromList(&room);
+    FillStateBoxFromList(&world);
 
     SetgVarInt(SLOT_WORLD, w);
     SetgVarInt(SLOT_ROOM, r);
-    SetgVarInt(SLOT_NODE, v1);
-    SetgVarInt(SLOT_VIEW, v2);
+    SetgVarInt(SLOT_NODE, n);
+    SetgVarInt(SLOT_VIEW, v);
     SetgVarInt(SLOT_VIEW_POS, X);
 
     Menu_SetVal(0xFFFF);
@@ -614,7 +934,7 @@ void ScrSys_ExecPuzzleList(pzllst_t *lst)
         StartMList(&lst->puzzles);
         while (!EndOfMList(&lst->puzzles))
         {
-            if (Puzzle_TryExec((puzzlenode_t *)DataMList(&lst->puzzles)) == ACTION_BREAK)
+            if (ExecPuzzle((puzzlenode_t *)DataMList(&lst->puzzles)) == ACTION_BREAK)
             {
                 BreakExecute = true;
                 break;
@@ -633,7 +953,7 @@ void ScrSys_ExecPuzzleList(pzllst_t *lst)
 
             lst->stack[i] = NULL;
 
-            if (Puzzle_TryExec(to_exec) == ACTION_BREAK)
+            if (ExecPuzzle(to_exec) == ACTION_BREAK)
             {
                 BreakExecute = true;
                 break;

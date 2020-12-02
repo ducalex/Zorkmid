@@ -8,8 +8,6 @@
 
 #define PuzzleStack 2048
 
-#include "Puzzle.h"
-
 #define SLOT_WORLD 3
 #define SLOT_ROOM 4
 #define SLOT_NODE 5
@@ -112,13 +110,22 @@
 #define NODE_RET_DELETE 1
 #define NODE_RET_NO 2
 
+typedef struct pzllst pzllst_t;
+
+typedef struct
+{
+    uint16_t slot;   //puzzle slot
+    MList CritList; //Criteria list of lists criteria
+    MList ResList;  //results list
+    pzllst_t *owner;
+} puzzlenode_t;
+
 typedef struct pzllst
 {
-    char name[32];
     MList puzzles;
     puzzlenode_t *stack[PuzzleStack];
-    int16_t stksize;
-    uint8_t exec_times;
+    size_t stksize;
+    size_t exec_times;
 } pzllst_t;
 
 typedef struct struct_action_res
@@ -133,10 +140,10 @@ typedef struct struct_action_res
         animnode_t *node_animpre;
         anim_preplay_node_t *node_animpreplay;
         syncnode_t *node_sync;
-        int32_t node_timer;
         ttytext_t *tty_text;
         distort_t *distort;
 
+        int32_t node_timer;
         int32_t node_pantracking;
         int32_t node_region;
         void *node_unknow;
@@ -165,6 +172,7 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t
 uint8_t ScrSys_GetFlag(uint32_t indx);
 void ScrSys_SetFlag(uint32_t indx, uint8_t newval);
 void ScrSys_ExecPuzzleList(pzllst_t *lst);
+const char *ScrSys_GetPuzzleListName(pzllst_t *lst);
 void ScrSys_FlushResourcesByOwner(pzllst_t *owner);
 void ScrSys_FlushResourcesByType(int type);
 bool ScrSys_BreakExec();

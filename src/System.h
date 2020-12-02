@@ -49,7 +49,6 @@
 #define LOG_WARN(f, ...) fprintf(stderr, "[WARNING] (%s) " f, __func__, ##__VA_ARGS__)
 
 typedef struct struct_action_res action_res_t;
-typedef struct pzllst pzllst_t;
 typedef struct ctrlnode ctrlnode_t;
 
 //node structure
@@ -109,7 +108,6 @@ char **str_split(const char *str, const char *delim);
 #include "Sound.h"
 #include "Mouse.h"
 #include "Loader.h"
-#include "Puzzle.h"
 #include "Controls.h"
 #include "Timer.h"
 #include "Scripting.h"
