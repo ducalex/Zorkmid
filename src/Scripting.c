@@ -32,12 +32,12 @@ static pzllst_t world; // world script
 static pzllst_t room;  // room script
 static pzllst_t view;  // view script
 
-static MList controls;  // Controls
-static MList actions;   // Sounds, animations, ttytexts, and others
+static dynlist_t controls;  // Controls
+static dynlist_t actions;   // Sounds, animations, ttytexts, and others
 
 static bool BreakExecute = false;
 
-static const char *PreferencesFile = NULL;
+static const char *PreferencesFile = "prefs.ini";
 
 static uint8_t SaveBuffer[512 * 1024];
 static size_t SaveCurrentSize = 0;
@@ -56,33 +56,38 @@ static void DeletePuzzleNode(puzzlenode_t *nod)
 {
     LOG_DEBUG("Deleting Puzzle #%d\n", nod->slot);
 
-    for (int i = 0; i < nod->CritList.count; i++)
+    for (int i = 0; i < nod->CritList.length; i++)
     {
-        dynstack_t *critlist = (dynstack_t *)nod->CritList.items[i];
-        for (int j = 0; j < critlist->count; j++)
+        dynlist_t *critlist = (dynlist_t *)nod->CritList.items[i];
+        if (!critlist) continue;
+
+        for (int j = 0; j < critlist->length; j++)
         {
             DELETE(critlist->items[j]);
         }
-        DeleteStack(critlist);
+        DeleteList(critlist);
     }
-    DeleteStack(&nod->CritList);
+    DeleteList(&nod->CritList);
 
-    for (int i = 0; i < nod->ResList.count; i++)
+    for (int i = 0; i < nod->ResList.length; i++)
     {
         DELETE(nod->ResList.items[i]);
     }
-    DeleteStack(&nod->ResList);
+    DeleteList(&nod->ResList);
 
     DELETE(nod);
 }
 
 static void FlushPuzzleList(pzllst_t *lst)
 {
-    for (int i = 0; i < lst->puzzles->count; i++)
+    for (int i = 0; i < lst->puzzles.length; i++)
     {
-        DeletePuzzleNode((puzzlenode_t *)lst->puzzles->items[i]);
+        puzzlenode_t *nod = (puzzlenode_t *)lst->puzzles.items[i];
+        if (!nod) continue;
+
+        DeletePuzzleNode(nod);
     }
-    FlushStack(lst->puzzles);
+    FlushList(&lst->puzzles);
 
     lst->exec_times = 0;
     lst->stksize = 0;
@@ -122,9 +127,9 @@ static void ParsePuzzleCriteria(puzzlenode_t *pzl, mfile_t *fl)
     char buf[STRBUFSIZE];
     char *str;
 
-    dynstack_t *crit_nodes_lst = CreateStack(32);
+    dynlist_t *crit_nodes_lst = CreateList(64);
 
-    PushToStack(&pzl->CritList, crit_nodes_lst);
+    AddToList(&pzl->CritList, crit_nodes_lst);
 
     while (!mfeof(fl))
     {
@@ -138,7 +143,7 @@ static void ParsePuzzleCriteria(puzzlenode_t *pzl, mfile_t *fl)
         else if (str[0] == '[')
         {
             crit_node_t *nod = NEW(crit_node_t);
-            PushToStack(crit_nodes_lst, nod);
+            AddToList(crit_nodes_lst, nod);
 
             sscanf(&str[1], "%d", &nod->slot1);
 
@@ -191,7 +196,7 @@ static void ParsePuzzleCriteria(puzzlenode_t *pzl, mfile_t *fl)
     }
 }
 
-static void ParsePuzzleResultAction(char *str, dynstack_t *list)
+static void ParsePuzzleResultAction(char *str, dynlist_t *list)
 {
     char buf[255];
     const char *params = " ";
@@ -214,7 +219,7 @@ static void ParsePuzzleResultAction(char *str, dynstack_t *list)
     }
 
     res_node_t *nod = NEW(res_node_t);
-    PushToStack(list, nod);
+    AddToList(list, nod);
     strcpy(nod->action, buf);
     strcpy(nod->params, params);
     nod->slot = slot;
@@ -265,7 +270,7 @@ static void ParsePuzzle(pzllst_t *lst, mfile_t *fl, char *ctstr)
                 SetgVarInt(slot, 0);
 
             LOG_DEBUG("Created Puzzle %d\n", slot);
-            PushToStack(lst->puzzles, pzl);
+            AddToList(&lst->puzzles, pzl);
             return;
         }
         else if (str_starts_with(str, "criteria"))
@@ -287,13 +292,14 @@ static void ParsePuzzle(pzllst_t *lst, mfile_t *fl, char *ctstr)
     DeletePuzzleNode(pzl);
 }
 
-static bool ProcessCriteries(dynstack_t *lst)
+static bool ProcessCriteries(dynlist_t *lst)
 {
     bool tmp = true;
 
-    for (int i = 0; i < lst->count; i++)
+    for (int i = 0; i < lst->length; i++)
     {
         crit_node_t *critnd = (crit_node_t *)lst->items[i];
+        if (!critnd) continue;
 
         LOG_DEBUG("  [%d] %d [%d] %d\n", critnd->slot1, critnd->oper, critnd->slot2, critnd->var2);
 
@@ -335,20 +341,21 @@ static int ExecPuzzle(puzzlenode_t *pzlnod)
         if (!(ScrSys_GetFlag(pzlnod->slot) & FLAG_DO_ME_NOW))
             return ACTION_NORMAL;
 
-    if (pzlnod->CritList.count > 0)
+    if (pzlnod->CritList.length > 0)
     {
-        bool match = false;
+        int match = -1;
 
-        for (int i = 0; i < pzlnod->CritList.count; i++)
+        for (int i = 0; i < pzlnod->CritList.length; i++)
         {
-            if (ProcessCriteries(pzlnod->CritList.items[i]))
-            {
-                match = true;
+            dynlist_t *crits = (dynlist_t *)pzlnod->CritList.items[i];
+            if (!crits) continue;
+
+            if ((match = ProcessCriteries(crits)))
                 break;
-            }
         }
 
-        if (!match)
+        // We iterated at least once but got no match
+        if (match == 0)
             return ACTION_NORMAL;
     }
 
@@ -356,9 +363,11 @@ static int ExecPuzzle(puzzlenode_t *pzlnod)
 
     SetgVarInt(pzlnod->slot, 1);
 
-    for (int i = 0; i < pzlnod->ResList.count; i++)
+    for (int i = 0; i < pzlnod->ResList.length; i++)
     {
         res_node_t *res = (res_node_t *)pzlnod->ResList.items[i];
+        if (!res) continue;
+
         if (Actions_Run(res->action, res->params, res->slot, pzlnod->owner) == ACTION_BREAK)
         {
             return ACTION_BREAK;
@@ -387,20 +396,23 @@ static void AddPuzzleToStateBox(int slot, puzzlenode_t *pzlnd)
 
 static void FillStateBoxFromList(pzllst_t *lst)
 {
-    for (int i = 0; i < lst->puzzles->count; i++)
+    for (int i = 0; i < lst->puzzles.length; i++)
     {
-        puzzlenode_t *pzlnod = (puzzlenode_t *)lst->puzzles->items[i];
+        puzzlenode_t *pzlnod = (puzzlenode_t *)lst->puzzles.items[i];
+        if (!pzlnod) continue;
 
         AddPuzzleToStateBox(pzlnod->slot, pzlnod);
 
-        for (int j = 0; j < pzlnod->CritList.count; j++)
+        for (int j = 0; j < pzlnod->CritList.length; j++)
         {
-            dynstack_t *CriteriaLst = (dynstack_t *)pzlnod->CritList.items[j];
+            dynlist_t *CriteriaLst = (dynlist_t *)pzlnod->CritList.items[j];
+            if (!CreateList) continue;
 
             int prevslot = 0;
-            for (int k = 0; k < CriteriaLst->count; k++)
+            for (int k = 0; k < CriteriaLst->length; k++)
             {
                 crit_node_t *crtnod = (crit_node_t *)CriteriaLst->items[k];
+                if (!crtnod) continue;
 
                 if (prevslot != crtnod->slot1)
                     AddPuzzleToStateBox(crtnod->slot1, pzlnod);
@@ -488,20 +500,19 @@ pzllst_t *Getview()
     return &view;
 }
 
-MList *GetControlsList()
+dynlist_t *GetControlsList()
 {
     return &controls;
 }
 
-MList *GetActionsList()
+dynlist_t *GetActionsList()
 {
     return &actions;
 }
 
 void ScrSys_AddToActionsList(void *nod)
 {
-    if (nod)
-        AddToMList(&actions, nod);
+    AddToList(&actions, nod);
 }
 
 void SetgVarInt(uint32_t indx, int var)
@@ -572,11 +583,6 @@ void ScrSys_Init()
         VAR_SLOTS_MAX = 30000;
     }
 
-    uni.puzzles = CreateStack(512);
-    room.puzzles = CreateStack(512);
-    view.puzzles = CreateStack(512);
-    world.puzzles = CreateStack(512);
-
     //needed for znemesis
     SetDirectgVarInt(SLOT_CPU, 1);
     SetDirectgVarInt(SLOT_PLATFORM, 0);
@@ -585,7 +591,7 @@ void ScrSys_Init()
     ScrSys_LoadPreferences();
 }
 
-void ScrSys_LoadScript(pzllst_t *lst, const char *filename, bool control, MList *controlst)
+void ScrSys_LoadScript(pzllst_t *lst, const char *filename, bool control, dynlist_t *controls)
 {
     mfile_t *fl = mfopen(filename);
     if (!fl)
@@ -610,7 +616,7 @@ void ScrSys_LoadScript(pzllst_t *lst, const char *filename, bool control, MList 
         }
         else if (str_starts_with(str, "control") && control)
         {
-            Control_Parse(controlst, fl, str);
+            Control_Parse(controls, fl, str);
         }
     }
 
@@ -647,10 +653,11 @@ void ScrSys_PrepareSaveBuffer()
 
     buffpos = 28;
 
-    StartMList(&actions);
-    while (!EndOfMList(&actions))
+    for (int i = 0; i < actions.length; i++)
     {
-        action_res_t *nod = (action_res_t *)DataMList(&actions);
+        action_res_t *nod = (action_res_t *)actions.items[i];
+        if (!nod) continue;
+
         if (nod->node_type == NODE_TYPE_TIMER)
         {
             SaveBuffer[buffpos] = 'T';
@@ -671,8 +678,6 @@ void ScrSys_PrepareSaveBuffer()
 
             buffpos += 16;
         }
-
-        NextMList(&actions);
     }
 
     SaveBuffer[buffpos] = 'F';
@@ -713,15 +718,13 @@ void ScrSys_PrepareSaveBuffer()
     for (int i = 0; i < VAR_SLOTS_MAX; i++)
         tmp2[i] = GetgVarInt(i);
 
-    StartMList(&actions);
-    while (!EndOfMList(&actions))
+    for (int i = 0; i < actions.length; i++)
     {
-        action_res_t *nod = (action_res_t *)DataMList(&actions);
-        if (nod->node_type == NODE_TYPE_MUSIC)
-            if (nod->slot > 0)
-                tmp2[nod->slot] = 2;
+        action_res_t *nod = (action_res_t *)actions.items[i];
+        if (!nod) continue;
 
-        NextMList(&actions);
+        if (nod->slot > 0 && nod->node_type == NODE_TYPE_MUSIC)
+            tmp2[nod->slot] = 2;
     }
 
     buffpos += VAR_SLOTS_MAX * 2;
@@ -910,9 +913,12 @@ void ScrSys_ExecPuzzleList(pzllst_t *lst)
 {
     if (lst->exec_times < 2)
     {
-        for (int i = 0; i < lst->puzzles->count; i++)
+        for (int i = 0; i < lst->puzzles.length; i++)
         {
-            if (ExecPuzzle((puzzlenode_t *)lst->puzzles->items[i]) == ACTION_BREAK)
+            puzzlenode_t *nod = (puzzlenode_t *)lst->puzzles.items[i];
+            if (!nod) continue;
+
+            if (ExecPuzzle(nod) == ACTION_BREAK)
             {
                 BreakExecute = true;
                 break;
@@ -963,10 +969,10 @@ void ScrSys_ProcessActionsList()
 {
     int result = NODE_RET_OK;
 
-    StartMList(&actions);
-    while (!EndOfMList(&actions))
+    for (int i = 0; i < actions.length; i++)
     {
-        action_res_t *nod = (action_res_t *)DataMList(&actions);
+        action_res_t *nod = (action_res_t *)actions.items[i];
+        if (!nod) continue;
 
         nod->first_process = true;
 
@@ -1008,9 +1014,7 @@ void ScrSys_ProcessActionsList()
         }
 
         if (result == NODE_RET_DELETE)
-            DeleteCurrentMList(&actions);
-
-        NextMList(&actions);
+            DeleteFromList(&actions, i);
     }
 }
 
@@ -1040,21 +1044,22 @@ int ScrSys_DeleteActionNode(action_res_t *nod)
 
 void ScrSys_FlushActionsList()
 {
-    StartMList(&actions);
-    while (!EndOfMList(&actions))
+    for (int i = 0; i < actions.length; i++)
     {
-        ScrSys_DeleteActionNode((action_res_t *)DataMList(&actions));
-        NextMList(&actions);
+        action_res_t *nod = (action_res_t *)actions.items[i];
+        if (!nod) continue;
+
+        ScrSys_DeleteActionNode(nod);
     }
-    FlushMList(&actions);
+    FlushList(&actions);
 }
 
 void ScrSys_FlushResourcesByOwner(pzllst_t *owner)
 {
-    StartMList(&actions);
-    while (!EndOfMList(&actions))
+    for (int i = 0; i < actions.length; i++)
     {
-        action_res_t *nod = (action_res_t *)DataMList(&actions);
+        action_res_t *nod = (action_res_t *)actions.items[i];
+        if (!nod) continue;
 
         if (nod->owner == owner)
         {
@@ -1069,25 +1074,21 @@ void ScrSys_FlushResourcesByOwner(pzllst_t *owner)
                 result = ScrSys_DeleteActionNode(nod);
 
             if (result == NODE_RET_DELETE)
-                DeleteCurrentMList(&actions);
+                actions.items[i] = NULL;
         }
-
-        NextMList(&actions);
     }
 }
 
 void ScrSys_FlushResourcesByType(int type)
 {
-    StartMList(&actions);
-    while (!EndOfMList(&actions))
+    for (int i = 0; i < actions.length; i++)
     {
-        action_res_t *nod = (action_res_t *)DataMList(&actions);
+        action_res_t *nod = (action_res_t *)actions.items[i];
+        if (!nod) continue;
 
         if (nod->node_type == type && nod->first_process == true)
             if (ScrSys_DeleteActionNode(nod) == NODE_RET_DELETE)
-                DeleteCurrentMList(&actions);
-
-        NextMList(&actions);
+                actions.items[i] = NULL;
     }
 }
 

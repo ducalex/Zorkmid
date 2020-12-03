@@ -1114,7 +1114,7 @@ static int Parse_Control_Flat()
     return 1;
 }
 
-static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Lever(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 {
     char tmpbuf[STRBUFSIZE];
     char filename[MINIBUFSIZE];
@@ -1123,7 +1123,7 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_LEVER);
     levernode_t *lev = ctnode->node.lev;
 
-    AddToMList(controlst, ctnode);
+    AddToList(controls, ctnode);
 
     ctnode->slot = slot;
 
@@ -1267,7 +1267,7 @@ static int Parse_Control_Lever(MList *controlst, mfile_t *fl, uint32_t slot)
     return 1;
 }
 
-static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_HotMov(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 {
     char tmpbuf[STRBUFSIZE];
     char filename[MINIBUFSIZE];
@@ -1277,7 +1277,7 @@ static int Parse_Control_HotMov(MList *controlst, mfile_t *fl, uint32_t slot)
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_HOTMV);
     hotmvnode_t *hotm = ctnode->node.hotmv;
 
-    AddToMList(controlst, ctnode);
+    AddToList(controls, ctnode);
 
     ctnode->slot = slot;
     SetDirectgVarInt(slot, 0);
@@ -1447,7 +1447,7 @@ static int Parse_Control_Tilt(mfile_t *fl)
     return good;
 }
 
-static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Save(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -1457,7 +1457,7 @@ static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_SAVE);
     saveloadnode_t *sv = ctnode->node.svld;
 
-    AddToMList(controlst, ctnode);
+    AddToList(controls, ctnode);
 
     ctnode->slot = slot;
     SetDirectgVarInt(slot, 0);
@@ -1533,7 +1533,7 @@ static int Parse_Control_Save(MList *controlst, mfile_t *fl, uint32_t slot)
     return good;
 }
 
-static int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Titler(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -1542,7 +1542,7 @@ static int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_TITLER);
     titlernode_t *titler = ctnode->node.titler;
 
-    AddToMList(controlst, ctnode);
+    AddToList(controls, ctnode);
     ctnode->slot = slot;
 
     while (!mfeof(fl))
@@ -1589,7 +1589,7 @@ static int Parse_Control_Titler(MList *controlst, mfile_t *fl, uint32_t slot)
     return good;
 }
 
-static int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Input(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -1597,7 +1597,7 @@ static int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_INPUT);
     inputnode_t *inp = ctnode->node.inp;
 
-    AddToMList(controlst, ctnode);
+    AddToList(controls, ctnode);
 
     ctnode->slot = slot;
     SetDirectgVarInt(slot, 0);
@@ -1671,7 +1671,7 @@ static int Parse_Control_Input(MList *controlst, mfile_t *fl, uint32_t slot)
     return good;
 }
 
-static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Paint(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -1679,7 +1679,7 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_PAINT);
     paintnode_t *paint = ctnode->node.paint;
 
-    AddToMList(controlst, ctnode);
+    AddToList(controls, ctnode);
     ctnode->slot = slot;
 
     char filename[MINIBUFSIZE];
@@ -1787,7 +1787,7 @@ static int Parse_Control_Paint(MList *controlst, mfile_t *fl, uint32_t slot)
     return good;
 }
 
-static int Parse_Control_Slot(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Slot(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -1795,7 +1795,7 @@ static int Parse_Control_Slot(MList *controlst, mfile_t *fl, uint32_t slot)
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_SLOT);
     slotnode_t *slut = ctnode->node.slot;
 
-    AddToMList(controlst, ctnode);
+    AddToList(controls, ctnode);
     ctnode->slot = slot;
     slut->srf = NULL;
 
@@ -1872,7 +1872,7 @@ static int Parse_Control_Slot(MList *controlst, mfile_t *fl, uint32_t slot)
     return good;
 }
 
-static int Parse_Control_PushTgl(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_PushTgl(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -1938,12 +1938,12 @@ static int Parse_Control_PushTgl(MList *controlst, mfile_t *fl, uint32_t slot)
     }
 
     if (good == 1)
-        AddToMList(controlst, ctnode);
+        AddToList(controls, ctnode);
 
     return good;
 }
 
-static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Fist(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -2108,12 +2108,12 @@ static int Parse_Control_Fist(MList *controlst, mfile_t *fl, uint32_t slot)
         good = 0;
 
     if (good == 1)
-        AddToMList(controlst, ctnode);
+        AddToList(controls, ctnode);
 
     return good;
 }
 
-static int Parse_Control_Safe(MList *controlst, mfile_t *fl, uint32_t slot)
+static int Parse_Control_Safe(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
@@ -2188,7 +2188,7 @@ static int Parse_Control_Safe(MList *controlst, mfile_t *fl, uint32_t slot)
     }
 
     if (good == 1)
-        AddToMList(controlst, ctnode);
+        AddToList(controls, ctnode);
 
     return good;
 }
@@ -2274,12 +2274,11 @@ static void ctrl_Delete_TitlerNode(ctrlnode_t *nod)
 
 void Controls_Draw()
 {
-    MList *ctrl = GetControlsList();
-    StartMList(ctrl);
-
-    while (!EndOfMList(ctrl))
+    dynlist_t *list = GetControlsList();
+    for (int i = 0; i < list->length; i++)
     {
-        ctrlnode_t *nod = (ctrlnode_t *)DataMList(ctrl);
+        ctrlnode_t *nod = (ctrlnode_t *)list->items[i];
+        if (!nod) continue;
 
         if (!(ScrSys_GetFlag(nod->slot) & FLAG_DISABLED))
         {
@@ -2298,11 +2297,10 @@ void Controls_Draw()
             else if (nod->type == CTRL_TITLER)
                 control_titler_draw(nod);
         }
-        NextMList(ctrl);
     }
 }
 
-void Control_Parse(MList *controlst, mfile_t *fl, char *ctstr)
+void Control_Parse(dynlist_t *controls, mfile_t *fl, char *ctstr)
 {
     uint32_t slot;
     char ctrltp[100];
@@ -2315,44 +2313,41 @@ void Control_Parse(MList *controlst, mfile_t *fl, char *ctstr)
     if (str_equals(ctrltp, "flat"))             Parse_Control_Flat();
     else if (str_equals(ctrltp, "pana"))        Parse_Control_Panorama(fl);
     else if (str_equals(ctrltp, "tilt"))        Parse_Control_Tilt(fl);
-    else if (str_equals(ctrltp, "push_toggle")) Parse_Control_PushTgl(controlst, fl, slot);
-    else if (str_equals(ctrltp, "input"))       Parse_Control_Input(controlst, fl, slot);
-    else if (str_equals(ctrltp, "save"))        Parse_Control_Save(controlst, fl, slot);
-    else if (str_equals(ctrltp, "slot"))        Parse_Control_Slot(controlst, fl, slot);
-    else if (str_equals(ctrltp, "lever"))       Parse_Control_Lever(controlst, fl, slot);
-    else if (str_equals(ctrltp, "safe"))        Parse_Control_Safe(controlst, fl, slot);
-    else if (str_equals(ctrltp, "fist"))        Parse_Control_Fist(controlst, fl, slot);
-    else if (str_equals(ctrltp, "hotmovie"))    Parse_Control_HotMov(controlst, fl, slot);
-    else if (str_equals(ctrltp, "paint"))       Parse_Control_Paint(controlst, fl, slot);
-    else if (str_equals(ctrltp, "titler"))      Parse_Control_Titler(controlst, fl, slot);
+    else if (str_equals(ctrltp, "push_toggle")) Parse_Control_PushTgl(controls, fl, slot);
+    else if (str_equals(ctrltp, "input"))       Parse_Control_Input(controls, fl, slot);
+    else if (str_equals(ctrltp, "save"))        Parse_Control_Save(controls, fl, slot);
+    else if (str_equals(ctrltp, "slot"))        Parse_Control_Slot(controls, fl, slot);
+    else if (str_equals(ctrltp, "lever"))       Parse_Control_Lever(controls, fl, slot);
+    else if (str_equals(ctrltp, "safe"))        Parse_Control_Safe(controls, fl, slot);
+    else if (str_equals(ctrltp, "fist"))        Parse_Control_Fist(controls, fl, slot);
+    else if (str_equals(ctrltp, "hotmovie"))    Parse_Control_HotMov(controls, fl, slot);
+    else if (str_equals(ctrltp, "paint"))       Parse_Control_Paint(controls, fl, slot);
+    else if (str_equals(ctrltp, "titler"))      Parse_Control_Titler(controls, fl, slot);
 }
 
-void Controls_ProcessList(MList *ctrlst)
+void Controls_ProcessList(dynlist_t *list)
 {
     pushChangeMouse = false;
 
-    LastMList(ctrlst);
-
-    while (!EndOfMList(ctrlst))
+    for (int i = list->length - 1; i >= 0 ; i--)
     {
-        ctrlnode_t *nod = (ctrlnode_t *)DataMList(ctrlst);
+        ctrlnode_t *nod = (ctrlnode_t *)list->items[i];
+        if (!nod) continue;
 
-        LOG_DEBUG("Running control %d\n", nod->slot);
+        LOG_DEBUG("Running control %d (%d)\n", nod->slot, i);
 
         if (!(ScrSys_GetFlag(nod->slot) & FLAG_DISABLED)) //(nod->enable)
             if (nod->func != NULL)
                 nod->func(nod);
-
-        PrevMList(ctrlst);
     }
 }
 
-void Controls_FlushList(MList *lst)
+void Controls_FlushList(dynlist_t *list)
 {
-    StartMList(lst);
-    while (!EndOfMList(lst))
+    for (int i = 0; i < list->length; i++)
     {
-        ctrlnode_t *nod = (ctrlnode_t *)DataMList(lst);
+        ctrlnode_t *nod = (ctrlnode_t *)list->items[i];
+        if (!nod) continue;
 
         switch (nod->type)
         {
@@ -2387,32 +2382,27 @@ void Controls_FlushList(MList *lst)
             ctrl_Delete_TitlerNode(nod);
             break;
         }
+        DeleteFromList(list, i);
         DELETE(nod);
-
-        NextMList(lst);
     }
 
-    FlushMList(lst);
+    FlushList(list);
 }
 
-ctrlnode_t *Controls_GetControl(int32_t id)
+ctrlnode_t *Controls_GetControl(int id)
 {
-    MList *lst = GetControlsList();
-    PushMList(lst);
-    StartMList(lst);
-    while (!EndOfMList(lst))
+    dynlist_t *list = GetControlsList();
+
+    for (int i = 0; i < list->length; i++)
     {
-        ctrlnode_t *nod = (ctrlnode_t *)DataMList(lst);
+        ctrlnode_t *nod = (ctrlnode_t *)list->items[i];
+        if (!nod) continue;
 
         if (nod->slot == id)
         {
-            PopMList(lst);
             return nod;
         }
-
-        NextMList(lst);
     }
 
-    PopMList(lst);
     return NULL;
 }

@@ -261,10 +261,10 @@ typedef struct ctrlnode
     void (*func)(ctrlnode_t *);
 } ctrlnode_t;
 
-void Control_Parse(MList *controlst, mfile_t *fl, char *ctstr);
-void Controls_ProcessList(MList *ctrlst);
+void Control_Parse(dynlist_t *controls, mfile_t *fl, char *ctstr);
+void Controls_ProcessList(dynlist_t *list);
 void Controls_Draw();
-void Controls_FlushList(MList *lst);
-ctrlnode_t *Controls_GetControl(int32_t id);
+void Controls_FlushList(dynlist_t *list);
+ctrlnode_t *Controls_GetControl(int id);
 
 #endif // CONTROL_H_INCLUDED

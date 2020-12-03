@@ -89,22 +89,18 @@ int Anim_DeleteNode(action_res_t *nod)
     }
     else if (nod->node_type == NODE_TYPE_ANIMPRE)
     {
-        MList *lst = GetActionsList();
-        PushMList(lst);
-        StartMList(lst);
-        while (!EndOfMList(lst))
+        dynlist_t *list = GetActionsList();
+        for (int i = 0; i < list->length; i++)
         {
-            action_res_t *nod2 = (action_res_t *)DataMList(lst);
+            action_res_t *nod2 = (action_res_t *)list->items[i];
+            if (!nod2) continue;
 
             if (nod2->node_type == NODE_TYPE_ANIMPRPL)
             {
                 if (nod2->nodes.node_animpreplay->pointingslot == nod->slot)
                     nod2->need_delete = true;
             }
-
-            NextMList(lst);
         }
-        PopMList(lst);
 
         SetGNode(nod->slot, NULL);
         Anim_DeleteAnim(nod->nodes.node_animpre);

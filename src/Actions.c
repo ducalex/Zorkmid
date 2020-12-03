@@ -268,19 +268,17 @@ static inline int action_animplay(char *params, int aSlot, pzllst_t *owner)
     char framerate[16]; //framerate or 0 (default)
     sscanf(params, "%s %s %s %s %s %s %s %s %s %s %s %s", file, x, y, w, h, st, en, loop, un1, un2, mask, framerate);
 
-    MList *all = GetActionsList();
-    StartMList(all);
-    while (!EndOfMList(all))
+    dynlist_t *all = GetActionsList();
+    for (int i = 0; i < all->length; i++)
     {
-        action_res_t *nd = (action_res_t *)DataMList(all);
+        action_res_t *nod = (action_res_t *)all->items[i];
+        if (!nod) continue;
 
-        if (nd->slot == aSlot && nd->node_type == NODE_TYPE_ANIMPLAY)
+        if (nod->slot == aSlot && nod->node_type == NODE_TYPE_ANIMPLAY)
         {
-            Anim_DeleteNode(nd);
-            DeleteCurrentMList(all);
+            Anim_DeleteNode(nod);
+            DeleteFromList(all, i);
         }
-
-        NextMList(all);
     }
 
     action_res_t *glob = Anim_CreateNode(NODE_TYPE_ANIMPLAY);
@@ -637,12 +635,11 @@ static int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
     //if (getGNode(slot) == NULL)
     //return ACTION_NOT_FOUND;
 
-    MList *all = GetActionsList();
-
-    StartMList(all);
-    while (!EndOfMList(all))
+    dynlist_t *all = GetActionsList();
+    for (int i = 0; i < all->length; i++)
     {
-        action_res_t *nod = (action_res_t *)DataMList(all);
+        action_res_t *nod = (action_res_t *)all->items[i];
+        if (!nod) continue;
 
         if (nod->slot == slot)
         {
@@ -669,11 +666,9 @@ static int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
             else
                 ScrSys_DeleteActionNode(nod);
 
-            DeleteCurrentMList(all);
+            DeleteFromList(all, i);
             break;
         }
-
-        NextMList(all);
     }
 
     return ACTION_NORMAL;

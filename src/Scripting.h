@@ -115,14 +115,14 @@ typedef struct pzllst pzllst_t;
 typedef struct
 {
     uint16_t slot;         //puzzle slot
-    dynstack_t CritList;   //Criteria list of lists criteria
-    dynstack_t ResList;    //results list
+    dynlist_t CritList;   //Criteria list of lists criteria
+    dynlist_t ResList;    //results list
     pzllst_t *owner;
 } puzzlenode_t;
 
 typedef struct pzllst
 {
-    dynstack_t *puzzles;
+    dynlist_t puzzles;
     puzzlenode_t *stack[PuzzleStack];
     size_t stksize;
     size_t exec_times;
@@ -156,8 +156,8 @@ pzllst_t *GetUni();
 pzllst_t *Getworld();
 pzllst_t *Getroom();
 pzllst_t *Getview();
-MList *GetControlsList();
-MList *GetActionsList();
+dynlist_t *GetControlsList();
+dynlist_t *GetActionsList();
 
 action_res_t *GetGNode(uint32_t indx);
 void SetGNode(uint32_t indx, action_res_t *data);
@@ -167,7 +167,7 @@ int *GetgVarRef(uint32_t indx);
 void SetDirectgVarInt(uint32_t indx, int var);
 
 void ScrSys_Init();
-void ScrSys_LoadScript(pzllst_t *lst, const char *filename, bool control, MList *controlst);
+void ScrSys_LoadScript(pzllst_t *lst, const char *filename, bool control, dynlist_t *controls);
 void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X, bool force_all);
 uint8_t ScrSys_GetFlag(uint32_t indx);
 void ScrSys_SetFlag(uint32_t indx, uint8_t newval);

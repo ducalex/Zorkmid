@@ -14,7 +14,7 @@
 #define TXT_CFG_TEXTURES_LINES 256
 #define TXT_CFG_TEXTURES_PER_LINE 6
 
-static dynstack_t *active_subs;
+static dynlist_t subs_list;
 
 static SDL_Surface *RenderUTF8(TTF_Font *fnt, const char *text, txt_style_t *style)
 {
@@ -261,7 +261,7 @@ static int getglyphwidth(TTF_Font *fnt, uint16_t chr)
 
 void Text_Init()
 {
-    active_subs = CreateStack(16);
+    //
 }
 
 void Text_InitStyle(txt_style_t *style)
@@ -817,7 +817,7 @@ subrect_t *Text_CreateSubRect(int x, int y, int w, int h)
     tmp->timer = -1;
     tmp->img = Rend_CreateSurface(w, h, 0);
 
-    PushToStack(active_subs, tmp);
+    AddToList(&subs_list, tmp);
 
     return tmp;
 }
@@ -837,12 +837,10 @@ void Text_DrawSubtitles()
     };
     Rend_FillRect(screen, &msg_rect, 0, 0, 0);
 
-    for (int i = 0; i < active_subs->count; i++)
+    for (int i = 0; i < subs_list.length; i++)
     {
-        subrect_t *subrec = (subrect_t *)active_subs->items[i];
-
-        if (subrec == NULL) // Item was deleted
-            continue;
+        subrect_t *subrec = (subrect_t *)subs_list.items[i];
+        if (!subrec) continue;
 
         if (subrec->timer >= 0)
         {
@@ -853,9 +851,9 @@ void Text_DrawSubtitles()
 
         if (subrec->todelete)
         {
+            DeleteFromList(&subs_list, i);
             SDL_FreeSurface(subrec->img);
             DELETE(subrec);
-            active_subs->items[i] = NULL;
         }
         else
         {

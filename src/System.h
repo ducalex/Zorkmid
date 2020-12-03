@@ -55,56 +55,19 @@ typedef struct ctrlnode ctrlnode_t;
 
 typedef struct
 {
-    void **items;
-    size_t count;
-    size_t capacity;
-    size_t blocksize;
-    bool   is_heap;
-} dynstack_t;
+    void **items;       // Items. Always check for NULL values (deleted items may leave holes)
+    size_t length;      // Length of the list including deleted items (to be used in loops)
+    size_t capacity;    // Max length before we need to realloc
+    size_t blocksize;   // Block size to increase on realloc (in items)
+    bool   is_heap;     // Tells us if the dynlist was created with CreateList() so we can free it
+} dynlist_t;
 
-//node structure
-typedef struct MList_node_s
-{
-    struct MList_node_s *next; //pointer to next node
-    struct MList_node_s *prev; //pointer to next node
-    void *data;                //pointer to data
-    size_t idx;
-} MList_node;
-
-//List structure
-typedef struct
-{
-    MList_node *CurNode; //pointer to current node
-    MList_node *Head;    //pointer to first node
-    MList_node *Tail;    //pointer to last node
-    size_t count;  //count of elements
-    size_t indx;   //count of elements
-    MList_node *Stack[MLIST_STACK];
-    size_t stkpos;
-    bool dontstp;
-} MList;
-
-//Linked-list functions
-MList_node *AddToMList(MList *lst, void *item);
-void StartMList(MList *lst);
-void LastMList(MList *lst);
-void NextMList(MList *lst);
-void PrevMList(MList *lst);
-void *DataMList(MList *lst);
-void FlushMList(MList *lst);
-void DeleteCurrentMList(MList *lst);
-bool EndOfMList(MList *lst);
-bool PushMList(MList *lst);
-bool PopMList(MList *lst);
-
-dynstack_t *CreateStack(int blocksize);
-void ResizeStack(dynstack_t *stack);
-void PushToStack(dynstack_t *stack, void *item);
-void *PopFromStack(dynstack_t *stack);
-void *PeekStack(dynstack_t *stack);
-void FlushStack(dynstack_t *stack);
-void SpliceStack(dynstack_t *stack, int index);
-void DeleteStack(dynstack_t *stack);
+dynlist_t *CreateList(size_t blocksize);
+void ResizeList(dynlist_t *list);
+void AddToList(dynlist_t *list, void *item);
+void DeleteFromList(dynlist_t *list, int index);
+void FlushList(dynlist_t *list);
+void DeleteList(dynlist_t *list);
 
 char *PrepareString(char *buf);
 char *GetParams(char *str);

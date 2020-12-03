@@ -129,260 +129,77 @@ char *str_trim(const char *buffer)
     return strdup("");
 }
 
-dynstack_t *CreateStack(int blocksize)
+dynlist_t *CreateList(size_t blocksize)
 {
-    dynstack_t *stack = NEW(dynstack_t);
+    dynlist_t *list = NEW(dynlist_t);
 
-    stack->blocksize = blocksize;
-    stack->is_heap = true;
-    ResizeStack(stack);
+    list->blocksize = blocksize;
+    list->is_heap = true;
 
-    return stack;
+    return list;
 }
 
-void ResizeStack(dynstack_t *stack)
+void ResizeList(dynlist_t *list)
 {
-    ASSERT(stack != NULL);
+    ASSERT(list != NULL);
 
-    if (stack->blocksize == 0)
-        stack->blocksize = 64;
+    if (list->blocksize == 0)
+        list->blocksize = 64;
 
-    int new_capacity = stack->blocksize * ((stack->count / stack->blocksize) + 1);
-    if (new_capacity != stack->capacity)
+    int new_capacity = list->blocksize * ((list->length / list->blocksize) + 1);
+    if (new_capacity != list->capacity)
     {
-        LOG_DEBUG("Resizing stack %p from %d items to %d items\n", stack, stack->capacity, new_capacity);
-        stack->items = realloc(stack->items, new_capacity * sizeof(void*));
-        stack->capacity = new_capacity;
+        LOG_DEBUG("Resizing list %p from %d items to %d items\n", list, list->capacity, new_capacity);
+        list->items = realloc(list->items, new_capacity * sizeof(void*));
+        list->capacity = new_capacity;
     }
 }
 
-void SpliceStack(dynstack_t *stack, int index)
+void AddToList(dynlist_t *list, void *item)
 {
-    ASSERT(stack != NULL);
+    ASSERT(list != NULL);
 
-    int pos = 0;
+    if (list->length + 1 > list->capacity)
+        ResizeList(list);
 
-    for (int i = 0; i < stack->count; i++)
-        if (stack->items[i] != NULL)
-            stack->items[pos++] = stack->items[i];
-
-    stack->count = pos;
+    list->items[list->length] = item;
+    list->length++;
 }
 
-void PushToStack(dynstack_t *stack, void *item)
+void DeleteFromList(dynlist_t *list, int index)
 {
-    ASSERT(stack != NULL);
+    ASSERT(list != NULL);
 
-    if (stack->count + 1 >= stack->capacity)
-        ResizeStack(stack);
+    if (!list->items)
+        return;
 
-    stack->items[stack->count++] = item;
+    if (index >= 0 && index < list->length)
+        list->items[index] = NULL;
+
+    // We can only free items at the end of the list
+    while (list->length > 0 && list->items[list->length - 1] == NULL)
+        list->length--;
+
+    ResizeList(list);
 }
 
-void *PopFromStack(dynstack_t *stack)
+void FlushList(dynlist_t *list)
 {
-    ASSERT(stack != NULL);
+    ASSERT(list != NULL);
 
-    if (stack->count == 0)
-        return NULL;
-
-    if (stack->capacity - stack->count >= stack->blocksize * 2)
-        ResizeStack(stack);
-
-    stack->count--;
-
-    return stack->items[stack->count - 1];
+    list->length = 0;
+    ResizeList(list);
 }
 
-void *PeekStack(dynstack_t *stack)
+void DeleteList(dynlist_t *list)
 {
-    ASSERT(stack != NULL);
+    if (list == NULL)
+        return;
 
-    if (stack->count == 0)
-        return NULL;
+    DELETE(list->items);
 
-    return stack->items[stack->count - 1];
-}
-
-void FlushStack(dynstack_t *stack)
-{
-    ASSERT(stack != NULL);
-
-    stack->count = 0;
-    ResizeStack(stack);
-}
-
-void DeleteStack(dynstack_t *stack)
-{
-    ASSERT(stack != NULL);
-
-    DELETE(stack->items);
-
-    if (!stack->is_heap) // clean up static object
-        memset(stack, 0, sizeof(dynstack_t));
+    if (!list->is_heap) // clean up static object
+        memset(list, 0, sizeof(dynlist_t));
     else
-        DELETE(stack);
-}
-
-
-
-//Adds item to linked-list
-MList_node *AddToMList(MList *lst, void *item)
-{
-    MList_node *tmp = NEW(MList_node);
-    tmp->data = item;
-    tmp->next = NULL;
-    tmp->prev = lst->Tail;
-    tmp->idx = lst->indx;
-    if (lst->count == 0)
-    {
-        lst->Head = tmp;
-        lst->CurNode = tmp;
-        lst->Tail = tmp;
-    }
-    else
-    {
-        lst->Tail->next = tmp;
-        lst->Tail = tmp;
-    }
-
-    lst->count++;
-    lst->indx++;
-
-    return tmp;
-}
-
-//Go to the first linked-list item
-void StartMList(MList *lst)
-{
-    lst->CurNode = lst->Head;
-    lst->dontstp = false;
-}
-
-void LastMList(MList *lst)
-{
-    lst->CurNode = lst->Tail;
-    lst->dontstp = false;
-}
-
-//Go to next linked-list item without checking of item exist's
-void NextMList(MList *lst)
-{
-    if (lst->CurNode)
-        if (!lst->dontstp)
-            lst->CurNode = lst->CurNode->next;
-
-    lst->dontstp = false;
-}
-
-//Go to prev linked-list item without checking of item exist's
-void PrevMList(MList *lst)
-{
-    lst->dontstp = false;
-    if (lst->CurNode)
-        lst->CurNode = lst->CurNode->prev;
-}
-
-//Return true on EOF of list
-bool EndOfMList(MList *lst)
-{
-    return (lst->CurNode == NULL);
-}
-
-//Get data of element
-void *DataMList(MList *lst)
-{
-    return lst->CurNode->data;
-}
-
-//Delete all nodes assigned to list
-void FlushMList(MList *lst)
-{
-    if (lst->count > 0)
-    {
-        MList_node *nxt = lst->Head->next;
-        lst->CurNode = lst->Head;
-        while (lst->CurNode)
-        {
-            nxt = lst->CurNode->next;
-            DELETE(lst->CurNode);
-            lst->CurNode = nxt;
-        }
-    }
-
-    lst->CurNode = NULL;
-    lst->Head = NULL;
-    lst->Tail = NULL;
-    lst->count = 0;
-    lst->indx = 0;
-    lst->stkpos = 0;
-    lst->dontstp = false;
-}
-
-void DeleteCurrentMList(MList *lst)
-{
-    if (lst->stkpos != 0)
-        Z_PANIC("???");
-
-    lst->dontstp = false;
-
-    if (lst->CurNode->next)
-        lst->CurNode->next->prev = lst->CurNode->prev;
-
-    if (lst->CurNode->prev)
-        lst->CurNode->prev->next = lst->CurNode->next;
-
-    if (lst->CurNode == lst->Tail)
-        lst->Tail = lst->CurNode->prev;
-
-    if (lst->CurNode == lst->Head)
-    {
-        lst->Head = lst->CurNode->next;
-        lst->dontstp = true;
-    }
-
-    MList_node *nod;
-
-    if (lst->CurNode->prev)
-        nod = lst->CurNode->prev;
-    else
-        nod = lst->Head;
-
-    DELETE(lst->CurNode);
-
-    lst->stkpos = 0; //Clean Stack!
-    lst->CurNode = nod;
-    lst->count--;
-
-    if (lst->count == 0)
-    {
-        lst->CurNode = NULL;
-        lst->Head = NULL;
-        lst->Tail = NULL;
-    }
-}
-
-bool PushMList(MList *lst)
-{
-    if (lst->stkpos >= MLIST_STACK)
-        return false;
-
-    lst->Stack[lst->stkpos] = lst->CurNode;
-    lst->stkpos++;
-
-    return true;
-}
-
-bool PopMList(MList *lst)
-{
-    if (lst->stkpos <= 0)
-    {
-        lst->CurNode = lst->Head;
-        return false;
-    }
-
-    lst->stkpos--;
-    lst->CurNode = lst->Stack[lst->stkpos];
-
-    return true;
+        DELETE(list);
 }
