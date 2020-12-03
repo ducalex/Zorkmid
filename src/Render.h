@@ -75,6 +75,7 @@ void Rend_MouseInteractOfRender();
 void Rend_RenderFrame();
 void Rend_SetVideoMode(int w, int h, int full);
 void Rend_Init(int full);
+void Rend_InitWindow();
 void Rend_SetDelay(int32_t delay);
 void Rend_ScreenFlip();
 void Rend_SetGamma(float val);

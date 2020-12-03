@@ -429,25 +429,30 @@ void Rend_SetVideoMode(int w, int h, int full)
     GAMESCREEN_X = (WINDOW_W - GAMESCREEN_W) / 2;
     GAMESCREEN_Y = (WINDOW_H - GAMESCREEN_H) / 2;
     GAMESCREEN_P = 60;
+
+    char buffer[128];
+    sprintf(buffer, "Zorkmid: %s [build: " __DATE__ " " __TIME__ "]", GetGameTitle());
+    SDL_WM_SetCaption(buffer, NULL);
 }
 
-void Rend_Init(int full)
+void Rend_InitWindow()
 {
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
     {
         Z_PANIC("Unable to init SDL: %s\n", SDL_GetError());
     }
 
-    view_X = GetgVarRef(SLOT_VIEW_POS);
-    tilt_gap = GAMESCREEN_H_2;
-
-    Rend_SetVideoMode(640, 480, full);
-
-    char buffer[128];
-    sprintf(buffer, "Zorkmid: %s [build: " __DATE__ " " __TIME__ "]", GetGameTitle());
-    SDL_WM_SetCaption(buffer, NULL);
+    // SDL_SetVideoMode(640, 480, 0, SDL_SWSURFACE);
     SDL_ShowCursor(SDL_DISABLE);
     TTF_Init();
+}
+
+void Rend_Init(int full)
+{
+    Rend_SetVideoMode(640, 480, full);
+
+    view_X = GetgVarRef(SLOT_VIEW_POS);
+    tilt_gap = GAMESCREEN_H_2;
 }
 
 void Rend_LoadGamescr(const char *file)
@@ -1050,12 +1055,10 @@ int32_t Rend_EF_Light_Setup(char *string, int32_t x, int32_t y, int32_t w, int32
         return -1;
 
     effect_t *ef = GetEffect(eftmp);
+    int xx, yy, delta, color;
 
-    if (str_starts_with(string, "useart"))
+    if (sscanf(string, "useart[%d,%d,%d]", &xx, &yy, &delta) == 3)
     {
-        int32_t xx, yy, delta, color;
-        sscanf(string, "useart[%d,%d,%d]", &xx, &yy, &delta);
-
         SDL_LockSurface(scrbuf);
 
         delta = SDL_MapRGB(scrbuf->format, delta * 8, delta * 8, delta * 8);
@@ -1067,7 +1070,7 @@ int32_t Rend_EF_Light_Setup(char *string, int32_t x, int32_t y, int32_t w, int32
     }
     else
     {
-        //WRITE CODE FOR IMAGES.... but not want %)
+        // ...
     }
 
     ef->delay = delay;

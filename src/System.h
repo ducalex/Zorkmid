@@ -20,7 +20,7 @@
 #include <SDL/SDL_rotozoom.h>
 
 #define STRBUFSIZE  0x400
-#define MINIBUFSIZE 0x20
+#define MINIBUFSIZE 0x40
 #define PATHBUFSIZE 0x400
 #define MLIST_STACK 0x10
 

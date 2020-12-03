@@ -228,19 +228,18 @@ static void ParsePuzzleResultAction(char *str, dynlist_t *list)
 static void ParsePuzzleResults(puzzlenode_t *pzl, mfile_t *fl)
 {
     char buf[STRBUFSIZE];
+    char *str;
 
     while (!mfeof(fl))
     {
-        mfgets(buf, STRBUFSIZE, fl);
-
         // Format is `action: background: event: other`
-        char *str = PrepareString(buf);
-        char *str2;
+        mfgets(buf, STRBUFSIZE, fl);
+        str = PrepareString(buf);
 
         if (str[0] == '}')
             return;
-        else if ((str2 = strchr(str, ':')))
-            ParsePuzzleResultAction(str2 + 1, &pzl->ResList);
+        else if ((str = strchr(str, ':')))
+            ParsePuzzleResultAction(str + 1, &pzl->ResList);
         else
             LOG_WARN("Results parsing error in: '%s'\n", str);
     }
@@ -249,7 +248,8 @@ static void ParsePuzzleResults(puzzlenode_t *pzl, mfile_t *fl)
 static void ParsePuzzle(pzllst_t *lst, mfile_t *fl, char *ctstr)
 {
     char buf[STRBUFSIZE];
-    uint32_t slot;
+    char *str;
+    int slot;
 
     sscanf(ctstr, "puzzle:%d", &slot);
 
@@ -262,7 +262,7 @@ static void ParsePuzzle(pzllst_t *lst, mfile_t *fl, char *ctstr)
     while (!mfeof(fl))
     {
         mfgets(buf, STRBUFSIZE, fl);
-        char *str = PrepareString(buf);
+        str = PrepareString(buf);
 
         if (str[0] == '}') // We've reached the end!
         {
@@ -591,7 +591,7 @@ void ScrSys_Init()
     ScrSys_LoadPreferences();
 }
 
-void ScrSys_LoadScript(pzllst_t *lst, const char *filename, bool control, dynlist_t *controls)
+void ScrSys_LoadScript(pzllst_t *list, const char *filename, bool control, dynlist_t *controls)
 {
     mfile_t *fl = mfopen(filename);
     if (!fl)
@@ -603,16 +603,16 @@ void ScrSys_LoadScript(pzllst_t *lst, const char *filename, bool control, dynlis
         Rend_SetRenderer(RENDER_FLAT);
 
     char buf[STRBUFSIZE];
+    char *str;
 
     while (!mfeof(fl))
     {
         mfgets(buf, STRBUFSIZE, fl);
-
-        char *str = PrepareString(buf);
+        str = PrepareString(buf);
 
         if (str_starts_with(str, "puzzle"))
         {
-            ParsePuzzle(lst, fl, str);
+            ParsePuzzle(list, fl, str);
         }
         else if (str_starts_with(str, "control") && control)
         {
@@ -1119,30 +1119,33 @@ static const struct
 
 void ScrSys_LoadPreferences()
 {
-    char **rows = Loader_LoadSTR(PreferencesFile);
-    const char *par;
-    int pos = 0;
+    char line[STRBUFSIZE];
+    char key[MINIBUFSIZE];
+    int value;
 
-    while (rows[pos] != NULL)
+    mfile_t *mfp = mfopen_txt(PreferencesFile);
+    if (!mfp)
+        return;
+
+    while (!mfeof(mfp))
     {
-        if (!str_empty(rows[pos]) && (par = strchr(rows[pos], '=')))
+        mfgets(line, STRBUFSIZE, mfp);
+
+        if (sscanf(line, "%[^=]=%d", key, &value) == 2)
         {
-            par = str_ltrim(par + 1);
             for (int j = 0; prefs[j].name != NULL; j++)
             {
-                if (str_equals(rows[pos], prefs[j].name))
+                if (str_equals(key, prefs[j].name))
                 {
-                    LOG_DEBUG("'%s' = '%d'\n", prefs[j].name, atoi(par));
-                    SetDirectgVarInt(prefs[j].slot, atoi(par));
+                    LOG_DEBUG("'%s' = '%d'\n", prefs[j].name, value);
+                    SetDirectgVarInt(prefs[j].slot, value);
                     break;
                 }
             }
         }
-        DELETE(rows[pos]);
-        pos++;
     }
 
-    DELETE(rows);
+    mfclose(mfp);
 }
 
 void ScrSys_SavePreferences()

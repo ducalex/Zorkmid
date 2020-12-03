@@ -40,14 +40,14 @@ typedef struct
     int start;
     int stop;
     int sub;
+    char *txt;
 } subtitle_t;
 
 typedef struct
 {
     subrect_t *SubRect;
-    subtitle_t *subs; // Subtitle indices
-    char **txt;           // Subtitles text
-    int count;          // Subtittles count
+    subtitle_t *subs;
+    int count;
     int currentsub;
 } subtitles_t;
 

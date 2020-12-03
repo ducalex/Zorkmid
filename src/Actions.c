@@ -98,8 +98,8 @@ static inline int action_timer(char *params, int aSlot, pzllst_t *owner)
 {
     int delay = CURRENT_GAME == GAME_ZGI ? 100 : 1000;
 
-    char tmp[16];
-    sscanf(params, "%s", tmp);
+    char param[16];
+    sscanf(params, "%s", param); // Get first word
 
     if (GetGNode(aSlot) != NULL)
     {
@@ -109,7 +109,7 @@ static inline int action_timer(char *params, int aSlot, pzllst_t *owner)
     action_res_t *nod = Timer_CreateNode();
     nod->slot = aSlot;
     nod->owner = owner;
-    nod->nodes.node_timer = GetIntVal(PrepareString(tmp)) * delay;
+    nod->nodes.node_timer = GetIntVal(param) * delay;
 
     SetGNode(aSlot, nod);
 
@@ -176,10 +176,10 @@ static inline int action_debug(char *params, int aSlot, pzllst_t *owner)
 
 static inline int action_random(char *params, int aSlot, pzllst_t *owner)
 {
-    char tmp[16];
-    sscanf(params, "%s", tmp);
+    char param[16];
+    sscanf(params, "%s", param);
 
-    SetgVarInt(aSlot, rand() % (GetIntVal(tmp) + 1));
+    SetgVarInt(aSlot, rand() % (GetIntVal(param) + 1));
 
     return ACTION_NORMAL;
 }
@@ -399,12 +399,13 @@ static inline int action_syncsound(char *params, int aSlot, pzllst_t *owner)
     //6 - 0 mono | 1 stereo
     //7 - unknown
 
-    char a1[16];
-    char a2[16];
-    char a3[16];
+    char a1[16], a2[16], a3[32];
 
-    //sscanf(params,"%s %s %s %s %s %s %s",)
-    sscanf(params, "%s %s %s", a1, a2, a3);
+    if (sscanf(params, "%s %s %s", a1, a2, a3) != 3)
+    {
+        LOG_WARN("Malformed params: '%s'\n", params);
+        return ACTION_NORMAL;
+    }
 
     int syncto = GetIntVal(a1);
 
@@ -422,8 +423,7 @@ static inline int action_syncsound(char *params, int aSlot, pzllst_t *owner)
     action_res_t *tmp = Sound_CreateNode(NODE_TYPE_SYNCSND);
 
     tmp->owner = owner;
-    tmp->slot = -1;
-    //tmp->slot  = aSlot;
+    tmp->slot = -1; //  aSlot;
     tmp->nodes.node_sync->syncto = syncto;
     tmp->nodes.node_sync->chunk = chunk;
     tmp->nodes.node_sync->chn = playing;
@@ -687,12 +687,14 @@ static inline int action_stop(char *params, int aSlot, pzllst_t *owner)
 
 static inline int action_inventory(char *params, int aSlot, pzllst_t *owner)
 {
-    int item;
-    char cmd[16];
-    char chars[16];
-    memset(chars, 0, 16);
-    sscanf(params, "%s %s", cmd, chars);
-    item = GetIntVal(chars);
+    char cmd[MINIBUFSIZE];
+    char param[MINIBUFSIZE];
+    int item = 0;
+
+    if (sscanf(params, "%s %s", cmd, param) == 2)
+    {
+        item = GetIntVal(param);
+    }
 
     if (str_equals(cmd, "add"))
     {
@@ -924,14 +926,13 @@ static inline int action_rotate_to(char *params, int aSlot, pzllst_t *owner)
     if (Rend_GetRenderer() != RENDER_PANA)
         return ACTION_NORMAL;
 
-    int32_t topos;
-    int32_t time;
+    int topos;
+    int time;
+    int maxX = Rend_GetPanaWidth();
+    int curX = GetgVarInt(SLOT_VIEW_POS);
+    int oner = 0;
 
     sscanf(params, "%d %d", &topos, &time);
-
-    int32_t maxX = Rend_GetPanaWidth();
-    int32_t curX = GetgVarInt(SLOT_VIEW_POS);
-    int32_t oner = 0;
 
     if (curX == topos)
         return ACTION_NORMAL;
@@ -1122,17 +1123,15 @@ static inline int action_region(char *params, int aSlot, pzllst_t *owner)
 
 static inline int action_display_message(char *params, int aSlot, pzllst_t *owner)
 {
-    int32_t p1, p2, p3, p4, p5, p6;
+    int p1, p2, p3, p4, p5, p6;
 
-    if (sscanf(params, "%d %d %d %d %d %d", &p1, &p2, &p3, &p4, &p5, &p6) == 6)
-    {
-    }
-    else if (sscanf(params, "%d %d", &p1, &p2) == 2)
+    int count = sscanf(params, "%d %d %d %d %d %d", &p1, &p2, &p3, &p4, &p5, &p6);
+
+    if (count == 2)
     {
         ctrlnode_t *ct = Controls_GetControl(p1);
-        if (ct)
-            if (ct->type == CTRL_TITLER)
-                ct->node.titler->next_string = p2;
+        if (ct && ct->type == CTRL_TITLER)
+            ct->node.titler->next_string = p2;
     }
 
     return ACTION_NORMAL;
@@ -1140,9 +1139,7 @@ static inline int action_display_message(char *params, int aSlot, pzllst_t *owne
 
 static inline int action_set_venus(char *params, int aSlot, pzllst_t *owner)
 {
-    int32_t p1;
-
-    p1 = atoi(params);
+    int p1 = atoi(params);
 
     if (p1 > 0)
     {

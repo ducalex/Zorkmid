@@ -11,7 +11,7 @@ static bool NeedToLoadScript = false;
 static int8_t NeedToLoadScriptDelay = CHANGELOCATIONDELAY;
 static char *GamePath = "./";
 
-static const char **GameStrings;
+static const char *GameStrings[0x100];
 
 static uint32_t timer_last = 0;
 static uint32_t timer_delta = 0;
@@ -291,8 +291,18 @@ static void UpdateKeyboard()
 
 static void LoadGameStrings(void)
 {
-    const char *file = (CURRENT_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR");
-    GameStrings = (const char **)Loader_LoadSTR(file);
+    mfile_t *mfp = mfopen_txt(CURRENT_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR");
+    if (mfp)
+    {
+        char buf[STRBUFSIZE];
+        size_t count = 0;
+        while (!mfeof(mfp) && count < 0x100)
+        {
+            mfgets(buf, STRBUFSIZE, mfp);
+            GameStrings[count++] = str_trim(buf);
+        }
+        mfclose(mfp);
+    }
 }
 
 static void SetGamePath(const char *path)
@@ -361,17 +371,18 @@ void Game_Detect()
     CURRENT_GAME = 1;
 }
 
-void Game_Init(const char *path, bool fullscreen)
+void Game_Init(const char *path, bool full)
 {
+    Rend_InitWindow();
     SetGamePath(path);
     Loader_Init(path);
     Game_Detect();
-    Rend_Init(fullscreen);
+    Rend_Init(full);
+    ScrSys_Init();
     Sound_Init();
     Mouse_Init();
     Text_Init();
     Menu_Init();
-    ScrSys_Init();
 
     LoadGameStrings();
 

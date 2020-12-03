@@ -821,46 +821,6 @@ anim_surf_t *Loader_LoadRLF(const char *file, bool transpose, int32_t mask_555)
 /***************************** END Animations *****************************/
 
 
-/******************************* STRINGS *******************************/
-char **Loader_LoadSTR(const char *filename)
-{
-    char line_buffer[STRBUFSIZE];
-    int lines = 1;
-    int pos = 0;
-    char **strings;
-
-    mfile_t *mfp = mfopen_txt(filename);
-    if (mfp)
-    {
-        for (int i = 0; i < mfp->size; i++)
-        {
-            if (mfp->buffer[i] == '\n')
-                lines++;
-        }
-
-        strings = NEW_ARRAY(char *, lines);
-
-        while (!mfeof(mfp))
-        {
-            mfgets(line_buffer, STRBUFSIZE, mfp);
-            strings[pos++] = str_trim(line_buffer);
-        }
-
-        mfclose(mfp);
-    }
-    else
-    {
-        LOG_WARN("Strings file '%s' not found\n", filename);
-        strings = NEW_ARRAY(char *, lines);
-    }
-
-    strings[pos] = NULL;
-
-    return strings;
-}
-/***************************** STRINGS END *****************************/
-
-
 /******************************* File access *******************************/
 static void ucs2_to_utf8(mfile_t *file)
 {

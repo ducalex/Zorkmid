@@ -39,7 +39,6 @@ TTF_Font *Loader_LoadFont(const char *filename, int size);
 Mix_Chunk *Loader_LoadSound(const char *filename);
 SDL_Surface *Loader_LoadGFX(const char *filename, bool transpose, int32_t key_555);
 anim_surf_t *Loader_LoadRLF(const char *filename, bool transpose, int32_t mask_555);
-char **Loader_LoadSTR(const char *filename);
 void Loader_LoadZCR(const char *filename, Cursor_t *cur);
 
 mfile_t *mfopen(const char *filename);

@@ -689,7 +689,10 @@ int Text_ProcessTTYText(action_res_t *nod)
 subtitles_t *Text_LoadSubtitles(char *filename)
 {
     char buf[STRBUFSIZE];
+    char *subs[0x200];
     int subscount = 0;
+    int start, end, sub;
+    int x, y, x2, y2;
 
     mfile_t *f = mfopen(filename);
     if (!f) return NULL;
@@ -723,42 +726,44 @@ subtitles_t *Text_LoadSubtitles(char *filename)
         }
         else if (str_starts_with(str1, "Rectangle"))
         {
-            int x, y, x2, y2;
-            sscanf(str2, "%d %d %d %d", &x, &y, &x2, &y2);
-            tmp->SubRect = Text_CreateSubRect(x, y, x2 - x + 1, y2 - y + 1);
+            if (sscanf(str2, "%d %d %d %d", &x, &y, &x2, &y2) == 4)
+            {
+                tmp->SubRect = Text_CreateSubRect(x, y, x2 - x + 1, y2 - y + 1);
+            }
         }
         else if (str_starts_with(str1, "TextFile"))
         {
-            tmp->txt = Loader_LoadSTR(str2);
-
-            if (tmp->txt == NULL)
+            mfile_t *mfp = mfopen_txt(str2);
+            if (mfp)
             {
-                DELETE(tmp);
-                return NULL;
+                while (!mfeof(mfp))
+                {
+                    mfgets(buf, STRBUFSIZE, mfp);
+                    subs[subscount++] = str_trim(buf);
+                }
+                mfclose(mfp);
             }
 
-            subscount = 0;
-            while (tmp->txt[subscount])
-                subscount++;
             tmp->subs = NEW_ARRAY(subtitle_t, subscount);
         }
-        else // it must be sub info
+        else if (sscanf(str2, "(%d,%d)=%d", &start, &end, &sub) == 3)
         {
-            int st, en, sb;
-            if (sscanf(str2, "(%d,%d)=%d", &st, &en, &sb) == 3)
+            if (sub < subscount)
             {
-                if (subscount == 0 || sb > subscount)
-                {
-                    Z_PANIC("Error in subs %s\n", filename);
-                }
-                tmp->subs[tmp->count].start = st;
-                tmp->subs[tmp->count].stop = en;
-                tmp->subs[tmp->count].sub = sb;
+                tmp->subs[sub].start = start;
+                tmp->subs[sub].stop = end;
+                tmp->subs[sub].txt = subs[sub];
                 tmp->count++;
             }
         }
     }
     mfclose(f);
+
+    if (!tmp->subs || !tmp->SubRect)
+    {
+        DELETE(tmp);
+        return NULL;
+    }
 
     return tmp;
 }
@@ -781,11 +786,10 @@ void Text_ProcessSubtitles(subtitles_t *sub, int subtime)
 
     if (j != -1 && j != sub->currentsub)
     {
-        char *sss = sub->txt[sub->subs[j].sub];
-        if (!str_empty(sss))
+        if (!str_empty(sub->subs[j].txt))
         {
             Rend_FillRect(sub->SubRect->img, NULL, 0, 0, 0);
-            Text_DrawInOneLine(sss, sub->SubRect->img);
+            Text_DrawInOneLine(sub->subs[j].txt, sub->SubRect->img);
         }
         sub->currentsub = j;
     }
@@ -793,11 +797,10 @@ void Text_ProcessSubtitles(subtitles_t *sub, int subtime)
 
 void Text_DeleteSubtitles(subtitles_t *sub)
 {
-    if (sub->txt)
+    if (sub->subs)
     {
         for (int i = 0; i < sub->count; i++)
-            DELETE(sub->txt[i]);
-        DELETE(sub->txt);
+            DELETE(sub->subs[i].txt);
     }
     Text_DeleteSubRect(sub->SubRect);
     DELETE(sub->subs);

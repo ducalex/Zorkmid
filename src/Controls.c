@@ -1306,10 +1306,9 @@ static int Parse_Control_HotMov(dynlist_t *controls, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "animation"))
         {
-            char file[MINIBUFSIZE];
-            sscanf(GetParams(str), "%s", file);
+            sscanf(GetParams(str), "%s", tmpbuf);
             hotm->anm = NEW(animnode_t);
-            Anim_Load(hotm->anm, file, 0, 0, 0, 0);
+            Anim_Load(hotm->anm, tmpbuf, 0, 0, 0, 0);
         }
         else if (str_starts_with(str, "rectangle"))
         {
@@ -1451,7 +1450,6 @@ static int Parse_Control_Save(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 {
     int good = 0;
     char buf[STRBUFSIZE];
-    char fln[MINIBUFSIZE];
     char *str;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_SAVE);
@@ -1464,19 +1462,15 @@ static int Parse_Control_Save(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 
     memset(sv->Names, 0, sizeof(sv->Names));
 
-    if (Loader_FindFile(CTRL_SAVE_FILE) != NULL)
+    mfile_t *mfp = mfopen_txt(CTRL_SAVE_FILE);
+    if (mfp)
     {
-        char **saves = Loader_LoadSTR(CTRL_SAVE_FILE);
-
-        for (int i = 0; saves[i] != NULL; i++)
+        size_t count = 0;
+        while (!mfeof(mfp))
         {
-            sprintf(fln, CTRL_SAVE_SAVES, i + 1);
-            if (Loader_FindFile(fln) != NULL)
-                strcpy(sv->Names[i], saves[i]);
-            DELETE(saves[i]);
+            mfgets(sv->Names[count++], SAVE_NAME_MAX_LEN, mfp);
         }
-
-        DELETE(saves);
+        mfclose(mfp);
     }
 
     while (!mfeof(fl))
@@ -1568,21 +1562,18 @@ static int Parse_Control_Titler(dynlist_t *controls, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "string_resource_file") == 0)
         {
-            char **strings = Loader_LoadSTR(GetParams(str));
-            if (strings)
+            mfile_t *mfp = mfopen_txt(GetParams(str));
+            if (mfp)
             {
                 titler->num_strings = 0;
 
-                for (int i = 0; i < CTRL_TITLER_MAX_STRINGS; i++)
+                while (!mfeof(mfp))
                 {
-                    if (strings[i] == NULL)
-                        break;
-
-                    // char *str2 = PrepareString(bf);
-                    titler->strings[titler->num_strings++] = strings[i];
+                    mfgets(buf, STRBUFSIZE, mfp);
+                    titler->strings[titler->num_strings++] = str_trim(buf);
                 }
 
-                DELETE(strings);
+                mfclose(mfp);
             }
         }
     }
@@ -1634,7 +1625,7 @@ static int Parse_Control_Input(dynlist_t *controls, mfile_t *fl, uint32_t slot)
         else if (str_starts_with(str, "cursor_animation_frames"))
         {
             //  inp->frame = atoi(GetParams(str));
-        } //if (str[0] == '}')
+        }
         else if (str_starts_with(str, "next_tabstop"))
         {
             inp->next_tab = atoi(GetParams(str));
@@ -1945,19 +1936,20 @@ static int Parse_Control_PushTgl(dynlist_t *controls, mfile_t *fl, uint32_t slot
 
 static int Parse_Control_Fist(dynlist_t *controls, mfile_t *fl, uint32_t slot)
 {
-    int good = 0;
+    char filename[MINIBUFSIZE];
     char buf[STRBUFSIZE];
+    char *str;
+    int good = 0;
 
     ctrlnode_t *ctnode = Ctrl_CreateNode(CTRL_FIST);
     fistnode_t *fist = ctnode->node.fist;
     ctnode->slot = slot;
 
-    char filename[MINIBUFSIZE];
 
     while (!mfeof(fl))
     {
         mfgets(buf, STRBUFSIZE, fl);
-        char *str = PrepareString(buf);
+        str = PrepareString(buf);
 
         if (str[0] == '}')
         {
@@ -1986,17 +1978,18 @@ static int Parse_Control_Fist(dynlist_t *controls, mfile_t *fl, uint32_t slot)
         }
     }
 
-    char **lines = Loader_LoadSTR(filename);
-
-    if (lines)
+    mfile_t *mfp = mfopen_txt(filename);
+    if (mfp)
     {
         int32_t t1, t2, t3, t4, t5, t6;
         char s1[MINIBUFSIZE];
         char s2[MINIBUFSIZE];
 
-        for (int pos = 0; lines[pos] != NULL; pos++)
+        while (!mfeof(mfp))
         {
-            char *str = PrepareString(lines[pos]);
+            mfgets(buf, STRBUFSIZE, mfp);
+            str = PrepareString(buf);
+
             size_t ln = strlen(str);
             if (str[ln - 1] == '~')
                 str[ln - 1] = 0;
@@ -2100,9 +2093,8 @@ static int Parse_Control_Fist(dynlist_t *controls, mfile_t *fl, uint32_t slot)
                     }
                 }
             }
-            DELETE(lines[pos]);
         }
-        DELETE(lines);
+        mfclose(mfp);
     }
     else
         good = 0;
@@ -2139,9 +2131,7 @@ static int Parse_Control_Safe(dynlist_t *controls, mfile_t *fl, uint32_t slot)
         }
         else if (str_starts_with(str, "rectangle"))
         {
-            sscanf(
-                GetParams(str),
-                "%d %d %d %d",
+            sscanf(GetParams(str), "%d %d %d %d",
                 &safe->rectangle.x, &safe->rectangle.y, &safe->rectangle.w, &safe->rectangle.h);
             safe->rectangle.w -= (safe->rectangle.x - 1);
             safe->rectangle.h -= (safe->rectangle.y - 1);
