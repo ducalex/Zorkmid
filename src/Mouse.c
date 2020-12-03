@@ -55,7 +55,7 @@ void Mouse_Init()
         FreeCursor(&DefCursors[i][MOUSE_UP]);
         FreeCursor(&DefCursors[i][MOUSE_DOWN]);
 
-        if (CUR_GAME == GAME_ZGI)
+        if (CURRENT_GAME == GAME_ZGI)
         {
             strcpy(buffer, Cursors[i].zgi);
             Loader_LoadZCR(buffer, &DefCursors[i][MOUSE_UP]);
@@ -85,7 +85,7 @@ static void LoadObjCursor(int index)
 
     char buf[MINIBUFSIZE];
 
-    if (CUR_GAME == GAME_ZGI)
+    if (CURRENT_GAME == GAME_ZGI)
     {
         sprintf(buf, "g0b%cc%2.2x1.zcr", 'a', current_obj_cursor);
         Loader_LoadZCR(buf, &ObjCursors[0][MOUSE_UP]);

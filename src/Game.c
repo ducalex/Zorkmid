@@ -4,6 +4,8 @@
 #define DBL_CLK_TIME 250
 #define KEYBUFLEN 14
 
+gametype_t CURRENT_GAME = GAME_NONE;
+
 static Location_t Need_Locate;
 static bool NeedToLoadScript = false;
 static int8_t NeedToLoadScriptDelay = CHANGELOCATIONDELAY;
@@ -289,7 +291,7 @@ static void UpdateKeyboard()
 
 static void LoadGameStrings(void)
 {
-    const char *file = (CUR_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR");
+    const char *file = (CURRENT_GAME == GAME_ZGI ? "INQUIS.STR" : "NEMESIS.STR");
     GameStrings = (const char **)Loader_LoadSTR(file);
 }
 
@@ -312,11 +314,11 @@ const char *Game_GetPath()
 
 const char *GetGameTitle()
 {
-    switch (CUR_GAME)
+    switch (CURRENT_GAME)
     {
     case GAME_ZGI:
         return "Zork: Grand Inquisitor";
-    case GAME_NEM:
+    case GAME_ZNEM:
         return "Zork: Nemesis";
     default:
         return "Unknown";
@@ -354,10 +356,18 @@ void Game_Relocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X)
     }
 }
 
-void Game_Init(const char *path)
+void Game_Detect()
+{
+    CURRENT_GAME = 1;
+}
+
+void Game_Init(const char *path, bool fullscreen)
 {
     SetGamePath(path);
     Loader_Init(path);
+    Game_Detect();
+    Rend_Init(fullscreen);
+    Sound_Init();
     Mouse_Init();
     Text_Init();
     Menu_Init();
@@ -407,7 +417,7 @@ void EasterEggsAndDebug()
         game_timed_debug_message(1500, message_buffer);
     }
 
-    if (CUR_GAME == GAME_ZGI)
+    if (CURRENT_GAME == GAME_ZGI)
     {
         if (CheckKeyboardMessage("IMNOTDEAF", 9))
         {
@@ -436,7 +446,7 @@ void EasterEggsAndDebug()
         }
     }
 
-    if (CUR_GAME == GAME_NEM)
+    if (CURRENT_GAME == GAME_ZNEM)
     {
         if (CheckKeyboardMessage("CHLOE", 5))
         {
@@ -525,7 +535,7 @@ void Game_Loop()
         if (MouseUp(MOUSE_BTN_RIGHT))
             SetgVarInt(SLOT_MOUSE_RIGHT_CLICK, 1);
 
-        if (CUR_GAME == GAME_NEM)
+        if (CURRENT_GAME == GAME_ZNEM)
             if (MouseUp(MOUSE_BTN_RIGHT))
                 Inventory_Cycle();
 

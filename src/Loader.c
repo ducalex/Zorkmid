@@ -290,7 +290,7 @@ Mix_Chunk *Loader_LoadSound(const char *file)
     {
         chunks = Mix_QuickLoad_WAV((uint8_t*)mfbuffer(mfp));
     }
-    else if (CUR_GAME == GAME_ZGI)
+    else if (CURRENT_GAME == GAME_ZGI)
     {
         char type = tolower(file[strlen(file) - 5]);
         int index = -1;
@@ -313,7 +313,7 @@ Mix_Chunk *Loader_LoadSound(const char *file)
             zg[index].bits,
             zg[index].pkd);
     }
-    else if (CUR_GAME == GAME_NEM)
+    else if (CURRENT_GAME == GAME_ZNEM)
     {
         char type = tolower(file[strlen(file) - 6]);
 

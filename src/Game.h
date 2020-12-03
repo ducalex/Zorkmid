@@ -3,10 +3,6 @@
 
 #include "System.h"
 
-#define GAME_AUTO 0
-#define GAME_ZGI 1
-#define GAME_NEM 2
-
 #define SYSTEM_STR_SAVEEXIST 23
 #define SYSTEM_STR_SAVED 4
 #define SYSTEM_STR_SAVEEMPTY 21
@@ -45,6 +41,12 @@
 #define MOUSE_BTN_LEFT  SDL_BUTTON(SDL_BUTTON_LEFT)
 #define MOUSE_BTN_RIGHT SDL_BUTTON(SDL_BUTTON_RIGHT)
 
+typedef enum {
+    GAME_NONE = 0,
+    GAME_ZGI,
+    GAME_ZNEM,
+} gametype_t;
+
 typedef struct
 {
     uint8_t World;
@@ -54,10 +56,13 @@ typedef struct
     int16_t X;
 } Location_t;
 
+extern gametype_t CURRENT_GAME;
+
+void Game_Detect();
 void Game_Loop();
 void Game_Update();
 void Game_Quit();
-void Game_Init(const char *path);
+void Game_Init(const char *path, bool fullscreen);
 void Game_Relocate(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X);
 
 const char *Game_GetPath();

@@ -2,8 +2,6 @@
 #define SYSTEM_H_INCLUDED
 
 #define ZORKMID_VER "1.0"
-#define CUR_GAME GAME_ZGI
-// extern int CUR_GAME;
 
 // #define ENABLE_TRACING
 
@@ -50,8 +48,10 @@
 
 #define ASSERT(expr) {if (!(expr)) Z_PANIC("Assertion failed");}
 
+#define MIN(a,b) ({__typeof__(a) _a = (a); __typeof__(b) _b = (b);_a < _b ? _a : _b; })
+#define MAX(a,b) ({__typeof__(a) _a = (a); __typeof__(b) _b = (b);_a > _b ? _a : _b; })
+
 typedef struct struct_action_res action_res_t;
-typedef struct ctrlnode ctrlnode_t;
 
 typedef struct
 {

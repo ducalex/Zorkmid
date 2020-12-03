@@ -458,7 +458,7 @@ static void ShakeStateBox(uint32_t indx)
     if (!StateBox[indx])
         return;
 
-    if (CUR_GAME == GAME_NEM)
+    if (CURRENT_GAME == GAME_ZNEM)
     {
         for (int i = 0; i < StateBox[indx]->cnt; i++)
             AddStateBoxToStk(StateBox[indx]->nod[i]);
@@ -572,7 +572,7 @@ void SetGNode(uint32_t indx, action_res_t *data)
 
 void ScrSys_Init()
 {
-    if (CUR_GAME == GAME_ZGI)
+    if (CURRENT_GAME == GAME_ZGI)
     {
         PreferencesFile = "./prefs_zgi.ini";
         VAR_SLOTS_MAX = 20000;

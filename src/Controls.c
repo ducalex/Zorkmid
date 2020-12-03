@@ -56,7 +56,7 @@ static void control_slot_draw(ctrlnode_t *nod)
         {
             char bff[16];
 
-            if (CUR_GAME == GAME_ZGI)
+            if (CURRENT_GAME == GAME_ZGI)
                 sprintf(bff, "g0z%1.1su%2.2x1.tga", slut->distance_id, tmp1);
             else
                 sprintf(bff, "%d%sOBJ.TGA", tmp1, slut->distance_id);

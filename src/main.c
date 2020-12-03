@@ -11,13 +11,9 @@ int main(int argc, char **argv)
         {
             fullscreen = true;
         }
-        else if (str_equals(argv[i], "-zgi"))
+        else if (argv[i][0] == '-')
         {
-            // CUR_GAME = GAME_ZGI;
-        }
-        else if (str_equals(argv[i], "-nem"))
-        {
-            // CUR_GAME = GAME_NEM;
+            // Unknown option
         }
         else
         {
@@ -25,9 +21,7 @@ int main(int argc, char **argv)
         }
     }
 
-    Rend_InitGraphics(fullscreen);
-    Sound_Init();
-    Game_Init(path);
+    Game_Init(path, fullscreen);
 
     while (true)
     {

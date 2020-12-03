@@ -404,7 +404,7 @@ void Rend_SetVideoMode(int w, int h, int full)
 
     LOG_INFO("Changing video mode to: Size: %dx%d, Full: %d\n", w, h, full);
 
-    if (CUR_GAME == GAME_ZGI)
+    if (CURRENT_GAME == GAME_ZGI)
     {
         GAMESCREEN_W = 640;
         GAMESCREEN_H = 344;
@@ -431,7 +431,7 @@ void Rend_SetVideoMode(int w, int h, int full)
     GAMESCREEN_P = 60;
 }
 
-void Rend_InitGraphics(int full)
+void Rend_Init(int full)
 {
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
     {
@@ -761,14 +761,11 @@ void Rend_tilt_SetTable()
 
             newy += GAMESCREEN_H_2;
 
-            if (newx < 0)
-                newx = 0;
-            if (newx >= GAMESCREEN_W)
-                newx = GAMESCREEN_W - 1;
-            if (newy < 0)
-                newy = 0;
-            if (newy >= GAMESCREEN_H)
-                newy = GAMESCREEN_H - 1;
+            newx = MAX(newx, 0);
+            newy = MAX(newy, 0);
+
+            newx = MIN(newx, GAMESCREEN_W - 1);
+            newy = MIN(newy, GAMESCREEN_H - 1);
 
             new_render_table[x + y * GAMESCREEN_W] = newx + newy * GAMESCREEN_W; //pixel index
         }
@@ -1249,27 +1246,23 @@ static void Rend_EF_Wave_Draw(effect_t *ef)
             n_x = x + amnt;
             n_y = y + amnt + GAMESCREEN_H_2;
 
-            if (n_x < 0)
-                n_x = 0;
-            if (n_x >= GAMESCREEN_W)
-                n_x = GAMESCREEN_W - 1;
-            if (n_y < 0)
-                n_y = 0;
-            if (n_y >= GAMESCREEN_H)
-                n_y = GAMESCREEN_H - 1;
+            n_x = MAX(n_x, 0);
+            n_y = MAX(n_y, 0);
+
+            n_x = MIN(n_x, GAMESCREEN_W - 1);
+            n_y = MIN(n_y, GAMESCREEN_H - 1);
+
             *abc2 = ((uint16_t *)tempbuf->pixels)[n_x + n_y * GAMESCREEN_W];
 
             n_x = x + amnt + GAMESCREEN_W_2;
             n_y = y + amnt + GAMESCREEN_H_2;
 
-            if (n_x < 0)
-                n_x = 0;
-            if (n_x >= GAMESCREEN_W)
-                n_x = GAMESCREEN_W - 1;
-            if (n_y < 0)
-                n_y = 0;
-            if (n_y >= GAMESCREEN_H)
-                n_y = GAMESCREEN_H - 1;
+            n_x = MAX(n_x, 0);
+            n_y = MAX(n_y, 0);
+
+            n_x = MIN(n_x, GAMESCREEN_W - 1);
+            n_y = MIN(n_y, GAMESCREEN_H - 1);
+
             *abc4 = ((uint16_t *)tempbuf->pixels)[n_x + n_y * GAMESCREEN_W];
 
             abc++;
@@ -1388,17 +1381,8 @@ static void Rend_EF_9_Draw(effect_t *ef)
         SDL_Surface *mask = ef->effect.ef9.mask;
         SDL_Surface *cloud = ef->effect.ef9.cloud;
 
-        int32_t minw = srf->w;
-        if (minw > mask->w)
-            minw = mask->w;
-        if (minw > cloud->w)
-            minw = cloud->w;
-
-        int32_t minh = srf->h;
-        if (minh > mask->h)
-            minh = mask->h;
-        if (minh > cloud->h)
-            minh = cloud->h;
+        int32_t minw = MIN(cloud->w, MIN(srf->w, mask->w));
+        int32_t minh = MIN(cloud->h, MIN(srf->h, mask->h));
 
         SDL_LockSurface(srf);
         SDL_LockSurface(mask);
@@ -1472,6 +1456,8 @@ void Rend_BlitSurface(SDL_Surface *src, SDL_Rect *src_rct, SDL_Surface *dst, SDL
     int src_h = (src_rct && src_rct->h > 0) ? src_rct->h : src->h;
     int dst_w = (dst_rct && dst_rct->w > 0) ? dst_rct->w : src_w;
     int dst_h = (dst_rct && dst_rct->h > 0) ? dst_rct->h : src_h;
+    int dst_x = (dst_rct) ? dst_rct->x : 0;
+    int dst_y = (dst_rct) ? dst_rct->y : 0;
 
     if (dst_rct) LOG_DEBUG("dst_rct: %d %d %d %d\n", dst_rct->x, dst_rct->y, dst_rct->w, dst_rct->h);
     if (src_rct) LOG_DEBUG("src_rct: %d %d %d %d\n", dst_rct->x, dst_rct->y, dst_rct->w, dst_rct->h);
@@ -1479,8 +1465,8 @@ void Rend_BlitSurface(SDL_Surface *src, SDL_Rect *src_rct, SDL_Surface *dst, SDL
 
     if (dst_h != src_h || dst_w != src_w)
     {
-        // TO DO: Handle src x/y
-        SDL_Rect dst_rect = {dst_rct ? dst_rct->x : 0, dst_rct ? dst_rct->y : 0, dst_w, dst_h};
+        // TO DO: Handle x/y correctly
+        SDL_Rect dst_rect = {dst_x, dst_y, dst_w, dst_h};
         SDL_Surface *zsrc = zoomSurface(src, (float)dst_w / src_w, (float)dst_h / src_h, 0);
         SDL_BlitSurface(zsrc, NULL, dst, &dst_rect);
         SDL_FreeSurface(zsrc);

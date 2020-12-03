@@ -77,7 +77,7 @@ void Menu_Init()
 {
     char buf[MINIBUFSIZE];
 
-    if (CUR_GAME == GAME_ZGI)
+    if (CURRENT_GAME == GAME_ZGI)
     {
         for (int i = 1; i < 4; i++)
         {
@@ -110,7 +110,7 @@ void Menu_Init()
 
 void Menu_Update()
 {
-    if (CUR_GAME == GAME_ZGI)
+    if (CURRENT_GAME == GAME_ZGI)
     {
         int menu_MAIN_X = ((WINDOW_W - 580) >> 1);
         mouse_on_item = -1;
@@ -309,7 +309,7 @@ void Menu_Update()
             menu_mousefocus = -1;
         }
     }
-    else if (CUR_GAME == GAME_NEM)
+    else if (CURRENT_GAME == GAME_ZNEM)
     {
         int menu_MAIN_X = ((WINDOW_W - 512) >> 1);
         mouse_on_item = -1;
@@ -446,7 +446,7 @@ void Menu_Draw()
     Rend_FillRect(Rend_GetScreen(), &menu_rect, 0, 0, 0);
 
     // Draw the menu
-    if (CUR_GAME == GAME_ZGI)
+    if (CURRENT_GAME == GAME_ZGI)
     {
         if (!inmenu)
             return;

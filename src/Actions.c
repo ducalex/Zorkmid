@@ -96,7 +96,7 @@ static inline int action_assign(char *params, int aSlot, pzllst_t *owner)
 
 static inline int action_timer(char *params, int aSlot, pzllst_t *owner)
 {
-    int delay = CUR_GAME == GAME_ZGI ? 100 : 1000;
+    int delay = CURRENT_GAME == GAME_ZGI ? 100 : 1000;
 
     char tmp[16];
     sscanf(params, "%s", tmp);
@@ -209,10 +209,7 @@ static inline int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
 
     Mix_Chunk *chunk = avi_get_audio(avi);
     int channel = Sound_Play(-1, chunk, 0, 100);
-    int frame_delay = avi->mcrSecPframe / 2000;
-
-    if (frame_delay > 200 || frame_delay < 0)
-        frame_delay = 15;
+    int frame_delay = MIN(200, avi->mcrSecPframe / 2000);
 
     subtitles_t *subs = NULL;
 
@@ -1158,9 +1155,7 @@ static inline int action_set_venus(char *params, int aSlot, pzllst_t *owner)
 
 static inline int action_disable_venus(char *params, int aSlot, pzllst_t *owner)
 {
-    int32_t p1;
-
-    p1 = atoi(params);
+    int32_t p1 = atoi(params);
 
     if (p1 > 0)
         SetgVarInt(p1, 0);
