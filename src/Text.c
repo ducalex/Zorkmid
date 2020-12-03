@@ -207,6 +207,8 @@ static uint8_t txt_parse_txt_params(txt_style_t *style, const char *str, size_t 
             }
         }
 
+        // We should skip this if the previous token wasn't a valid parameter above...
+        // (though that would mean a parse error, so consuming it is equally valid I guess)
         token = strtok(NULL, find);
     }
     return retval;

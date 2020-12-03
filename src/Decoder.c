@@ -422,12 +422,13 @@ void avi_close(avi_file_t *av)
         fclose(av->fp);
     if (av->surf)
         SDL_FreeSurface(av->surf);
-    DELETE(av->buf);
-    DELETE(av->atrk);
-    DELETE(av->vtrk);
-    DELETE(av->idx);
-    DELETE(av->vframes);
     DELETE(av->achunks);
+    DELETE(av->vframes);
+    DELETE(av->buf);
+    DELETE(av->idx);
+    DELETE(av->vtrk);
+    DELETE(av->atrk);
+    DELETE(av->surf);
     DELETE(av);
 }
 
@@ -453,5 +454,9 @@ Mix_Chunk *wav_create(const void *data, size_t data_len, int channels, int freq,
     else
         memcpy((void*)buffer + sizeof(wavHeader), data, data_len);
 
-    return Mix_LoadWAV_RW(SDL_RWFromMem(buffer, final_size), 1);
+    Mix_Chunk *chunk = Mix_LoadWAV_RW(SDL_RWFromMem(buffer, final_size), 1);
+
+    DELETE(buffer);
+
+    return chunk;
 }

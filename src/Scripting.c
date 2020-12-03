@@ -406,7 +406,7 @@ static void FillStateBoxFromList(pzllst_t *lst)
         for (int j = 0; j < pzlnod->CritList.length; j++)
         {
             dynlist_t *CriteriaLst = (dynlist_t *)pzlnod->CritList.items[j];
-            if (!CreateList) continue;
+            if (!CriteriaLst) continue;
 
             int prevslot = 0;
             for (int k = 0; k < CriteriaLst->length; k++)
