@@ -1,4 +1,10 @@
-#include "System.h"
+#include "Utilities.h"
+#include "Scripting.h"
+#include "Loader.h"
+#include "Render.h"
+#include "Anims.h"
+#include "Text.h"
+#include "Game.h"
 
 #define TXT_JUSTIFY_CENTER 0
 #define TXT_JUSTIFY_LEFT 1
@@ -862,7 +868,7 @@ void Text_DrawSubtitles()
         }
         else
         {
-            SDL_Rect rect = {subrec->x + GAMESCREEN_X, subrec->y + GAMESCREEN_Y - 5, 0, 0};
+            SDL_Rect rect = {subrec->x + GAMESCREEN_X, subrec->y + GAMESCREEN_Y, 0, 0};
             Rend_BlitSurface(subrec->img, NULL, screen, &rect);
         }
     }

@@ -7,6 +7,9 @@
 #define MAGIC_RLF 0x524C4546
 #define MAGIC_SAV 0x47534E5A
 
+#include "Mouse.h"
+#include "Anims.h"
+
 typedef struct
 {
     FILE *fl;

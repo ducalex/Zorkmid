@@ -1,3 +1,12 @@
+#include "Utilities.h"
+#include "Scripting.h"
+#include "Inventory.h"
+#include "Controls.h"
+#include "Actions.h"
+#include "Loader.h"
+#include "Render.h"
+#include "Mouse.h"
+#include "Menu.h"
 #include "Game.h"
 
 #define DELAY 10
@@ -386,7 +395,7 @@ void Game_Init(const char *path, bool full)
 
     LoadGameStrings();
 
-    ScrSys_LoadScript(GetUni(), "universe.scr", false, NULL);
+    ScrSys_LoadScript(LIST_UNIVERSE, "universe.scr", false, NULL);
     ScrSys_ChangeLocation(InitWorld, InitRoom, InitNode, InitView, 0, true);
 
     TimerInit(35.0);
@@ -493,7 +502,7 @@ void EasterEggsAndDebug()
             else
                 sprintf(message_buffer, "0 %s 0", "v000hnta.raw");
 
-            Actions_Run("universe_music", message_buffer, 0, GetUni());
+            Actions_Run("universe_music", message_buffer, 0, LIST_UNIVERSE);
         }
     }
 
@@ -558,16 +567,16 @@ void Game_Loop()
     ScrSys_ProcessActionsList();
 
     if (!ScrSys_BreakExec())
-        ScrSys_ExecPuzzleList(Getworld());
+        ScrSys_ExecPuzzleList(LIST_WORLD);
 
     if (!ScrSys_BreakExec())
-        ScrSys_ExecPuzzleList(Getroom());
+        ScrSys_ExecPuzzleList(LIST_ROOM);
 
     if (!ScrSys_BreakExec())
-        ScrSys_ExecPuzzleList(Getview());
+        ScrSys_ExecPuzzleList(LIST_VIEW);
 
     if (!ScrSys_BreakExec())
-        ScrSys_ExecPuzzleList(GetUni());
+        ScrSys_ExecPuzzleList(LIST_UNIVERSE);
 
     if (!ScrSys_BreakExec())
         Menu_Update();

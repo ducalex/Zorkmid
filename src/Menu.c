@@ -1,4 +1,11 @@
-#include "System.h"
+#include "Utilities.h"
+#include "Scripting.h"
+#include "Inventory.h"
+#include "Loader.h"
+#include "Render.h"
+#include "Mouse.h"
+#include "Game.h"
+#include "Menu.h"
 
 #define menu_ITEM 0
 #define menu_MAGIC 1

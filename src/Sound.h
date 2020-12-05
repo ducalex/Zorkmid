@@ -4,29 +4,25 @@
 #define SOUND_CHANNELS  16
 #define SOUND_FREQUENCY 44100
 
+#include "Text.h"
+
 typedef struct
 {
     Mix_Chunk *chunk;
     int32_t chn;
     int32_t volume;
     bool looped;
-
     bool crossfade;
     struct crossfade_params
     {
         int deltavolume;
         int times;
     } crossfade_params;
-
     int attenuate;
-
     bool pantrack;
     int pantrack_X;
-
     int pantrack_angle;
-
     bool universe; //universe_music or music
-
     subtitles_t *sub;
 } musicnode_t;
 

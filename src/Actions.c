@@ -1,4 +1,15 @@
-#include "System.h"
+#include "Utilities.h"
+#include "Scripting.h"
+#include "Inventory.h"
+#include "Controls.h"
+#include "Actions.h"
+#include "Loader.h"
+#include "Render.h"
+#include "Anims.h"
+#include "Sound.h"
+#include "Timer.h"
+#include "Game.h"
+#include "Menu.h"
 
 static const char *get_addition(const char *str)
 {
@@ -61,13 +72,13 @@ static inline int GetIntVal(char *chr)
         return atoi(chr);
 }
 
-static inline int action_set_screen(char *params, int aSlot, pzllst_t *owner)
+static inline int action_set_screen(char *params, int aSlot, int owner)
 {
     Rend_LoadGamescr(params);
     return ACTION_NORMAL;
 }
 
-static inline int action_set_partial_screen(char *params, int aSlot, pzllst_t *owner)
+static inline int action_set_partial_screen(char *params, int aSlot, int owner)
 {
     char x[16], y[16], tmp11[16], key[16], file[255];
     sscanf(params, "%s %s %s %s %s", x, y, file, tmp11, key);
@@ -85,7 +96,7 @@ static inline int action_set_partial_screen(char *params, int aSlot, pzllst_t *o
     return ACTION_NORMAL;
 }
 
-static inline int action_assign(char *params, int aSlot, pzllst_t *owner)
+static inline int action_assign(char *params, int aSlot, int owner)
 {
     char tmp1[16], tmp2[16];
     sscanf(params, "%s %s", tmp1, tmp2);
@@ -94,7 +105,7 @@ static inline int action_assign(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_timer(char *params, int aSlot, pzllst_t *owner)
+static inline int action_timer(char *params, int aSlot, int owner)
 {
     int delay = CURRENT_GAME == GAME_ZGI ? 100 : 1000;
 
@@ -120,7 +131,7 @@ static inline int action_timer(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_change_location(char *params, int aSlot, pzllst_t *owner)
+static inline int action_change_location(char *params, int aSlot, int owner)
 {
     char w[4], r[4], v[4], x[16];
     sscanf(params, "%c %c %c%c %s", w, r, v, v + 1, x);
@@ -132,28 +143,28 @@ static inline int action_change_location(char *params, int aSlot, pzllst_t *owne
     return ACTION_NORMAL;
 }
 
-static inline int action_dissolve(char *params, int aSlot, pzllst_t *owner)
+static inline int action_dissolve(char *params, int aSlot, int owner)
 {
     Rend_FillRect(Rend_GetGameScreen(), NULL, 0, 0, 0);
 
     return ACTION_NORMAL;
 }
 
-static inline int action_disable_control(char *params, int aSlot, pzllst_t *owner)
+static inline int action_disable_control(char *params, int aSlot, int owner)
 {
     ScrSys_SetFlag(GetIntVal(params), FLAG_DISABLED);
 
     return ACTION_NORMAL;
 }
 
-static inline int action_enable_control(char *params, int aSlot, pzllst_t *owner)
+static inline int action_enable_control(char *params, int aSlot, int owner)
 {
     ScrSys_SetFlag(GetIntVal(params), 0);
 
     return ACTION_NORMAL;
 }
 
-static inline int action_add(char *params, int aSlot, pzllst_t *owner)
+static inline int action_add(char *params, int aSlot, int owner)
 {
     char tmp[16];
     int slot;
@@ -164,7 +175,7 @@ static inline int action_add(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_debug(char *params, int aSlot, pzllst_t *owner)
+static inline int action_debug(char *params, int aSlot, int owner)
 {
     char txt[STRBUFSIZE], tmp[16];
 
@@ -174,7 +185,7 @@ static inline int action_debug(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_random(char *params, int aSlot, pzllst_t *owner)
+static inline int action_random(char *params, int aSlot, int owner)
 {
     char param[16];
     sscanf(params, "%s", param);
@@ -184,7 +195,7 @@ static inline int action_random(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
+static inline int action_streamvideo(char *params, int aSlot, int owner)
 {
     char file[PATHBUFSIZE];
     char x[16];
@@ -249,7 +260,7 @@ static inline int action_streamvideo(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_animplay(char *params, int aSlot, pzllst_t *owner)
+static inline int action_animplay(char *params, int aSlot, int owner)
 {
     char file[255];
     char x[16];
@@ -305,7 +316,7 @@ static inline int action_animplay(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_music(char *params, int aSlot, pzllst_t *owner, bool universe)
+static inline int action_music(char *params, int aSlot, int owner, bool universe)
 {
     int type;
     char file[32];
@@ -387,7 +398,7 @@ static inline int action_music(char *params, int aSlot, pzllst_t *owner, bool un
     return ACTION_NORMAL;
 }
 
-static inline int action_syncsound(char *params, int aSlot, pzllst_t *owner)
+static inline int action_syncsound(char *params, int aSlot, int owner)
 {
     //slot maybe 0
     //params:
@@ -442,7 +453,7 @@ static inline int action_syncsound(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_animpreload(char *params, int aSlot, pzllst_t *owner)
+static inline int action_animpreload(char *params, int aSlot, int owner)
 {
     if (GetGNode(aSlot) != NULL)
         return ACTION_NORMAL;
@@ -474,7 +485,7 @@ static inline int action_animpreload(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_playpreload(char *params, int aSlot, pzllst_t *owner)
+static inline int action_playpreload(char *params, int aSlot, int owner)
 {
     char sl[16];
     int x, y, w, h, start, end, loop, slot;
@@ -519,7 +530,7 @@ static inline int action_playpreload(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_ttytext(char *params, int aSlot, pzllst_t *owner)
+static inline int action_ttytext(char *params, int aSlot, int owner)
 {
     char chars[16];
     int32_t x, y, w, h, delay;
@@ -568,7 +579,7 @@ static inline int action_ttytext(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
+static int stopkiller(char *params, int aSlot, int owner, bool iskillfunc)
 {
     int slot;
     char chars[16];
@@ -671,21 +682,21 @@ static int stopkiller(char *params, int aSlot, pzllst_t *owner, bool iskillfunc)
     return ACTION_NORMAL;
 }
 
-static inline int action_kill(char *params, int aSlot, pzllst_t *owner)
+static inline int action_kill(char *params, int aSlot, int owner)
 {
     stopkiller(params, aSlot, owner, true);
 
     return ACTION_NORMAL;
 }
 
-static inline int action_stop(char *params, int aSlot, pzllst_t *owner)
+static inline int action_stop(char *params, int aSlot, int owner)
 {
     stopkiller(params, aSlot, owner, false);
 
     return ACTION_NORMAL;
 }
 
-static inline int action_inventory(char *params, int aSlot, pzllst_t *owner)
+static inline int action_inventory(char *params, int aSlot, int owner)
 {
     char cmd[MINIBUFSIZE];
     char param[MINIBUFSIZE];
@@ -727,7 +738,7 @@ static inline int action_inventory(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_crossfade(char *params, int aSlot, pzllst_t *owner)
+static inline int action_crossfade(char *params, int aSlot, int owner)
 {
     //crossfade(%d %d %d %d %d %d %ld)
     // item1 item2 fromvol1 fromvol2 tovol1 tovol2 time_in_millisecs
@@ -786,21 +797,21 @@ static inline int action_crossfade(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_menu_bar_enable(char *params, int aSlot, pzllst_t *owner)
+static inline int action_menu_bar_enable(char *params, int aSlot, int owner)
 {
     Menu_SetVal(GetIntVal(params));
 
     return ACTION_NORMAL;
 }
 
-static inline int action_delay_render(char *params, int aSlot, pzllst_t *owner)
+static inline int action_delay_render(char *params, int aSlot, int owner)
 {
     Rend_SetDelay(GetIntVal(params));
 
     return ACTION_NORMAL;
 }
 
-static inline int action_pan_track(char *params, int aSlot, pzllst_t *owner)
+static inline int action_pan_track(char *params, int aSlot, int owner)
 {
     if (Rend_GetRenderer() != RENDER_PANA)
         return ACTION_NORMAL;
@@ -838,7 +849,7 @@ static inline int action_pan_track(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_attenuate(char *params, int aSlot, pzllst_t *owner)
+static inline int action_attenuate(char *params, int aSlot, int owner)
 {
     int slot;
     int att;
@@ -862,7 +873,7 @@ static inline int action_attenuate(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_cursor(char *params, int aSlot, pzllst_t *owner)
+static inline int action_cursor(char *params, int aSlot, int owner)
 {
     if (tolower(params[0]) == 'u')
         Mouse_ShowCursor();
@@ -874,7 +885,7 @@ static inline int action_cursor(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_animunload(char *params, int aSlot, pzllst_t *owner)
+static inline int action_animunload(char *params, int aSlot, int owner)
 {
     int slot;
 
@@ -889,14 +900,14 @@ static inline int action_animunload(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_flush_mouse_events(char *params, int aSlot, pzllst_t *owner)
+static inline int action_flush_mouse_events(char *params, int aSlot, int owner)
 {
     FlushMouseBtn(MOUSE_BTN_LEFT|MOUSE_BTN_RIGHT);
 
     return ACTION_NORMAL;
 }
 
-static inline int action_save_game(char *params, int aSlot, pzllst_t *owner)
+static inline int action_save_game(char *params, int aSlot, int owner)
 {
     ScrSys_PrepareSaveBuffer();
     ScrSys_SaveGame(params);
@@ -904,14 +915,14 @@ static inline int action_save_game(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_restore_game(char *params, int aSlot, pzllst_t *owner)
+static inline int action_restore_game(char *params, int aSlot, int owner)
 {
     ScrSys_LoadGame(params);
 
     return ACTION_NORMAL;
 }
 
-static inline int action_quit(char *params, int aSlot, pzllst_t *owner)
+static inline int action_quit(char *params, int aSlot, int owner)
 {
     if (atoi(params) == 1)
         Game_Quit();
@@ -921,7 +932,7 @@ static inline int action_quit(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_rotate_to(char *params, int aSlot, pzllst_t *owner)
+static inline int action_rotate_to(char *params, int aSlot, int owner)
 {
     if (Rend_GetRenderer() != RENDER_PANA)
         return ACTION_NORMAL;
@@ -973,7 +984,7 @@ static inline int action_rotate_to(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_distort(char *params, int aSlot, pzllst_t *owner)
+static inline int action_distort(char *params, int aSlot, int owner)
 {
     if (Rend_GetRenderer() != RENDER_PANA && Rend_GetRenderer() != RENDER_TILT)
         return ACTION_NORMAL;
@@ -1016,7 +1027,7 @@ static inline int action_distort(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_preferences(char *params, int aSlot, pzllst_t *owner)
+static inline int action_preferences(char *params, int aSlot, int owner)
 {
     if (str_starts_with(params, "save"))
         ScrSys_SavePreferences();
@@ -1027,7 +1038,7 @@ static inline int action_preferences(char *params, int aSlot, pzllst_t *owner)
 }
 
 //Graphic effects
-static inline int action_region(char *params, int aSlot, pzllst_t *owner)
+static inline int action_region(char *params, int aSlot, int owner)
 {
     char art[64];
     int32_t x;
@@ -1121,7 +1132,7 @@ static inline int action_region(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_display_message(char *params, int aSlot, pzllst_t *owner)
+static inline int action_display_message(char *params, int aSlot, int owner)
 {
     int p1, p2, p3, p4, p5, p6;
 
@@ -1137,7 +1148,7 @@ static inline int action_display_message(char *params, int aSlot, pzllst_t *owne
     return ACTION_NORMAL;
 }
 
-static inline int action_set_venus(char *params, int aSlot, pzllst_t *owner)
+static inline int action_set_venus(char *params, int aSlot, int owner)
 {
     int p1 = atoi(params);
 
@@ -1150,7 +1161,7 @@ static inline int action_set_venus(char *params, int aSlot, pzllst_t *owner)
     return ACTION_NORMAL;
 }
 
-static inline int action_disable_venus(char *params, int aSlot, pzllst_t *owner)
+static inline int action_disable_venus(char *params, int aSlot, int owner)
 {
     int32_t p1 = atoi(params);
 
@@ -1161,7 +1172,7 @@ static inline int action_disable_venus(char *params, int aSlot, pzllst_t *owner)
 }
 
 
-int Actions_Run(const char* name, char *params, int aSlot, pzllst_t *owner)
+int Actions_Run(const char* name, char *params, int aSlot, int owner)
 {
     LOG_DEBUG("Running action %s %s\n", name, params);
 

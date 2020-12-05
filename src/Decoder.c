@@ -1,10 +1,9 @@
-#include "System.h"
-
-typedef struct
-{
-    int32_t t[4];
-    uint32_t j;
-} adpcm_context_t;
+#include "Utilities.h"
+#include "Decoder.h"
+#include "Loader.h"
+#include "Render.h"
+#include "Anims.h"
+#include "Game.h"
 
 int truemotion1_decode_init(avi_file_t *fil);
 int truemotion1_decode_frame(avi_file_t *avctx, void *pkt, int pkt_sz);

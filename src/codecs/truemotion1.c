@@ -33,7 +33,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../System.h"
+#include "../Utilities.h"
+#include "../Decoder.h"
 
 #ifndef AV_RL16
 #define AV_RL16(x)                      \

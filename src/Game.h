@@ -1,8 +1,6 @@
 #ifndef GAME_H_INCLUDED
 #define GAME_H_INCLUDED
 
-#include "System.h"
-
 #define SYSTEM_STR_SAVEEXIST 23
 #define SYSTEM_STR_SAVED 4
 #define SYSTEM_STR_SAVEEMPTY 21
@@ -13,30 +11,6 @@
 //speed tune
 #define FPS 15
 #define FPS_DELAY (1000 / FPS)
-
-//Script names
-#define SystemWorld 'g'
-#define SystemRoom 'j'
-
-#define SaveWorld SystemWorld
-#define SaveRoom SystemRoom
-#define SaveNode 's'
-#define SaveView 'e'
-
-#define LoadWorld SystemWorld
-#define LoadRoom SystemRoom
-#define LoadNode 'r'
-#define LoadView 'e'
-
-#define PrefWorld SystemWorld
-#define PrefRoom SystemRoom
-#define PrefNode 'p'
-#define PrefView 'e'
-
-#define InitWorld SystemWorld
-#define InitRoom 'a'
-#define InitNode 'r'
-#define InitView 'y'
 
 #define MOUSE_BTN_LEFT  SDL_BUTTON(SDL_BUTTON_LEFT)
 #define MOUSE_BTN_RIGHT SDL_BUTTON(SDL_BUTTON_RIGHT)

@@ -1,4 +1,10 @@
-#include "System.h"
+#include "Utilities.h"
+#include "Scripting.h"
+#include "Decoder.h"
+#include "Render.h"
+#include "Loader.h"
+#include "Anims.h"
+#include "Game.h"
 
 action_res_t *Anim_CreateNode(int type)
 {

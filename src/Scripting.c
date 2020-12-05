@@ -1,10 +1,26 @@
-#include "System.h"
+#include "Utilities.h"
+#include "Scripting.h"
+#include "Controls.h"
+#include "Actions.h"
+#include "Render.h"
+#include "Loader.h"
+#include "Anims.h"
+#include "Timer.h"
+#include "Menu.h"
+#include "Game.h"
 
 typedef struct
 {
-    int32_t slot1;
-    int32_t slot2;
-    uint8_t oper;
+    dynlist_t puzzles;
+    dynlist_t stack;
+    size_t exec_times;
+} pzllst_t;
+
+typedef struct
+{
+    int slot1;
+    int slot2;
+    char oper;
     bool var2; //if true: slot2 is slot; false: slot2 - number
 } crit_node_t;
 
@@ -15,23 +31,12 @@ typedef struct
     int slot;
 } res_node_t;
 
-typedef struct
-{
-    puzzlenode_t *nod[PuzzleStack];
-    int32_t cnt;
-} StateBoxEnt_t;
-
 static int32_t VAR_SLOTS_MAX = 20000;
 static int32_t gVars[30000];
 static action_res_t *gNodes[30000];
 static uint8_t Flags[30000];
-static StateBoxEnt_t *StateBox[30000];
-
-static pzllst_t uni;   // universe script
-static pzllst_t world; // world script
-static pzllst_t room;  // room script
-static pzllst_t view;  // view script
-
+static dynlist_t StateBox[30000]; // Lists of puzzlenode_t
+static pzllst_t PuzzleLists[LIST_COUNT]; // universe, world, room, view
 static dynlist_t controls;  // Controls
 static dynlist_t actions;   // Sounds, animations, ttytexts, and others
 
@@ -42,15 +47,6 @@ static const char *PreferencesFile = "prefs.ini";
 static uint8_t SaveBuffer[512 * 1024];
 static size_t SaveCurrentSize = 0;
 
-
-const char *GetPuzzleListName(pzllst_t *lst)
-{
-    if (lst == &uni)    return "universe";
-    if (lst == &world)  return "word";
-    if (lst == &room)   return "room";
-    if (lst == &view)   return "view";
-    return "Unknown";
-}
 
 static void DeletePuzzleNode(puzzlenode_t *nod)
 {
@@ -78,19 +74,20 @@ static void DeletePuzzleNode(puzzlenode_t *nod)
     DELETE(nod);
 }
 
-static void FlushPuzzleList(pzllst_t *lst)
+static void FlushPuzzleList(zlist_t index)
 {
+    pzllst_t *lst = &PuzzleLists[index];
+
     for (int i = 0; i < lst->puzzles.length; i++)
     {
-        puzzlenode_t *nod = (puzzlenode_t *)lst->puzzles.items[i];
-        if (!nod) continue;
-
-        DeletePuzzleNode(nod);
+        if (lst->puzzles.items[i])
+            DeletePuzzleNode(lst->puzzles.items[i]);
     }
+
     FlushList(&lst->puzzles);
+    FlushList(&lst->stack);
 
     lst->exec_times = 0;
-    lst->stksize = 0;
 }
 
 static void ParsePuzzleFlags(puzzlenode_t *pzl, mfile_t *fl)
@@ -126,6 +123,8 @@ static void ParsePuzzleCriteria(puzzlenode_t *pzl, mfile_t *fl)
 {
     char buf[STRBUFSIZE];
     char *str;
+    int left, right;
+    char op;
 
     dynlist_t *crit_nodes_lst = CreateList(64);
 
@@ -140,54 +139,23 @@ static void ParsePuzzleCriteria(puzzlenode_t *pzl, mfile_t *fl)
         {
             return;
         }
-        else if (str[0] == '[')
+        else if (sscanf(str, "[%d] %c [%d]", &left, &op, &right) == 3)
         {
             crit_node_t *nod = NEW(crit_node_t);
             AddToList(crit_nodes_lst, nod);
-
-            sscanf(&str[1], "%d", &nod->slot1);
-
-            int ij;
-            int32_t t_len = strlen(str);
-            for (ij = 0; ij < t_len; ij++)
-            {
-                if (str[ij] == '!')
-                {
-                    nod->oper = CRIT_OP_NOT;
-                    break;
-                }
-                else if (str[ij] == '>')
-                {
-                    nod->oper = CRIT_OP_GRE;
-                    break;
-                }
-                else if (str[ij] == '<')
-                {
-                    nod->oper = CRIT_OP_LEA;
-                    break;
-                }
-                else if (str[ij] == '=')
-                {
-                    nod->oper = CRIT_OP_EQU;
-                    break;
-                }
-            }
-
-            for (ij++; ij < t_len; ij++)
-            {
-                if (str[ij] == '[')
-                {
-                    sscanf(&str[ij + 1], "%d", &nod->slot2);
-                    nod->var2 = true;
-                    break;
-                }
-                else if (str[ij] != 0x20 && str[ij] != 0x09)
-                {
-                    sscanf(&str[ij], "%d", &nod->slot2);
-                    nod->var2 = false;
-                    break;
-                }
-            }
+            nod->slot1 = left;
+            nod->oper = op;
+            nod->slot2 = right;
+            nod->var2 = true;
+        }
+        else if (sscanf(str, "[%d] %c %d", &left, &op, &right) == 3)
+        {
+            crit_node_t *nod = NEW(crit_node_t);
+            AddToList(crit_nodes_lst, nod);
+            nod->slot1 = left;
+            nod->oper = op;
+            nod->slot2 = right;
+            nod->var2 = false;
         }
         else
         {
@@ -205,10 +173,15 @@ static void ParsePuzzleResultAction(char *str, dynlist_t *list)
 
     memset(buf, 0, 255);
 
+    // Format is: action:slot(param1 param2 param3)
+    // Where param count is variable and slot not always present
+
     for (int i = 0; i < len; i++)
     {
-        if (str[i] != '(' && str[i] != 0x20 && str[i] != 0x09 && str[i] != '#' && str[i] != 0x00 && str[i] != ':')
+        if (str[i] != '(' && str[i] != 0x20 && str[i] != 0x09 && str[i] != '#' && str[i] != ':')
+        {
             buf[i] = str[i];
+        }
         else
         {
             if (str[i] == ':')
@@ -245,7 +218,7 @@ static void ParsePuzzleResults(puzzlenode_t *pzl, mfile_t *fl)
     }
 }
 
-static void ParsePuzzle(pzllst_t *lst, mfile_t *fl, char *ctstr)
+static void ParsePuzzle(zlist_t owner, mfile_t *fl, char *ctstr)
 {
     char buf[STRBUFSIZE];
     char *str;
@@ -254,7 +227,7 @@ static void ParsePuzzle(pzllst_t *lst, mfile_t *fl, char *ctstr)
     sscanf(ctstr, "puzzle:%d", &slot);
 
     puzzlenode_t *pzl = NEW(puzzlenode_t);
-    pzl->owner = lst;
+    pzl->owner = owner;
     pzl->slot = slot;
 
     ScrSys_SetFlag(pzl->slot, 0);
@@ -266,11 +239,13 @@ static void ParsePuzzle(pzllst_t *lst, mfile_t *fl, char *ctstr)
 
         if (str[0] == '}') // We've reached the end!
         {
+            pzllst_t *list = &PuzzleLists[owner];
+
             if ((ScrSys_GetFlag(pzl->slot) & FLAG_ONCE_PER_I))
                 SetgVarInt(slot, 0);
 
             LOG_DEBUG("Created Puzzle %d\n", slot);
-            AddToList(&lst->puzzles, pzl);
+            AddToList(&list->puzzles, pzl);
             return;
         }
         else if (str_starts_with(str, "criteria"))
@@ -308,16 +283,16 @@ static bool ProcessCriteries(dynlist_t *lst)
 
         switch (critnd->oper)
         {
-        case CRIT_OP_EQU:
+        case '=':
             tmp &= (tmp1 == tmp2);
             break;
-        case CRIT_OP_GRE:
+        case '>':
             tmp &= (tmp1 > tmp2);
             break;
-        case CRIT_OP_LEA:
+        case '<':
             tmp &= (tmp1 < tmp2);
             break;
-        case CRIT_OP_NOT:
+        case '!':
             tmp &= (tmp1 != tmp2);
             break;
         }
@@ -337,7 +312,7 @@ static int ExecPuzzle(puzzlenode_t *pzlnod)
     if (GetgVarInt(pzlnod->slot) == 1)
         return ACTION_NORMAL;
 
-    if (pzlnod->owner->exec_times == 0)
+    if (PuzzleLists[pzlnod->owner].exec_times == 0)
         if (!(ScrSys_GetFlag(pzlnod->slot) & FLAG_DO_ME_NOW))
             return ACTION_NORMAL;
 
@@ -359,7 +334,7 @@ static int ExecPuzzle(puzzlenode_t *pzlnod)
             return ACTION_NORMAL;
     }
 
-    LOG_DEBUG("Running puzzle %d (%s)\n", pzlnod->slot, GetPuzzleListName(pzlnod->owner));
+    LOG_DEBUG("Running puzzle %d (owner: %d)\n", pzlnod->slot, pzlnod->owner);
 
     SetgVarInt(pzlnod->slot, 1);
 
@@ -377,31 +352,16 @@ static int ExecPuzzle(puzzlenode_t *pzlnod)
     return ACTION_NORMAL;
 }
 
-static void AddPuzzleToStateBox(int slot, puzzlenode_t *pzlnd)
+static void FillStateBoxFromList(zlist_t index)
 {
-    StateBoxEnt_t *ent = StateBox[slot];
+    pzllst_t *lst = &PuzzleLists[index];
 
-    if (ent == NULL)
-    {
-        ent = NEW(StateBoxEnt_t);
-        StateBox[slot] = ent;
-        ent->cnt = 0;
-    }
-    if (ent->cnt < PuzzleStack)
-    {
-        ent->nod[ent->cnt] = pzlnd;
-        ent->cnt++;
-    }
-}
-
-static void FillStateBoxFromList(pzllst_t *lst)
-{
     for (int i = 0; i < lst->puzzles.length; i++)
     {
         puzzlenode_t *pzlnod = (puzzlenode_t *)lst->puzzles.items[i];
         if (!pzlnod) continue;
 
-        AddPuzzleToStateBox(pzlnod->slot, pzlnod);
+        AddToList(&StateBox[pzlnod->slot], pzlnod);
 
         for (int j = 0; j < pzlnod->CritList.length; j++)
         {
@@ -415,7 +375,7 @@ static void FillStateBoxFromList(pzllst_t *lst)
                 if (!crtnod) continue;
 
                 if (prevslot != crtnod->slot1)
-                    AddPuzzleToStateBox(crtnod->slot1, pzlnod);
+                    AddToList(&StateBox[crtnod->slot1], pzlnod);
 
                 prevslot = crtnod->slot1;
             }
@@ -425,48 +385,37 @@ static void FillStateBoxFromList(pzllst_t *lst)
 
 static void AddStateBoxToStk(puzzlenode_t *pzl)
 {
-    pzllst_t *owner = pzl->owner;
-    if (owner->stksize < PuzzleStack)
+    pzllst_t *owner = &PuzzleLists[pzl->owner];
+
+    if (owner->stack.length > 0)
     {
-        if (owner->stksize > 0)
+        int numb = 0;
+        for (int i = owner->stack.length - 1; i >= 0; i--)
         {
-            int32_t numb = 0;
-            for (int32_t i = owner->stksize - 1; i >= 0 && owner->stack[i] != NULL; i--)
+            if (owner->stack.items[i] == pzl)
             {
-                if (owner->stack[i] == pzl)
-                {
-                    if (numb < MaxPuzzlesInStack)
-                        numb++;
-                    else
-                        return;
-                }
+                if (numb < MaxPuzzlesInStack)
+                    numb++;
+                else
+                    return;
             }
         }
+    }
 
-        owner->stack[owner->stksize] = pzl;
-        owner->stksize++;
-    }
-    else
-    {
-        LOG_WARN("Can't add pzl# %d to Stack\n", pzl->slot);
-    }
+    AddToList(&owner->stack, pzl);
 }
 
 static void ShakeStateBox(uint32_t indx)
 {
-    //Nemesis don't use statebox, but this engine does, well make for nemesis it non revert.
-    if (!StateBox[indx])
-        return;
-
     if (CURRENT_GAME == GAME_ZNEM)
     {
-        for (int i = 0; i < StateBox[indx]->cnt; i++)
-            AddStateBoxToStk(StateBox[indx]->nod[i]);
+        for (int i = 0; i < StateBox[indx].length; i++)
+            AddStateBoxToStk(StateBox[indx].items[i]);
     }
     else
     {
-        for (int i = StateBox[indx]->cnt - 1; i >= 0; i--)
-            AddStateBoxToStk(StateBox[indx]->nod[i]);
+        for (int i = StateBox[indx].length - 1; i >= 0; i--)
+            AddStateBoxToStk(StateBox[indx].items[i]);
     }
 }
 
@@ -474,30 +423,12 @@ static void FlushStateBox()
 {
     for (int i = 0; i < VAR_SLOTS_MAX; i++)
     {
-        if (StateBox[i] != NULL)
-            DELETE(StateBox[i]);
-        StateBox[i] = NULL;
+        for (int j = 0; j < StateBox[i].length; j++)
+        {
+            //  DeletePuzzleNode(StateBox[i].items[j]); // Should we ?
+        }
+        FlushList(&StateBox[i]);
     }
-}
-
-pzllst_t *GetUni()
-{
-    return &uni;
-}
-
-pzllst_t *Getworld()
-{
-    return &world;
-}
-
-pzllst_t *Getroom()
-{
-    return &room;
-}
-
-pzllst_t *Getview()
-{
-    return &view;
 }
 
 dynlist_t *GetControlsList()
@@ -591,7 +522,7 @@ void ScrSys_Init()
     ScrSys_LoadPreferences();
 }
 
-void ScrSys_LoadScript(pzllst_t *list, const char *filename, bool control, dynlist_t *controls)
+void ScrSys_LoadScript(zlist_t list, const char *filename, bool control, dynlist_t *controls)
 {
     mfile_t *fl = mfopen(filename);
     if (!fl)
@@ -787,7 +718,7 @@ void ScrSys_LoadGame(char *file)
         mfread(&time, 4, f);
 
         sprintf(buf, "%d", time / 100);
-        Actions_Run("timer", buf, slot, &view);
+        Actions_Run("timer", buf, slot, LIST_VIEW);
     }
 
     mfread(&tmp, 4, f);
@@ -824,7 +755,7 @@ void ScrSys_LoadGame(char *file)
     ScrSys_LoadPreferences();
 }
 
-void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t n, uint8_t v, int32_t X, bool force_all) // world / room / view
+void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t n, uint8_t v, int32_t X, bool force_all)
 {
     char buf[32];
 
@@ -859,44 +790,34 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t n, uint8_t v, int32_t X
         r != GetgVarInt(SLOT_ROOM) || w != GetgVarInt(SLOT_WORLD) ||
         force_all)
     {
-        ScrSys_FlushResourcesByOwner(&view);
-
-        FlushPuzzleList(&view);
+        ScrSys_FlushResourcesByOwner(LIST_VIEW);
+        FlushPuzzleList(LIST_VIEW);
         Controls_FlushList(&controls);
-
         sprintf(buf, "%c%c%c%c.scr", w, r, n, v);
-
-        ScrSys_LoadScript(&view, buf, true, &controls);
+        ScrSys_LoadScript(LIST_VIEW, buf, true, &controls);
     }
 
     if (r != GetgVarInt(SLOT_ROOM) || w != GetgVarInt(SLOT_WORLD) || force_all)
     {
-        ScrSys_FlushResourcesByOwner(&room);
-
-        FlushPuzzleList(&room);
-
+        ScrSys_FlushResourcesByOwner(LIST_ROOM);
+        FlushPuzzleList(LIST_ROOM);
         sprintf(buf, "%c%c.scr", w, r);
-
-        ScrSys_LoadScript(&room, buf, false, NULL);
+        ScrSys_LoadScript(LIST_ROOM, buf, false, NULL);
     }
 
     if (w != GetgVarInt(SLOT_WORLD) || force_all)
     {
-        ScrSys_FlushResourcesByOwner(&world);
-
-        FlushPuzzleList(&world);
-
+        ScrSys_FlushResourcesByOwner(LIST_WORLD);
+        FlushPuzzleList(LIST_WORLD);
         sprintf(buf, "%c.scr", w);
-
-        ScrSys_LoadScript(&world, buf, false, NULL);
-
+        ScrSys_LoadScript(LIST_WORLD, buf, false, NULL);
         Mouse_ShowCursor();
     }
 
-    FillStateBoxFromList(&uni);
-    FillStateBoxFromList(&view);
-    FillStateBoxFromList(&room);
-    FillStateBoxFromList(&world);
+    FillStateBoxFromList(LIST_UNIVERSE);
+    FillStateBoxFromList(LIST_VIEW);
+    FillStateBoxFromList(LIST_ROOM);
+    FillStateBoxFromList(LIST_WORLD);
 
     SetgVarInt(SLOT_WORLD, w);
     SetgVarInt(SLOT_ROOM, r);
@@ -909,13 +830,14 @@ void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t n, uint8_t v, int32_t X
     BreakExecute = false;
 }
 
-void ScrSys_ExecPuzzleList(pzllst_t *lst)
+void ScrSys_ExecPuzzleList(zlist_t index)
 {
-    if (lst->exec_times < 2)
+    pzllst_t *list = &PuzzleLists[index];
+    if (list->exec_times < 2)
     {
-        for (int i = 0; i < lst->puzzles.length; i++)
+        for (int i = 0; i < list->puzzles.length; i++)
         {
-            puzzlenode_t *nod = (puzzlenode_t *)lst->puzzles.items[i];
+            puzzlenode_t *nod = (puzzlenode_t *)list->puzzles.items[i];
             if (!nod) continue;
 
             if (ExecPuzzle(nod) == ACTION_BREAK)
@@ -924,17 +846,17 @@ void ScrSys_ExecPuzzleList(pzllst_t *lst)
                 break;
             }
         }
-        lst->exec_times++;
+        list->exec_times++;
     }
     else
     {
-        int i = 0, j = lst->stksize;
+        int i = 0, j = list->stack.length;
 
         while (i < j)
         {
-            puzzlenode_t *to_exec = lst->stack[i];
+            puzzlenode_t *to_exec = list->stack.items[i];
 
-            lst->stack[i] = NULL;
+            DeleteFromList(&list->stack, i);
 
             if (ExecPuzzle(to_exec) == ACTION_BREAK)
             {
@@ -946,12 +868,12 @@ void ScrSys_ExecPuzzleList(pzllst_t *lst)
         }
 
         int z = 0;
-        for (i = j; i < lst->stksize; i++)
+        for (i = j; i < list->stack.length; i++)
         {
-            lst->stack[z] = lst->stack[i];
+            list->stack.items[z] = list->stack.items[i];
             z++;
         }
-        lst->stksize = z;
+        list->stack.length = z;
     }
 }
 
@@ -1054,7 +976,7 @@ void ScrSys_FlushActionsList()
     FlushList(&actions);
 }
 
-void ScrSys_FlushResourcesByOwner(pzllst_t *owner)
+void ScrSys_FlushResourcesByOwner(zlist_t owner)
 {
     for (int i = 0; i < actions.length; i++)
     {

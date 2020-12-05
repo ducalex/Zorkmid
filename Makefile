@@ -19,17 +19,17 @@ OBJS =  \
 	src/Render.c\
 	src/Scripting.c\
  	src/Sound.c\
-	src/System.c\
+	src/Utilities.c\
 	src/Text.c\
 	src/Timer.c\
 	src/Decoder.c\
 	src/codecs/truemotion1.c
 
 linux: $(OBJS)
-	$(CC) -std=c99 -Wall -O3 -o $(TARGET) $(OBJS) $(LIBS) -I /usr/include/ -I /usr/include/SDL/
+	$(CC) -std=c99 -Wall -O3 -s -o $(TARGET) $(OBJS) $(LIBS) -I /usr/include/ -I /usr/include/SDL/
 
 win32: $(OBJS)
-	$(CC_WIN) -std=c99 -Wall -O3 -o $(TARGET).exe $(OBJS) $(LIBS_WIN) -I $(MINGW)/include/ -I $(MINGW)/include/SDL/
+	$(CC_WIN) -std=c99 -Wall -O3 -s -o $(TARGET).exe $(OBJS) $(LIBS_WIN) -I $(MINGW)/include/ -I $(MINGW)/include/SDL/
 
 linux_debug: $(OBJS)
 	$(CC) -std=c99 -DENABLE_TRACING -Wall -Og -pg -o $(TARGET) $(OBJS) $(LIBS) -I /usr/include/ -I /usr/include/SDL/

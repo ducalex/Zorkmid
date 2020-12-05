@@ -1,4 +1,8 @@
-#include "System.h"
+#include "Utilities.h"
+#include "Scripting.h"
+#include "Loader.h"
+#include "Render.h"
+#include "Game.h"
 
 #define MOUSE_UP     0
 #define MOUSE_DOWN   1

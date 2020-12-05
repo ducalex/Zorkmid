@@ -1,6 +1,9 @@
 #ifndef SIMPLE_AVI_H_INCLUDED
 #define SIMPLE_AVI_H_INCLUDED
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #define MAX_MOVI 10
 
 typedef struct __attribute__((packed))

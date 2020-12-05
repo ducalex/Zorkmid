@@ -12,6 +12,8 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include <sys/stat.h>
+#include <dirent.h>
 
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
@@ -22,7 +24,6 @@
 #define STRBUFSIZE  0x400
 #define MINIBUFSIZE 0x40
 #define PATHBUFSIZE 0x400
-#define MLIST_STACK 0x10
 
 #define Z_ALLOC(n) ({LOG_DEBUG("Allocating %d bytes\n", n); calloc(1, n);})
 #define Z_FREE(obj) {LOG_DEBUG("Freeing bytes\n"); free((void*)obj); /*obj = NULL;*/}
@@ -81,19 +82,6 @@ const char *str_ltrim(const char *str);
 char *str_trim(const char *str);
 char **str_split(const char *str, const char *delim);
 
-#include "Decoder.h"
-#include "Anims.h"
-#include "Game.h"
-#include "Render.h"
-#include "Text.h"
-#include "Sound.h"
-#include "Mouse.h"
-#include "Loader.h"
-#include "Controls.h"
-#include "Timer.h"
-#include "Scripting.h"
-#include "Inventory.h"
-#include "Actions.h"
-#include "Menu.h"
+uint8_t hash_l(const char *str);
 
 #endif // SYSTEM_H_INCLUDED

@@ -1,6 +1,8 @@
 #ifndef TEXT_H_INCLUDED
 #define TEXT_H_INCLUDED
 
+typedef struct struct_action_res action_res_t;
+
 typedef struct
 {
     char fontname[64];

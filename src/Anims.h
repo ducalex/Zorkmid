@@ -1,7 +1,8 @@
 #ifndef ANIMS_H_INCLUDED
 #define ANIMS_H_INCLUDED
 
-#include "System.h"
+#include <stdint.h>
+#include "Decoder.h"
 
 typedef struct
 {

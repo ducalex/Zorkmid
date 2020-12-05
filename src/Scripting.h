@@ -1,12 +1,39 @@
 #ifndef SCRIPTING_H_INCLUDED
 #define SCRIPTING_H_INCLUDED
 
+#include "Render.h"
+#include "Anims.h"
+#include "Sound.h"
+#include "Text.h"
+
+//Script names
+#define SystemWorld 'g'
+#define SystemRoom 'j'
+
+#define SaveWorld SystemWorld
+#define SaveRoom SystemRoom
+#define SaveNode 's'
+#define SaveView 'e'
+
+#define LoadWorld SystemWorld
+#define LoadRoom SystemRoom
+#define LoadNode 'r'
+#define LoadView 'e'
+
+#define PrefWorld SystemWorld
+#define PrefRoom SystemRoom
+#define PrefNode 'p'
+#define PrefView 'e'
+
+#define InitWorld SystemWorld
+#define InitRoom 'a'
+#define InitNode 'r'
+#define InitView 'y'
+
 //Maximal number of same puzzles in the statebox stack
 //For increasing speed of engine
 //May cause errors, but should not
 #define MaxPuzzlesInStack 2
-
-#define PuzzleStack 2048
 
 #define SLOT_WORLD 3
 #define SLOT_ROOM 4
@@ -90,49 +117,49 @@
 #define FLAG_DISABLED 2
 #define FLAG_DO_ME_NOW 4
 
-#define CRIT_OP_EQU 0 //=
-#define CRIT_OP_LEA 1 //<
-#define CRIT_OP_GRE 2 //>
-#define CRIT_OP_NOT 3 //!
+typedef enum
+{
+    NODE_TYPE_MUSIC,
+    NODE_TYPE_TIMER,
+    NODE_TYPE_ANIMPLAY,
+    NODE_TYPE_ANIMPRE,
+    NODE_TYPE_ANIMPRPL,
+    NODE_TYPE_PANTRACK,
+    NODE_TYPE_TTYTEXT,
+    NODE_TYPE_SYNCSND,
+    NODE_TYPE_DISTORT,
+    NODE_TYPE_REGION
+} node_type_t;
 
-#define NODE_TYPE_MUSIC 0
-#define NODE_TYPE_TIMER 1
-#define NODE_TYPE_ANIMPLAY 2
-#define NODE_TYPE_ANIMPRE 3
-#define NODE_TYPE_ANIMPRPL 4
-#define NODE_TYPE_PANTRACK 5
-#define NODE_TYPE_TTYTEXT 6
-#define NODE_TYPE_SYNCSND 7
-#define NODE_TYPE_DISTORT 8
-#define NODE_TYPE_REGION 9
+typedef enum
+{
+    NODE_RET_OK,
+    NODE_RET_DELETE,
+    NODE_RET_NO
+} node_ret_t;
 
-#define NODE_RET_OK 0
-#define NODE_RET_DELETE 1
-#define NODE_RET_NO 2
-
-typedef struct pzllst pzllst_t;
+typedef enum
+{
+    LIST_UNIVERSE,
+    LIST_WORLD,
+    LIST_ROOM,
+    LIST_VIEW,
+    LIST_COUNT
+} zlist_t;
 
 typedef struct
 {
-    uint16_t slot;         //puzzle slot
     dynlist_t CritList;   //Criteria list of lists criteria
     dynlist_t ResList;    //results list
-    pzllst_t *owner;
+    int owner;
+    int slot;             //puzzle slot
 } puzzlenode_t;
-
-typedef struct pzllst
-{
-    dynlist_t puzzles;
-    puzzlenode_t *stack[PuzzleStack];
-    size_t stksize;
-    size_t exec_times;
-} pzllst_t;
 
 typedef struct struct_action_res
 {
-    int32_t slot;
-    pzllst_t *owner;
-    int8_t node_type;
+    int owner;
+    int slot;
+    int node_type;
     union nodes
     {
         musicnode_t *node_music;
@@ -142,7 +169,6 @@ typedef struct struct_action_res
         syncnode_t *node_sync;
         ttytext_t *tty_text;
         distort_t *distort;
-
         int32_t node_timer;
         int32_t node_pantracking;
         int32_t node_region;
@@ -152,10 +178,6 @@ typedef struct struct_action_res
     bool first_process;
 } action_res_t;
 
-pzllst_t *GetUni();
-pzllst_t *Getworld();
-pzllst_t *Getroom();
-pzllst_t *Getview();
 dynlist_t *GetControlsList();
 dynlist_t *GetActionsList();
 
@@ -167,13 +189,12 @@ int *GetgVarRef(uint32_t indx);
 void SetDirectgVarInt(uint32_t indx, int var);
 
 void ScrSys_Init();
-void ScrSys_LoadScript(pzllst_t *list, const char *filename, bool control, dynlist_t *controls);
+void ScrSys_LoadScript(zlist_t list, const char *filename, bool control, dynlist_t *controls);
 void ScrSys_ChangeLocation(uint8_t w, uint8_t r, uint8_t v1, uint8_t v2, int32_t X, bool force_all);
 uint8_t ScrSys_GetFlag(uint32_t indx);
 void ScrSys_SetFlag(uint32_t indx, uint8_t newval);
-void ScrSys_ExecPuzzleList(pzllst_t *list);
-const char *ScrSys_GetPuzzleListName(pzllst_t *list);
-void ScrSys_FlushResourcesByOwner(pzllst_t *owner);
+void ScrSys_ExecPuzzleList(zlist_t list);
+void ScrSys_FlushResourcesByOwner(zlist_t owner);
 void ScrSys_FlushResourcesByType(int type);
 bool ScrSys_BreakExec();
 void ScrSys_SetBreak();

@@ -1,7 +1,14 @@
-#include "System.h"
+#include "Utilities.h"
+#include "Scripting.h"
+#include "Loader.h"
+#include "Render.h"
+#include "Sound.h"
+#include "Anims.h"
+#include "Text.h"
+#include "Game.h"
 
 static uint32_t channel_start_time[SOUND_CHANNELS];
-static int num_channels = 0;
+static size_t num_channels = 0;
 
 static const uint8_t log_volume[101] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                                   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -154,7 +161,7 @@ int Sound_DeleteNode(action_res_t *nod)
         if (nod->slot != 0)
             SetgVarInt(nod->slot, 2);
 
-        if (nod->nodes.node_music->sub != NULL)
+        if (nod->nodes.node_music->sub)
             Text_DeleteSubtitles(nod->nodes.node_music->sub);
 
         SetGNode(nod->slot, NULL);
@@ -171,7 +178,7 @@ int Sound_DeleteNode(action_res_t *nod)
         }
         Mix_FreeChunk(nod->nodes.node_sync->chunk);
 
-        if (nod->nodes.node_sync->sub != NULL)
+        if (nod->nodes.node_sync->sub)
             Text_DeleteSubtitles(nod->nodes.node_sync->sub);
 
         DELETE(nod->nodes.node_sync);

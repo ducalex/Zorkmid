@@ -1,4 +1,6 @@
-#include "System.h"
+#include "Utilities.h"
+#include "Scripting.h"
+#include "Game.h"
 
 action_res_t *Timer_CreateNode()
 {

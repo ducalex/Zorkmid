@@ -1,4 +1,10 @@
-#include "System.h"
+#include "Utilities.h"
+#include "Scripting.h"
+#include "Controls.h"
+#include "Render.h"
+#include "Loader.h"
+#include "Menu.h"
+#include "Game.h"
 
 //Graphics
 int WINDOW_W = 0;
